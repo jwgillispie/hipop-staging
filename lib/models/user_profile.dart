@@ -1,0 +1,288 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class UserProfile {
+  final String userId;
+  final String userType; // 'vendor', 'shopper', or 'market_organizer'
+  final String email;
+  final String? displayName;
+  final String? businessName; // For vendors
+  final String? organizationName; // For market organizers
+  final List<String> managedMarketIds; // For market organizers - markets they manage
+  final String? bio;
+  final String? instagramHandle;
+  final String? phoneNumber;
+  final String? website;
+  final List<String> categories; // For vendors - what they sell
+  final String? specificProducts; // For vendors - specific product details
+  final List<String> ccEmails; // For vendors - additional contact emails
+  final Map<String, dynamic> preferences; // General user preferences
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  UserProfile({
+    required this.userId,
+    required this.userType,
+    required this.email,
+    this.displayName,
+    this.businessName,
+    this.organizationName,
+    this.managedMarketIds = const [],
+    this.bio,
+    this.instagramHandle,
+    this.phoneNumber,
+    this.website,
+    this.categories = const [],
+    this.specificProducts,
+    this.ccEmails = const [],
+    this.preferences = const {},
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  // Create a copy with updated fields
+  UserProfile copyWith({
+    String? userId,
+    String? userType,
+    String? email,
+    String? displayName,
+    String? businessName,
+    String? organizationName,
+    List<String>? managedMarketIds,
+    String? bio,
+    String? instagramHandle,
+    String? phoneNumber,
+    String? website,
+    List<String>? categories,
+    String? specificProducts,
+    List<String>? ccEmails,
+    Map<String, dynamic>? preferences,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return UserProfile(
+      userId: userId ?? this.userId,
+      userType: userType ?? this.userType,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      businessName: businessName ?? this.businessName,
+      organizationName: organizationName ?? this.organizationName,
+      managedMarketIds: managedMarketIds ?? this.managedMarketIds,
+      bio: bio ?? this.bio,
+      instagramHandle: instagramHandle ?? this.instagramHandle,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      website: website ?? this.website,
+      categories: categories ?? this.categories,
+      specificProducts: specificProducts ?? this.specificProducts,
+      ccEmails: ccEmails ?? this.ccEmails,
+      preferences: preferences ?? this.preferences,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  // Convert to Firestore document
+  Map<String, dynamic> toFirestore() {
+    return {
+      'userId': userId,
+      'userType': userType,
+      'email': email,
+      'displayName': displayName,
+      'businessName': businessName,
+      'organizationName': organizationName,
+      'managedMarketIds': managedMarketIds,
+      'bio': bio,
+      'instagramHandle': instagramHandle,
+      'phoneNumber': phoneNumber,
+      'website': website,
+      'categories': categories,
+      'specificProducts': specificProducts,
+      'ccEmails': ccEmails,
+      'preferences': preferences,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  // Create from Firestore document
+  factory UserProfile.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return UserProfile(
+      userId: data['userId'] ?? doc.id,
+      userType: data['userType'] ?? 'shopper',
+      email: data['email'] ?? '',
+      displayName: data['displayName'],
+      businessName: data['businessName'],
+      organizationName: data['organizationName'],
+      managedMarketIds: List<String>.from(data['managedMarketIds'] ?? []),
+      bio: data['bio'],
+      instagramHandle: data['instagramHandle'],
+      phoneNumber: data['phoneNumber'],
+      website: data['website'],
+      categories: List<String>.from(data['categories'] ?? []),
+      specificProducts: data['specificProducts'],
+      ccEmails: List<String>.from(data['ccEmails'] ?? []),
+      preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  // Create from Firestore document with explicit ID
+  factory UserProfile.fromFirestoreWithId(String id, Map<String, dynamic> data) {
+    return UserProfile(
+      userId: data['userId'] ?? id,
+      userType: data['userType'] ?? 'shopper',
+      email: data['email'] ?? '',
+      displayName: data['displayName'],
+      businessName: data['businessName'],
+      organizationName: data['organizationName'],
+      managedMarketIds: List<String>.from(data['managedMarketIds'] ?? []),
+      bio: data['bio'],
+      instagramHandle: data['instagramHandle'],
+      phoneNumber: data['phoneNumber'],
+      website: data['website'],
+      categories: List<String>.from(data['categories'] ?? []),
+      specificProducts: data['specificProducts'],
+      ccEmails: List<String>.from(data['ccEmails'] ?? []),
+      preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+
+  // Helper method to get full name or business name for display
+  String get displayTitle {
+    if (userType == 'vendor' && businessName != null && businessName!.isNotEmpty) {
+      return businessName!;
+    }
+    if (userType == 'market_organizer' && organizationName != null && organizationName!.isNotEmpty) {
+      return organizationName!;
+    }
+    return displayName ?? email.split('@').first;
+  }
+
+  // Helper method to check if profile is complete
+  bool get isProfileComplete {
+    final hasBasicInfo = displayName != null && displayName!.isNotEmpty;
+    
+    if (userType == 'vendor') {
+      // Vendors need business name or display name
+      return hasBasicInfo || (businessName != null && businessName!.isNotEmpty);
+    } else if (userType == 'market_organizer') {
+      // Market organizers need organization name or display name, plus at least one managed market
+      return (hasBasicInfo || (organizationName != null && organizationName!.isNotEmpty)) 
+          && managedMarketIds.isNotEmpty;
+    } else {
+      // Shoppers just need display name
+      return hasBasicInfo;
+    }
+  }
+
+  // Helper method to get profile completion percentage
+  double get profileCompletionPercentage {
+    int totalFields;
+    int completedFields = 0;
+
+    // Always required
+    if (email.isNotEmpty) completedFields++;
+    if (displayName != null && displayName!.isNotEmpty) completedFields++;
+
+    if (userType == 'vendor') {
+      totalFields = 7;
+      // Vendor-specific fields
+      if (businessName != null && businessName!.isNotEmpty) completedFields++;
+      if (bio != null && bio!.isNotEmpty) completedFields++;
+      if (instagramHandle != null && instagramHandle!.isNotEmpty) completedFields++;
+      if (categories.isNotEmpty) completedFields++;
+      if (website != null && website!.isNotEmpty) completedFields++;
+    } else if (userType == 'market_organizer') {
+      totalFields = 8;
+      // Market organizer-specific fields
+      if (organizationName != null && organizationName!.isNotEmpty) completedFields++;
+      if (managedMarketIds.isNotEmpty) completedFields++;
+      if (bio != null && bio!.isNotEmpty) completedFields++;
+      if (instagramHandle != null && instagramHandle!.isNotEmpty) completedFields++;
+      if (phoneNumber != null && phoneNumber!.isNotEmpty) completedFields++;
+      if (website != null && website!.isNotEmpty) completedFields++;
+    } else {
+      totalFields = 4;
+      // Shopper-specific fields
+      if (bio != null && bio!.isNotEmpty) completedFields++;
+      if (instagramHandle != null && instagramHandle!.isNotEmpty) completedFields++;
+    }
+
+    return completedFields / totalFields;
+  }
+
+  @override
+  String toString() {
+    return 'UserProfile(userId: $userId, userType: $userType, email: $email, displayName: $displayName, businessName: $businessName)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    
+    return other is UserProfile &&
+        other.userId == userId &&
+        other.userType == userType &&
+        other.email == email &&
+        other.displayName == displayName &&
+        other.businessName == businessName &&
+        other.organizationName == organizationName &&
+        other.bio == bio &&
+        other.instagramHandle == instagramHandle &&
+        other.phoneNumber == phoneNumber &&
+        other.website == website;
+  }
+
+  @override
+  int get hashCode {
+    return userId.hashCode ^
+        userType.hashCode ^
+        email.hashCode ^
+        displayName.hashCode ^
+        businessName.hashCode ^
+        organizationName.hashCode ^
+        bio.hashCode ^
+        instagramHandle.hashCode ^
+        phoneNumber.hashCode ^
+        website.hashCode;
+  }
+
+  // Helper methods for market organizers
+  bool get isMarketOrganizer => userType == 'market_organizer';
+  
+  bool canManageMarket(String marketId) {
+    return isMarketOrganizer && managedMarketIds.contains(marketId);
+  }
+  
+  // Add a market to managed markets (for organizers)
+  UserProfile addManagedMarket(String marketId) {
+    if (!isMarketOrganizer) return this;
+    
+    final updatedMarkets = List<String>.from(managedMarketIds);
+    if (!updatedMarkets.contains(marketId)) {
+      updatedMarkets.add(marketId);
+    }
+    
+    return copyWith(
+      managedMarketIds: updatedMarkets,
+      updatedAt: DateTime.now(),
+    );
+  }
+  
+  // Remove a market from managed markets (for organizers)
+  UserProfile removeManagedMarket(String marketId) {
+    if (!isMarketOrganizer) return this;
+    
+    final updatedMarkets = List<String>.from(managedMarketIds);
+    updatedMarkets.remove(marketId);
+    
+    return copyWith(
+      managedMarketIds: updatedMarkets,
+      updatedAt: DateTime.now(),
+    );
+  }
+}

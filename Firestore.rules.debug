@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ⚠️ DANGER: SUPER PERMISSIVE DEBUG RULES ⚠️
+    // These rules allow the debug database cleaner to work
+    // ONLY USE FOR TESTING - NEVER IN PRODUCTION
+    
+    // Allow authenticated users to do anything (for debug database cleaner)
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Additional explicit rules for specific collections
+    
+    // Users collection rules - PERMISSIVE FOR DEBUG
+    match /users/{userId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // User profiles collection rules - PERMISSIVE FOR DEBUG
+    match /user_profiles/{userId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Markets collection rules - PERMISSIVE FOR DEBUG
+    match /markets/{marketId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Market schedules collection rules - PERMISSIVE FOR DEBUG
+    match /market_schedules/{scheduleId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Vendor applications collection rules - PERMISSIVE FOR DEBUG
+    match /vendor_applications/{applicationId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Managed vendors collection rules - PERMISSIVE FOR DEBUG
+    match /managed_vendors/{vendorId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Vendor markets collection rules - PERMISSIVE FOR DEBUG
+    match /vendor_markets/{relationshipId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Vendor posts collection rules - PERMISSIVE FOR DEBUG
+    match /vendor_posts/{postId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // User favorites collection rules - PERMISSIVE FOR DEBUG
+    match /user_favorites/{favoriteId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Recipes collection rules - PERMISSIVE FOR DEBUG
+    match /recipes/{recipeId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Market analytics collection rules - PERMISSIVE FOR DEBUG
+    match /market_analytics/{analyticsId} {
+      allow read, write, delete: if request.auth != null;
+    }
+    
+    // Market events collection rules - PERMISSIVE FOR DEBUG
+    match /market_events/{eventId} {
+      allow read, write, delete: if request.auth != null;
+    }
+  }
+}

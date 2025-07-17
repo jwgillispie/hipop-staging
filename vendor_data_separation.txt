@@ -1,0 +1,14 @@
+VENDOR PROFILE DATA:
+- Email Address
+- VENDOR NAME
+- BUSINESS NAME
+- PHONE NUMBER
+- EMAIL
+- PRODUCT SOLD, BE SPECIFIC (this helps us ensure we don't have too much of the same product)
+- CONTACTS (If there are others that need to be cc'd on your email communications regarding the event, please let us know their email)
+- SOCIAL MEDIA HANDLES & WEBSITES
+
+APPLICATION-SPECIFIC DATA:
+- Timestamp
+- Which Farmers Market Are You Applying For?
+- How Did You Hear About This Farmers Market and SPS Productions?
