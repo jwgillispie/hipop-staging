@@ -35,6 +35,7 @@ import '../screens/shopper_calendar_screen.dart';
 import '../screens/organizer_onboarding_screen.dart';
 import '../screens/vendor_application_status_screen.dart';
 import '../screens/legal_documents_screen.dart';
+import '../screens/organizer_event_management_screen.dart';
 import '../models/market.dart';
 import '../models/vendor_post.dart';
 
@@ -186,6 +187,11 @@ class AppRouter {
               builder: (context, state) => const VendorApplicationsScreen(),
             ),
             GoRoute(
+              path: 'event-management',
+              name: 'eventManagement',
+              builder: (context, state) => const OrganizerEventManagementScreen(),
+            ),
+            GoRoute(
               path: 'custom-items',
               name: 'customItems',
               builder: (context, state) => const CustomItemsScreen(),
@@ -280,6 +286,11 @@ class AppRouter {
               (state.matchedLocation.startsWith('/vendor') || state.matchedLocation.startsWith('/organizer'))) {
             return '/shopper';
           }
+        }
+        
+        // If email verification required, redirect to auth screen
+        if (authState is EmailVerificationRequired) {
+          return '/auth';
         }
         
         // If unauthenticated and not on auth routes or public routes, go to auth landing

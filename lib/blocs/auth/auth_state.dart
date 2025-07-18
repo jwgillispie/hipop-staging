@@ -57,3 +57,12 @@ class PasswordResetSent extends AuthState {
 }
 
 class EmailVerificationSent extends AuthState {}
+
+class EmailVerificationRequired extends AuthState {
+  final User user;
+  
+  const EmailVerificationRequired({required this.user});
+  
+  @override
+  List<Object> get props => [user];
+}

@@ -49,6 +49,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     if (user != null) {
       try {
+        // Check email verification status
+        print('DEBUG: Email verified: ${user.emailVerified}');
+        if (!user.emailVerified) {
+          print('DEBUG: User email not verified - proceeding anyway for staging environment');
+          // For staging, we'll proceed even with unverified email
+          // In production, you should require verification:
+          // emit(EmailVerificationRequired(user: user));
+          // return;
+        }
+        
+        // Force token refresh before any Firestore calls
+        try {
+          await user.getIdToken(true);
+        } catch (e) {
+          print('DEBUG: Error refreshing token: $e');
+        }
+        
         // FIRST: Try to load user profile from user_profiles collection (new system)
         UserProfile? userProfile;
         try {
@@ -70,6 +87,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             return; // Exit early if we have a user profile
           }
         } catch (e) {
+          print('DEBUG: Failed to load user profile: $e');
           // Failed to load user profile, continue with fallback
         }
         

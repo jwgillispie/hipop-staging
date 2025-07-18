@@ -155,6 +155,7 @@ class _UnifiedLocationSearchState extends State<UnifiedLocationSearch> {
           _controller.text = prediction.description;
           _showPredictions = false;
           _isLoading = false;
+          _selectedPlaceId = null;
         });
         
         _focusNode.unfocus();
@@ -167,14 +168,41 @@ class _UnifiedLocationSearchState extends State<UnifiedLocationSearch> {
             widget.onLocationSelected!(placeDetails);
           }
         } else {
-          // Handle case where place details couldn't be fetched
-          widget.onLocationSelected?.call(null);
-          debugPrint('Place details not found for ${prediction.placeId}');
+          // Handle case where place details couldn't be fetched - create fallback
+          final fallbackDetails = PlaceDetails(
+            placeId: prediction.placeId,
+            name: prediction.mainText,
+            formattedAddress: prediction.description,
+            latitude: 0.0,
+            longitude: 0.0,
+          );
+          if (widget.onPlaceSelected != null) {
+            widget.onPlaceSelected!(fallbackDetails);
+          } else if (widget.onLocationSelected != null) {
+            widget.onLocationSelected!(fallbackDetails);
+          }
         }
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _selectedPlaceId = null;
+        });
+        
+        // Create fallback details for error case
+        final fallbackDetails = PlaceDetails(
+          placeId: prediction.placeId,
+          name: prediction.mainText,
+          formattedAddress: prediction.description,
+          latitude: 0.0,
+          longitude: 0.0,
+        );
+        if (widget.onPlaceSelected != null) {
+          widget.onPlaceSelected!(fallbackDetails);
+        } else if (widget.onLocationSelected != null) {
+          widget.onLocationSelected!(fallbackDetails);
+        }
       }
       debugPrint('Error getting place details: $e');
     }
@@ -211,8 +239,13 @@ class _UnifiedLocationSearchState extends State<UnifiedLocationSearch> {
         TextFormField(
           controller: _controller,
           focusNode: _focusNode,
+          style: const TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+          ),
           decoration: widget.decoration ?? InputDecoration(
             hintText: widget.hintText ?? 'Search for a location...',
+            hintStyle: TextStyle(color: Colors.grey[600]),
             prefixIcon: _isLoading 
                 ? const Padding(
                     padding: EdgeInsets.all(AppConstants.mediumSpacing),
@@ -230,6 +263,8 @@ class _UnifiedLocationSearchState extends State<UnifiedLocationSearch> {
                   )
                 : null,
             border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.white,
           ),
           onChanged: (value) {
             setState(() {}); // Rebuild to show/hide clear button
@@ -264,13 +299,30 @@ class _UnifiedLocationSearchState extends State<UnifiedLocationSearch> {
               separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final prediction = _predictions[index];
+                final isSelected = _selectedPlaceId == prediction.placeId;
                 return ListTile(
-                  leading: const Icon(Icons.location_on, size: AppConstants.mediumIconSize),
+                  leading: Icon(
+                    Icons.location_on, 
+                    size: AppConstants.mediumIconSize,
+                    color: isSelected ? Colors.orange : null,
+                  ),
                   title: Text(
                     prediction.description,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: isSelected ? Colors.orange[700] : Colors.black,
+                    ),
                   ),
-                  onTap: () => _selectPlace(prediction),
+                  trailing: isSelected
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                          ),
+                        )
+                      : null,
+                  onTap: isSelected ? null : () => _selectPlace(prediction),
                 );
               },
             ),

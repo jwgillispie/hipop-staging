@@ -160,33 +160,30 @@ class _GooglePlacesWidgetState extends State<GooglePlacesWidget> {
     }
   }
   
-  List<Map<String, dynamic>> _buildSearchItems() {
+  List<Map<String, dynamic>> _getSearchItems() {
     final items = <Map<String, dynamic>>[];
     
     // Add direct search option as first item if user has typed something
     if (_controller.text.trim().isNotEmpty) {
       items.add({
-        'mainText': 'Search for "${_controller.text.trim()}"',
-        'secondaryText': 'Use exactly what you typed',
+        'title': 'Search for "${_controller.text.trim()}"',
+        'subtitle': 'Use exactly what you typed',
         'icon': Icons.search,
         'isDirect': true,
-        'isSelected': false,
+        'placeId': null,
         'onTap': () => _performDirectSearch(),
       });
     }
     
     // Add Google Places predictions
     for (final prediction in _predictions) {
-      final isSelected = _selectedPlaceId == prediction.placeId;
       items.add({
-        'mainText': prediction.mainText,
-        'secondaryText': prediction.secondaryText,
+        'title': prediction.mainText,
+        'subtitle': prediction.secondaryText,
         'icon': Icons.location_on,
         'isDirect': false,
-        'isSelected': isSelected,
-        'onTap': isSelected ? null : () {
-          _getPlaceDetails(prediction.placeId);
-        },
+        'placeId': prediction.placeId,
+        'onTap': () => _getPlaceDetails(prediction.placeId),
       });
     }
     
@@ -368,8 +365,13 @@ class _GooglePlacesWidgetState extends State<GooglePlacesWidget> {
                 child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                  ),
                   decoration: InputDecoration(
                     hintText: _isLoading ? 'Searching...' : 'Search for a location...',
+                    hintStyle: TextStyle(color: Colors.grey[600]),
                     prefixIcon: const Icon(Icons.location_on, color: Colors.orange),
                     suffixIcon: _controller.text.isNotEmpty
                         ? IconButton(
@@ -465,82 +467,54 @@ class _GooglePlacesWidgetState extends State<GooglePlacesWidget> {
             ),
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: _buildSearchItems().length,
+              itemCount: _getSearchItems().length,
               itemBuilder: (context, index) {
-                final searchItem = _buildSearchItems()[index];
+                final item = _getSearchItems()[index];
+                final isSelected = _selectedPlaceId == item['placeId'];
                 
-                return InkWell(
-                  onTap: searchItem['onTap'],
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: searchItem['isSelected'] ? Colors.orange.withValues(alpha: 0.1) : null,
-                      border: index < _buildSearchItems().length - 1
-                          ? Border(
-                              bottom: BorderSide(
-                                color: Colors.grey.withValues(alpha: 0.1),
-                              ),
-                            )
-                          : null,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          searchItem['icon'] as IconData,
-                          color: searchItem['isSelected'] ? Colors.orange : (searchItem['isDirect'] ? Colors.blue : Colors.grey),
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                searchItem['mainText'],
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: searchItem['isSelected'] 
-                                      ? Colors.orange[700] 
-                                      : (searchItem['isDirect'] ? Colors.blue[700] : null),
-                                ),
-                              ),
-                              if (searchItem['secondaryText'] != null && searchItem['secondaryText'].isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  searchItem['secondaryText'],
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: searchItem['isSelected'] 
-                                        ? Colors.orange[600] 
-                                        : (searchItem['isDirect'] ? Colors.blue[600] : Colors.grey[600]),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        if (searchItem['isSelected'])
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
-                            ),
-                          )
-                        else
-                          Icon(
-                            searchItem['isDirect'] ? Icons.search : Icons.north_west,
-                            color: searchItem['isDirect'] ? Colors.blue[400] : Colors.grey[400],
-                            size: 16,
-                          ),
-                      ],
+                return ListTile(
+                  leading: Icon(
+                    item['icon'] as IconData,
+                    color: isSelected ? Colors.orange : (item['isDirect'] ? Colors.blue : Colors.grey),
+                    size: 20,
+                  ),
+                  title: Text(
+                    item['title'],
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected 
+                          ? Colors.orange[700] 
+                          : (item['isDirect'] ? Colors.blue[700] : Colors.black),
                     ),
                   ),
+                  subtitle: item['subtitle'] != null && item['subtitle'].isNotEmpty
+                      ? Text(
+                          item['subtitle'],
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected 
+                                ? Colors.orange[600] 
+                                : (item['isDirect'] ? Colors.blue[600] : Colors.grey[700]),
+                          ),
+                        )
+                      : null,
+                  trailing: isSelected
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                          ),
+                        )
+                      : Icon(
+                          item['isDirect'] ? Icons.search : Icons.north_west,
+                          color: item['isDirect'] ? Colors.blue[400] : Colors.grey[400],
+                          size: 16,
+                        ),
+                  onTap: isSelected ? null : item['onTap'],
+                  dense: true,
                 );
               },
             ),

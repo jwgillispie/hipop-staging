@@ -8,7 +8,7 @@ import '../services/places_service.dart';
 import '../services/vendor_application_service.dart';
 import '../services/managed_vendor_service.dart';
 import '../widgets/market_schedule_form.dart';
-import '../widgets/common/unified_location_search.dart';
+import '../widgets/common/simple_places_widget.dart';
 import '../utils/ui_utils.dart';
 import '../utils/constants.dart';
 
@@ -592,10 +592,15 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          LocationSearchWidgets.googlePlaces(
+                          SimplePlacesWidget(
                             initialLocation: _selectedAddress,
-                            onPlaceSelected: _onPlaceSelected,
-                            onCleared: _onAddressCleared,
+                            onLocationSelected: (PlaceDetails? place) {
+                              if (place != null) {
+                                _onPlaceSelected(place);
+                              } else {
+                                _onAddressCleared();
+                              }
+                            },
                           ),
                           if (_selectedPlace != null) ...[
                             const SizedBox(height: 8),

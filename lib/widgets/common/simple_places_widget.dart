@@ -142,12 +142,17 @@ class _SimplePlacesWidgetState extends State<SimplePlacesWidget> {
               Expanded(
                 child: TextField(
                   controller: _controller,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Search for a location...',
+                    hintStyle: TextStyle(color: Colors.grey[600]),
                     prefixIcon: const Icon(Icons.location_on, color: Colors.orange),
                     suffixIcon: _controller.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear, color: Colors.grey),
                             onPressed: () {
                               _controller.clear();
                               setState(() {
@@ -241,14 +246,14 @@ class _SimplePlacesWidgetState extends State<SimplePlacesWidget> {
                     item['title'],
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
-                      color: item['isDirect'] ? Colors.blue[700] : null,
+                      color: item['isDirect'] ? Colors.blue[700] : Colors.black,
                     ),
                   ),
                   subtitle: item['subtitle'] != null && item['subtitle'].isNotEmpty
                       ? Text(
                           item['subtitle'],
                           style: TextStyle(
-                            color: item['isDirect'] ? Colors.blue[600] : null,
+                            color: item['isDirect'] ? Colors.blue[600] : Colors.grey[700],
                           ),
                         )
                       : null,

@@ -170,6 +170,7 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
                           'Recurring Schedule',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: Colors.black,
                           ),
                         ),
                         Text(
@@ -205,6 +206,7 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
               'Operating Hours',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
             ),
             const SizedBox(height: 8),
@@ -212,8 +214,8 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
               children: [
                 Expanded(
                   child: ListTile(
-                    title: const Text('Start Time'),
-                    subtitle: Text(_formatTimeOfDay(_startTime)),
+                    title: const Text('Start Time', style: TextStyle(color: Colors.black)),
+                    subtitle: Text(_formatTimeOfDay(_startTime), style: const TextStyle(color: Colors.black)),
                     leading: const Icon(Icons.access_time),
                     onTap: () async {
                       final time = await showTimePicker(
@@ -232,8 +234,8 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
                 ),
                 Expanded(
                   child: ListTile(
-                    title: const Text('End Time'),
-                    subtitle: Text(_formatTimeOfDay(_endTime)),
+                    title: const Text('End Time', style: TextStyle(color: Colors.black)),
+                    subtitle: Text(_formatTimeOfDay(_endTime), style: const TextStyle(color: Colors.black)),
                     leading: const Icon(Icons.access_time_filled),
                     onTap: () async {
                       final time = await showTimePicker(
@@ -288,20 +290,25 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
           'Recurrence Pattern',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<RecurrencePattern>(
           value: _recurrencePattern,
+          style: const TextStyle(color: Colors.black),
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
             labelText: 'Pattern',
+            labelStyle: TextStyle(color: Colors.black),
+            filled: true,
+            fillColor: Colors.white,
           ),
           items: const [
-            DropdownMenuItem(value: RecurrencePattern.weekly, child: Text('Weekly')),
-            DropdownMenuItem(value: RecurrencePattern.biweekly, child: Text('Every 2 weeks')),
-            DropdownMenuItem(value: RecurrencePattern.monthly, child: Text('Monthly')),
-            DropdownMenuItem(value: RecurrencePattern.custom, child: Text('Custom interval')),
+            DropdownMenuItem(value: RecurrencePattern.weekly, child: Text('Weekly', style: TextStyle(color: Colors.black))),
+            DropdownMenuItem(value: RecurrencePattern.biweekly, child: Text('Every 2 weeks', style: TextStyle(color: Colors.black))),
+            DropdownMenuItem(value: RecurrencePattern.monthly, child: Text('Monthly', style: TextStyle(color: Colors.black))),
+            DropdownMenuItem(value: RecurrencePattern.custom, child: Text('Custom interval', style: TextStyle(color: Colors.black))),
           ],
           onChanged: (value) {
             setState(() {
@@ -315,10 +322,15 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
         if (_recurrencePattern == RecurrencePattern.custom) ...[
           TextFormField(
             initialValue: _intervalWeeks.toString(),
+            style: const TextStyle(color: Colors.black),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               labelText: 'Repeat every X weeks',
+              labelStyle: TextStyle(color: Colors.black),
               suffixText: 'weeks',
+              suffixStyle: TextStyle(color: Colors.black),
+              filled: true,
+              fillColor: Colors.white,
             ),
             keyboardType: TextInputType.number,
             onChanged: (value) {
@@ -333,6 +345,7 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
           'Days of the Week',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 8),
@@ -341,8 +354,10 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
           children: [
             for (int i = 1; i <= 7; i++)
               FilterChip(
-                label: Text(_getDayName(i)),
+                label: Text(_getDayName(i), style: TextStyle(color: _selectedDaysOfWeek.contains(i) ? Colors.white : Colors.black)),
                 selected: _selectedDaysOfWeek.contains(i),
+                backgroundColor: Colors.white,
+                selectedColor: Colors.blue,
                 onSelected: (selected) {
                   setState(() {
                     if (selected) {
@@ -363,6 +378,7 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
           'Start Date',
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 8),
@@ -372,9 +388,12 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: ListTile(
-            title: Text(_recurrenceStartDate != null 
-                ? '${_recurrenceStartDate!.month}/${_recurrenceStartDate!.day}/${_recurrenceStartDate!.year}'
-                : 'Select start date'),
+            title: Text(
+              _recurrenceStartDate != null 
+                  ? '${_recurrenceStartDate!.month}/${_recurrenceStartDate!.day}/${_recurrenceStartDate!.year}'
+                  : 'Select start date',
+              style: const TextStyle(color: Colors.black),
+            ),
             leading: const Icon(Icons.calendar_today),
             onTap: () async {
               final date = await showDatePicker(
@@ -395,8 +414,8 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
         const SizedBox(height: 16),
 
         CheckboxListTile(
-          title: const Text('Set end date'),
-          subtitle: const Text('Otherwise, market will continue indefinitely'),
+          title: const Text('Set end date', style: TextStyle(color: Colors.black)),
+          subtitle: const Text('Otherwise, market will continue indefinitely', style: TextStyle(color: Colors.grey)),
           value: _hasEndDate,
           onChanged: (value) {
             setState(() {
@@ -417,9 +436,12 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
               borderRadius: BorderRadius.circular(4),
             ),
             child: ListTile(
-              title: Text(_recurrenceEndDate != null 
-                  ? '${_recurrenceEndDate!.month}/${_recurrenceEndDate!.day}/${_recurrenceEndDate!.year}'
-                  : 'Select end date'),
+              title: Text(
+                _recurrenceEndDate != null 
+                    ? '${_recurrenceEndDate!.month}/${_recurrenceEndDate!.day}/${_recurrenceEndDate!.year}'
+                    : 'Select end date',
+                style: const TextStyle(color: Colors.black),
+              ),
               leading: const Icon(Icons.event),
               onTap: () async {
                 final date = await showDatePicker(

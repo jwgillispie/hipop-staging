@@ -30,15 +30,41 @@ class UserProfileService implements IUserProfileService {
   @override
   Future<UserProfile?> getUserProfile(String userId) async {
     try {
+      debugPrint('DEBUG: Attempting to get user profile for userId: $userId');
+      debugPrint('DEBUG: Current auth user: ${_auth.currentUser?.uid}');
+      debugPrint('DEBUG: Is user authenticated: ${_auth.currentUser != null}');
+      debugPrint('DEBUG: Auth user email: ${_auth.currentUser?.email}');
+      debugPrint('DEBUG: Auth user emailVerified: ${_auth.currentUser?.emailVerified}');
+      
+      // Check if we can get an ID token
+      try {
+        final token = await _auth.currentUser?.getIdToken();
+        debugPrint('DEBUG: Got ID token: ${token != null ? "YES" : "NO"}');
+        if (token != null) {
+          debugPrint('DEBUG: Token length: ${token.length}');
+        }
+      } catch (tokenError) {
+        debugPrint('DEBUG: Error getting ID token: $tokenError');
+      }
+      
+      // Test with a simple read first
+      debugPrint('DEBUG: Testing basic Firestore access...');
+      final testQuery = await _firestore.collection('test').limit(1).get();
+      debugPrint('DEBUG: Test query successful, got ${testQuery.docs.length} docs');
+      
       final doc = await _firestore.collection(_collection).doc(userId).get();
       
+      debugPrint('DEBUG: Document exists: ${doc.exists}');
+      debugPrint('DEBUG: Document path: ${doc.reference.path}');
+      
       if (doc.exists) {
+        debugPrint('DEBUG: Document data: ${doc.data()}');
         return UserProfile.fromFirestore(doc);
       }
       return null;
     } catch (e) {
       debugPrint('Error getting user profile: $e');
-      return null;
+      rethrow;
     }
   }
 
