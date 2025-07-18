@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import '../models/event.dart';
 
 class EventService {
@@ -16,11 +18,12 @@ class EventService {
         .orderBy('startDateTime')
         .snapshots()
         .handleError((error) {
-          print('❌ FIRESTORE INDEX ERROR - getAllActiveEventsStream:');
-          print('Query: events where isActive == true AND endDateTime > now, orderBy endDateTime, startDateTime');
-          print('Error: $error');
-          print('🔗 CREATE INDEX AT: https://console.firebase.google.com/project/hipop-markets-staging/firestore/indexes');
-          print('');
+          debugPrint('Error loading all active events: $error');
+          developer.log('Error loading all active events: $error', name: 'EventService');
+          if (kIsWeb) {
+            // ignore: avoid_print
+            print('🔴 EventService getAllActiveEventsStream Error: $error');
+          }
         })
         .map((snapshot) => snapshot.docs
             .map((doc) => Event.fromFirestore(doc))
@@ -38,11 +41,12 @@ class EventService {
         .orderBy('startDateTime')
         .snapshots()
         .handleError((error) {
-          print('❌ FIRESTORE INDEX ERROR - getEventsByCityStream:');
-          print('Query: events where isActive == true AND city == "$city" AND endDateTime > now, orderBy endDateTime, startDateTime');
-          print('Error: $error');
-          print('🔗 CREATE INDEX AT: https://console.firebase.google.com/project/hipop-markets-staging/firestore/indexes');
-          print('');
+          debugPrint('Error loading events by city ($city): $error');
+          developer.log('Error loading events by city ($city): $error', name: 'EventService');
+          if (kIsWeb) {
+            // ignore: avoid_print
+            print('🔴 EventService getEventsByCityStream Error: $error');
+          }
         })
         .map((snapshot) => snapshot.docs
             .map((doc) => Event.fromFirestore(doc))
@@ -107,11 +111,12 @@ class EventService {
         .orderBy('startDateTime')
         .snapshots()
         .handleError((error) {
-          print('❌ FIRESTORE INDEX ERROR - getCurrentAndUpcomingEventsStream:');
-          print('Query: events where isActive == true AND endDateTime > now, orderBy endDateTime, startDateTime');
-          print('Error: $error');
-          print('🔗 CREATE INDEX AT: https://console.firebase.google.com/project/hipop-markets-staging/firestore/indexes');
-          print('');
+          debugPrint('Error loading current and upcoming events: $error');
+          developer.log('Error loading current and upcoming events: $error', name: 'EventService');
+          if (kIsWeb) {
+            // ignore: avoid_print
+            print('🔴 EventService getCurrentAndUpcomingEventsStream Error: $error');
+          }
         })
         .map((snapshot) => snapshot.docs
             .map((doc) => Event.fromFirestore(doc))
@@ -129,11 +134,12 @@ class EventService {
         .orderBy('startDateTime')
         .snapshots()
         .handleError((error) {
-          print('❌ FIRESTORE INDEX ERROR - getEventsForMarketStream:');
-          print('Query: events where isActive == true AND marketId == "$marketId" AND endDateTime > now, orderBy endDateTime, startDateTime');
-          print('Error: $error');
-          print('🔗 CREATE INDEX AT: https://console.firebase.google.com/project/hipop-markets-staging/firestore/indexes');
-          print('');
+          debugPrint('Error loading events for market ($marketId): $error');
+          developer.log('Error loading events for market ($marketId): $error', name: 'EventService');
+          if (kIsWeb) {
+            // ignore: avoid_print
+            print('🔴 EventService getEventsForMarketStream Error: $error');
+          }
         })
         .map((snapshot) => snapshot.docs
             .map((doc) => Event.fromFirestore(doc))
@@ -147,6 +153,14 @@ class EventService {
         .where('organizerId', isEqualTo: organizerId)
         .orderBy('updatedAt', descending: true)
         .snapshots()
+        .handleError((error) {
+          debugPrint('Error loading events by organizer ($organizerId): $error');
+          developer.log('Error loading events by organizer ($organizerId): $error', name: 'EventService');
+          if (kIsWeb) {
+            // ignore: avoid_print
+            print('🔴 EventService getEventsByOrganizerStream Error: $error');
+          }
+        })
         .map((snapshot) => snapshot.docs
             .map((doc) => Event.fromFirestore(doc))
             .toList());
@@ -174,11 +188,12 @@ class EventService {
         .orderBy('startDateTime')
         .snapshots()
         .handleError((error) {
-          print('❌ FIRESTORE INDEX ERROR - searchEventsByText:');
-          print('Query: events where isActive == true AND endDateTime > now, orderBy endDateTime, startDateTime');
-          print('Error: $error');
-          print('🔗 CREATE INDEX AT: https://console.firebase.google.com/project/hipop-markets-staging/firestore/indexes');
-          print('');
+          debugPrint('Error searching events by text ($searchText): $error');
+          developer.log('Error searching events by text ($searchText): $error', name: 'EventService');
+          if (kIsWeb) {
+            // ignore: avoid_print
+            print('🔴 EventService searchEventsByText Error: $error');
+          }
         })
         .map((snapshot) => snapshot.docs
             .map((doc) => Event.fromFirestore(doc))

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import '../models/user_profile.dart';
 
 abstract class IUserProfileService {
@@ -64,6 +65,12 @@ class UserProfileService implements IUserProfileService {
       return null;
     } catch (e) {
       debugPrint('Error getting user profile: $e');
+      developer.log('Error getting user profile: $e', name: 'UserProfileService');
+      if (kIsWeb) {
+        // Also log to browser console for web
+        // ignore: avoid_print
+        print('🔴 UserProfileService Error: $e');
+      }
       rethrow;
     }
   }
@@ -90,6 +97,12 @@ class UserProfileService implements IUserProfileService {
       
       return profile;
     } catch (e) {
+      debugPrint('Error creating user profile: $e');
+      developer.log('Error creating user profile: $e', name: 'UserProfileService');
+      if (kIsWeb) {
+        // ignore: avoid_print
+        print('🔴 UserProfileService Create Error: $e');
+      }
       throw UserProfileException('Failed to create user profile: $e');
     }
   }
@@ -115,6 +128,12 @@ class UserProfileService implements IUserProfileService {
 
       return updatedProfile;
     } catch (e) {
+      debugPrint('Error updating user profile: $e');
+      developer.log('Error updating user profile: $e', name: 'UserProfileService');
+      if (kIsWeb) {
+        // ignore: avoid_print
+        print('🔴 UserProfileService Update Error: $e');
+      }
       throw UserProfileException('Failed to update user profile: $e');
     }
   }

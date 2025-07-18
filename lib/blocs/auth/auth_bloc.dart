@@ -88,77 +88,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           }
         } catch (e) {
           print('DEBUG: Failed to load user profile: $e');
-          // Failed to load user profile, continue with fallback
-        }
-        
-        // FALLBACK: Check old users collection if no user profile exists
-        DocumentSnapshot userDoc;
-        int retries = 0;
-        const maxRetries = 5;
-        
-        do {
-          userDoc = await _firestore.collection('users').doc(user.uid).get();
-          
-          if (!userDoc.exists && retries < maxRetries) {
-            await Future.delayed(Duration(milliseconds: 1000 * (retries + 1)));
-            retries++;
-          } else {
-            break;
-          }
-        } while (retries <= maxRetries);
-        
-        if (userDoc.exists) {
-          final userData = userDoc.data()! as Map<String, dynamic>;
-          final userType = userData['userType'] as String?;
-          
-          
-          if (userType != null && userType.isNotEmpty) {
-            emit(Authenticated(user: user, userType: userType, userProfile: null));
-            
-            // Migrate local favorites to user account for shoppers
-            if (userType == 'shopper' && await FavoritesMigrationService.hasLocalFavorites()) {
-              try {
-                await FavoritesMigrationService.migrateLocalFavoritesToUser(user.uid);
-                await FavoritesMigrationService.clearLocalFavoritesAfterMigration();
-              } catch (e) {
-                // Handle migration error silently
-              }
-            }
-          } else {
-            // For existing users with missing userType, check if they have vendor-specific data
-            final hasVendorData = userData.containsKey('businessName') || 
-                                userData.containsKey('vendorProfile') ||
-                                userData.containsKey('popups');
-            final inferredType = hasVendorData ? 'vendor' : 'shopper';
-            emit(Authenticated(user: user, userType: inferredType, userProfile: null));
-          }
-        } else {
-          
-          // For returning users, try to check if they have any vendor collections
+          // If user profile doesn't exist, create a new one with default type
           try {
-            final vendorPostsQuery = await _firestore
-                .collection('vendor_posts')
-                .where('vendorId', isEqualTo: user.uid)
-                .limit(1)
-                .get();
+            print('DEBUG: Creating missing user profile for user: ${user.uid}');
+            // Default to 'shopper' for new users without profiles
+            const defaultUserType = 'shopper';
+            userProfile = await _userProfileService.createUserProfile(
+              userId: user.uid,
+              userType: defaultUserType,
+              email: user.email ?? '',
+              displayName: user.displayName ?? 'User',
+            );
             
-            if (vendorPostsQuery.docs.isNotEmpty) {
-              emit(Authenticated(user: user, userType: 'vendor', userProfile: null));
-            } else {
-              emit(Authenticated(user: user, userType: 'shopper', userProfile: null));
-              
-              // Migrate local favorites for shopper users
-              if (await FavoritesMigrationService.hasLocalFavorites()) {
-                try {
-                  await FavoritesMigrationService.migrateLocalFavoritesToUser(user.uid);
-                  await FavoritesMigrationService.clearLocalFavoritesAfterMigration();
-                } catch (e) {
-                  // Handle migration error silently
-                }
-              }
+            if (userProfile != null) {
+              emit(Authenticated(user: user, userType: userProfile.userType, userProfile: userProfile));
+              return;
             }
-          } catch (e) {
+          } catch (createError) {
+            print('DEBUG: Failed to create missing user profile: $createError');
+            // If profile creation fails, emit authenticated with default type
             emit(Authenticated(user: user, userType: 'shopper', userProfile: null));
+            return;
           }
         }
       } catch (e) {

@@ -37,7 +37,7 @@ class AuthRepository implements IAuthRepository {
         password: password,
       );
       
-      // Update last login timestamp (following govvy pattern)
+      // Update last login timestamp in user_profiles
       if (userCredential.user != null) {
         await updateLastLogin(userCredential.user!.uid);
       }
@@ -132,16 +132,20 @@ class AuthRepository implements IAuthRepository {
       print('DEBUG: Attempting to create user profile for UID: $uid');
       print('DEBUG: Name: $name, Email: $email, UserType: $userType');
       
-      // Always use set() to create/update user profile (following govvy pattern)
-      await _firestore.collection('users').doc(uid).set({
-        'name': name,
+      // Create user profile in the user_profiles collection
+      await _firestore.collection('user_profiles').doc(uid).set({
+        'userId': uid,
+        'displayName': name,
         'email': email,
         'userType': userType,
         'createdAt': FieldValue.serverTimestamp(),
-        'lastLogin': FieldValue.serverTimestamp(),
-      });
+        'updatedAt': FieldValue.serverTimestamp(),
+        'managedMarketIds': userType == 'market_organizer' ? [] : null,
+        'categories': userType == 'vendor' ? [] : null,
+        'ccEmails': userType == 'market_organizer' ? [] : null,
+      }, SetOptions(merge: true));
       
-      print('DEBUG: User profile created/updated successfully in Firestore');
+      print('DEBUG: User profile created/updated successfully in user_profiles collection');
     } catch (e) {
       print('DEBUG: Error creating user profile: $e');
       print('DEBUG: Error type: ${e.runtimeType}');
@@ -156,8 +160,8 @@ class AuthRepository implements IAuthRepository {
   
   Future<void> updateLastLogin(String uid) async {
     try {
-      await _firestore.collection('users').doc(uid).update({
-        'lastLogin': FieldValue.serverTimestamp(),
+      await _firestore.collection('user_profiles').doc(uid).update({
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       // Silently handle errors when updating last login
