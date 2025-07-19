@@ -135,6 +135,23 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               title: const Text('My Favorites'),
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    // Reload favorites from BLoC
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is Authenticated) {
+                      context.read<FavoritesBloc>().add(LoadFavorites(userId: authState.user.uid));
+                    } else {
+                      context.read<FavoritesBloc>().add(const LoadFavorites());
+                    }
+                    // Reload the screen data
+                    _loadFavorites();
+                  },
+                  tooltip: 'Refresh favorites',
+                ),
+              ],
               bottom: TabBar(
                 controller: _tabController,
                 indicatorColor: Colors.white,

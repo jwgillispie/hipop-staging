@@ -7,7 +7,6 @@ import '../blocs/favorites/favorites_bloc.dart';
 import '../models/market.dart';
 import '../services/market_service.dart';
 import '../services/market_calendar_service.dart';
-import '../services/favorites_service.dart';
 import '../widgets/common/loading_widget.dart';
 import '../widgets/common/error_widget.dart';
 
@@ -72,10 +71,25 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
       // Get current user from auth bloc
       final authState = context.read<AuthBloc>().state;
       
-      // Load favorite markets using cloud service for authenticated users
+      // Load favorite markets from BLoC state instead of direct service call
       List<Market> favoriteMarkets = [];
       if (authState is Authenticated) {
-        favoriteMarkets = await FavoritesService.getUserFavoriteMarkets(authState.user.uid);
+        // Ensure favorites are loaded in BLoC
+        context.read<FavoritesBloc>().add(LoadFavorites(userId: authState.user.uid));
+        
+        // Get favorites from BLoC state
+        final favoritesState = context.read<FavoritesBloc>().state;
+        for (final marketId in favoritesState.favoriteMarketIds) {
+          try {
+            final market = await MarketService.getMarket(marketId);
+            if (market != null) {
+              favoriteMarkets.add(market);
+            }
+          } catch (e) {
+            // Continue loading other markets if one fails
+            debugPrint('Error loading favorite market $marketId: $e');
+          }
+        }
       }
 
       // Load nearby markets (using Atlanta as default if no user city)
