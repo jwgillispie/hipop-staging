@@ -418,16 +418,6 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
             ...(_existingManagedVendors.map((vendor) => _buildManagedVendorTile(vendor))),
             const SizedBox(height: 16),
           ],
-          // Create new vendor button
-          OutlinedButton.icon(
-            onPressed: () => _showCreateVendorDialog(),
-            icon: const Icon(Icons.add),
-            label: const Text('Create New Vendor'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.teal,
-              side: BorderSide(color: Colors.teal),
-            ),
-          ),
         ],
       ],
     );
@@ -521,11 +511,6 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
         ),
       ),
     );
-  }
-
-  void _showCreateVendorDialog() {
-    // TODO: Implement vendor creation dialog
-    UIUtils.showInfoSnackBar(context, 'Vendor creation dialog not implemented yet');
   }
 
   @override
