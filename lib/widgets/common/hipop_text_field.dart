@@ -57,10 +57,12 @@ class _HiPopTextFieldState extends State<HiPopTextField> {
       maxLines: widget.maxLines,
       textCapitalization: widget.textCapitalization,
       autofocus: widget.autofocus,
-      style: const TextStyle(fontSize: 16),
+      style: const TextStyle(fontSize: 16, color: Colors.black87),
       decoration: InputDecoration(
         labelText: widget.labelText,
+        labelStyle: TextStyle(color: Colors.grey[700]),
         hintText: widget.hintText,
+        hintStyle: TextStyle(color: Colors.grey[500]),
         prefixIcon: widget.prefixIcon,
         suffixIcon: widget.obscureText
             ? IconButton(
@@ -110,7 +112,7 @@ class _HiPopTextFieldState extends State<HiPopTextField> {
           ),
         ),
         filled: true,
-        fillColor: widget.enabled ? Colors.white : Colors.grey.shade100,
+        fillColor: widget.enabled ? Colors.grey.shade50 : Colors.grey.shade100,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );

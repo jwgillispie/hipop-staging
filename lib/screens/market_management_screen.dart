@@ -307,8 +307,10 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
       ),
       child: TextField(
         controller: _searchController,
+        style: const TextStyle(color: Colors.black87),
         decoration: InputDecoration(
           hintText: 'Search markets...',
+          hintStyle: TextStyle(color: Colors.grey[600]),
           prefixIcon: const Icon(Icons.search),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),

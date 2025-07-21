@@ -6,6 +6,8 @@ import '../../blocs/auth/auth_state.dart';
 import '../../models/event.dart';
 import '../../services/event_service.dart';
 import '../../models/market.dart';
+import '../../widgets/common/simple_places_widget.dart';
+import '../../services/places_service.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -20,9 +22,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   // Form controllers
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _addressController = TextEditingController();
-  final _cityController = TextEditingController();
-  final _stateController = TextEditingController();
   final _tagsController = TextEditingController();
   
   // Form state
@@ -31,8 +30,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   Market? _selectedMarket;
   List<Market> _availableMarkets = [];
   bool _isLoading = false;
-  double? _latitude;
-  double? _longitude;
+  
+  // Location selection with Google Places
+  PlaceDetails? _selectedPlace;
+  String _selectedAddress = '';
   
   @override
   void initState() {
@@ -44,9 +45,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
-    _addressController.dispose();
-    _cityController.dispose();
-    _stateController.dispose();
     _tagsController.dispose();
     super.dispose();
   }
@@ -54,6 +52,46 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   Future<void> _loadMarkets() async {
     // For now, we'll skip market loading since the association isn't implemented
     // This can be added later when market-organizer association is implemented
+  }
+
+  void _onPlaceSelected(PlaceDetails place) {
+    setState(() {
+      _selectedPlace = place;
+      _selectedAddress = place.formattedAddress;
+    });
+  }
+
+  void _onAddressCleared() {
+    setState(() {
+      _selectedPlace = null;
+      _selectedAddress = '';
+    });
+  }
+
+  Map<String, String> _parseAddressComponents(String formattedAddress) {
+    // Simple parsing of formatted address
+    // Expected format: "Street Address, City, State ZIP, Country"
+    final parts = formattedAddress.split(', ');
+    
+    if (parts.length >= 3) {
+      final address = parts[0];
+      final city = parts[1];
+      final stateZip = parts[2].split(' ');
+      final state = stateZip.isNotEmpty ? stateZip[0] : '';
+      
+      return {
+        'address': address,
+        'city': city,
+        'state': state,
+      };
+    }
+    
+    // Fallback: use the full formatted address as address
+    return {
+      'address': formattedAddress,
+      'city': '',
+      'state': '',
+    };
   }
 
   Future<void> _selectDateTime(BuildContext context, bool isStartDate) async {
@@ -105,16 +143,29 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     });
 
     try {
+      if (_selectedPlace == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a location for the event'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final addressComponents = _parseAddressComponents(_selectedPlace!.formattedAddress);
+      
       final event = Event(
         id: '', // Will be set by Firestore
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
-        location: _addressController.text.trim(),
-        address: _addressController.text.trim(),
-        city: _cityController.text.trim(),
-        state: _stateController.text.trim(),
-        latitude: _latitude ?? 0.0,
-        longitude: _longitude ?? 0.0,
+        location: _selectedPlace!.formattedAddress,
+        address: addressComponents['address'] ?? _selectedPlace!.formattedAddress,
+        city: addressComponents['city'] ?? '',
+        state: addressComponents['state'] ?? '',
+        latitude: _selectedPlace!.latitude,
+        longitude: _selectedPlace!.longitude,
         startDateTime: _startDateTime,
         endDateTime: _endDateTime,
         organizerId: authState.user.uid,
@@ -272,64 +323,43 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      
-                      // Address
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'Address *',
-                          hintText: 'Enter event address',
-                          prefixIcon: Icon(Icons.location_on),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Address is required';
+                      const SizedBox(height: 8),
+                      SimplePlacesWidget(
+                        initialLocation: _selectedAddress,
+                        onLocationSelected: (PlaceDetails? place) {
+                          if (place != null) {
+                            _onPlaceSelected(place);
+                          } else {
+                            _onAddressCleared();
                           }
-                          return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // City and State
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _cityController,
-                              decoration: const InputDecoration(
-                                labelText: 'City *',
-                                hintText: 'City',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'City is required';
-                                }
-                                return null;
-                              },
-                            ),
+                      if (_selectedPlace != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _stateController,
-                              decoration: const InputDecoration(
-                                labelText: 'State *',
-                                hintText: 'State',
-                                border: OutlineInputBorder(),
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Location selected: ${_selectedPlace!.formattedAddress}',
+                                  style: TextStyle(
+                                    color: Colors.green[700],
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'State is required';
-                                }
-                                return null;
-                              },
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

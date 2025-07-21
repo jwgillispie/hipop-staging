@@ -288,7 +288,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
       margin: const EdgeInsets.only(right: 12),
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,48 +300,49 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                       market.name,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
                       color: isOpen ? Colors.green : Colors.grey,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       isOpen ? 'OPEN' : 'CLOSED',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 8,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 '${market.operatingDays.length} operating days',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   color: Colors.grey[600],
                 ),
               ),
-              const SizedBox(height: 2),
-              if (market.operatingDays.isNotEmpty)
+              if (market.operatingDays.isNotEmpty) ...[
+                const SizedBox(height: 1),
                 Text(
                   market.operatingDays.keys.join(', ').toUpperCase(),
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     color: Colors.grey[500],
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+              ],
             ],
           ),
         ),

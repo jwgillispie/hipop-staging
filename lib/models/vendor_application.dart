@@ -8,12 +8,18 @@ enum ApplicationStatus {
   waitlisted,
 }
 
+enum ApplicationType {
+  eventApplication,
+  marketPermission,
+}
+
 class VendorApplication extends Equatable {
   final String id;
   final String marketId;
   final String vendorId; // User ID of the vendor applicant
+  final ApplicationType applicationType; // Type of application: event or permission
   final List<String> operatingDays; // Legacy: Days they want to attend this market (kept for backward compatibility)
-  final List<DateTime> requestedDates; // Specific dates they want to attend this market
+  final List<DateTime> requestedDates; // Specific dates they want to attend this market (for event applications)
   final String? specialMessage; // Optional message to market organizer
   final String? howDidYouHear; // How they heard about the market
   final ApplicationStatus status;
@@ -28,6 +34,7 @@ class VendorApplication extends Equatable {
     required this.id,
     required this.marketId,
     required this.vendorId,
+    this.applicationType = ApplicationType.eventApplication,
     this.operatingDays = const [],
     this.requestedDates = const [],
     this.specialMessage,
@@ -48,6 +55,10 @@ class VendorApplication extends Equatable {
       id: doc.id,
       marketId: data['marketId'] ?? '',
       vendorId: data['vendorId'] ?? '',
+      applicationType: ApplicationType.values.firstWhere(
+        (type) => type.name == data['applicationType'],
+        orElse: () => ApplicationType.eventApplication,
+      ),
       operatingDays: List<String>.from(data['operatingDays'] ?? []),
       requestedDates: (data['requestedDates'] as List<dynamic>?)?.map((e) => (e as Timestamp).toDate()).toList() ?? [],
       specialMessage: data['specialMessage'],
@@ -69,6 +80,7 @@ class VendorApplication extends Equatable {
     return {
       'marketId': marketId,
       'vendorId': vendorId,
+      'applicationType': applicationType.name,
       'operatingDays': operatingDays,
       'requestedDates': requestedDates.map((date) => Timestamp.fromDate(date)).toList(),
       'specialMessage': specialMessage,
@@ -87,6 +99,7 @@ class VendorApplication extends Equatable {
     String? id,
     String? marketId,
     String? vendorId,
+    ApplicationType? applicationType,
     List<String>? operatingDays,
     List<DateTime>? requestedDates,
     String? specialMessage,
@@ -103,6 +116,7 @@ class VendorApplication extends Equatable {
       id: id ?? this.id,
       marketId: marketId ?? this.marketId,
       vendorId: vendorId ?? this.vendorId,
+      applicationType: applicationType ?? this.applicationType,
       operatingDays: operatingDays ?? this.operatingDays,
       requestedDates: requestedDates ?? this.requestedDates,
       specialMessage: specialMessage ?? this.specialMessage,
@@ -123,6 +137,10 @@ class VendorApplication extends Equatable {
   bool get isRejected => status == ApplicationStatus.rejected;
   bool get isWaitlisted => status == ApplicationStatus.waitlisted;
   bool get hasBeenReviewed => reviewedAt != null;
+  
+  // Application type helpers
+  bool get isEventApplication => applicationType == ApplicationType.eventApplication;
+  bool get isMarketPermission => applicationType == ApplicationType.marketPermission;
 
   String get statusDisplayName {
     switch (status) {
@@ -212,6 +230,7 @@ class VendorApplication extends Equatable {
         id,
         marketId,
         vendorId,
+        applicationType,
         operatingDays,
         requestedDates,
         specialMessage,

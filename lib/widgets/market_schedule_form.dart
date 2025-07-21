@@ -517,13 +517,22 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
           const SizedBox(height: 8),
           Text(
             'Hours: ${_formatTimeOfDay(_startTime)} - ${_formatTimeOfDay(_endTime)}',
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: Colors.green[700],
+            ),
           ),
           const SizedBox(height: 4),
           if (_scheduleType == ScheduleType.specificDates) ...[
-            Text('${_selectedDates.length} specific dates selected'),
+            Text(
+              '${_selectedDates.length} specific dates selected',
+              style: TextStyle(color: Colors.green[700]),
+            ),
           ] else if (_scheduleType == ScheduleType.recurring) ...[
-            Text(_getRecurrenceDescription()),
+            Text(
+              _getRecurrenceDescription(),
+              style: TextStyle(color: Colors.green[700]),
+            ),
           ],
         ],
       ),

@@ -10,7 +10,7 @@ class DebugAccountSwitcher extends StatelessWidget {
 
   // Your test emails for quick switching
   static const Map<String, String> debugEmails = {
-    'shopper': 'jozoo@gmail.com',
+    'shopper': 'jozo@gmail.com',
     'vendor': 'vendorjozo@gmail.com',
     'market_organizer': 'marketjozo@gmail.com',
   };

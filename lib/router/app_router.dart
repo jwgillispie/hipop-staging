@@ -12,7 +12,7 @@ import '../screens/market_detail_screen.dart';
 import '../screens/shopper_home.dart';
 import '../screens/vendor_dashboard.dart';
 import '../screens/create_popup_screen.dart';
-import '../screens/vendor_my_popups.dart';
+import '../screens/vendor_my_popups_screen.dart';
 import '../screens/vendor_profile_screen.dart';
 import '../screens/change_password_screen.dart';
 import '../screens/vendor_post_detail_screen.dart';
@@ -34,6 +34,8 @@ import '../screens/vendor_detail_screen.dart';
 import '../screens/shopper_calendar_screen.dart';
 import '../screens/organizer_onboarding_screen.dart';
 import '../screens/vendor_application_status_screen.dart';
+import '../screens/vendor_market_permissions_screen.dart';
+import '../screens/vendor_popup_creation_screen.dart';
 import '../screens/legal_documents_screen.dart';
 import '../screens/organizer_event_management_screen.dart';
 import '../models/market.dart';
@@ -147,7 +149,7 @@ class AppRouter {
             GoRoute(
               path: 'my-popups',
               name: 'myPopups',
-              builder: (context, state) => const VendorMyPopups(),
+              builder: (context, state) => const VendorMyPopupsScreen(),
             ),
             GoRoute(
               path: 'profile',
@@ -163,6 +165,16 @@ class AppRouter {
               path: 'applications',
               name: 'vendorApplicationStatus',
               builder: (context, state) => const VendorApplicationStatusScreen(),
+            ),
+            GoRoute(
+              path: 'market-permissions',
+              name: 'vendorMarketPermissions',
+              builder: (context, state) => const VendorMarketPermissionsScreen(),
+            ),
+            GoRoute(
+              path: 'popup-creation',
+              name: 'vendorPopupCreation',
+              builder: (context, state) => const VendorPopupCreationScreen(),
             ),
           ],
         ),

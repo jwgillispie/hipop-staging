@@ -85,53 +85,8 @@ class HiPopApp extends StatelessWidget {
                 title: 'HiPop - STAGING',
                 debugShowCheckedModeBanner: false,
                 theme: ThemeData(
-                  colorScheme: ColorScheme.fromSeed(
-                    seedColor: Colors.purple,
-                    brightness: Brightness.dark,
-                  ).copyWith(
-                    primary: Colors.purple,
-                    secondary: Colors.cyan,
-                    surface: Colors.deepPurple.shade900,
-                    onPrimary: Colors.white,
-                    onSecondary: Colors.black,
-                    onSurface: Colors.white,
-                    error: Colors.pink,
-                    onError: Colors.white,
-                  ),
+                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
                   useMaterial3: true,
-                  appBarTheme: const AppBarTheme(
-                    backgroundColor: Colors.purple,
-                    foregroundColor: Colors.white,
-                    titleTextStyle: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  elevatedButtonTheme: ElevatedButtonThemeData(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.cyan,
-                      foregroundColor: Colors.black,
-                    ),
-                  ),
-                  textButtonTheme: TextButtonThemeData(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.cyan,
-                    ),
-                  ),
-                  floatingActionButtonTheme: const FloatingActionButtonThemeData(
-                    backgroundColor: Colors.pink,
-                    foregroundColor: Colors.white,
-                  ),
-                  cardTheme: CardThemeData(
-                    color: Colors.deepPurple.shade800,
-                    elevation: 8,
-                  ),
-                  bottomNavigationBarTheme: BottomNavigationBarThemeData(
-                    backgroundColor: Colors.deepPurple.shade900,
-                    selectedItemColor: Colors.cyan,
-                    unselectedItemColor: Colors.white70,
-                  ),
                 ),
                 builder: (context, child) {
                   return Banner(

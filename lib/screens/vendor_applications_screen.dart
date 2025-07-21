@@ -508,12 +508,37 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        application.vendorBusinessName,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              application.vendorBusinessName,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: application.isMarketPermission 
+                                  ? Colors.purple.shade100 
+                                  : Colors.blue.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              application.isMarketPermission ? 'Permission Request' : 'Event Application',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: application.isMarketPermission 
+                                    ? Colors.purple.shade700 
+                                    : Colors.blue.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -539,12 +564,38 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                             color: Colors.grey[500],
                           ),
                         ),
-                      if (application.hasRequestedDates)
+                      if (application.isEventApplication && application.hasRequestedDates)
                         Text(
                           'Requested Dates: ${application.requestedDatesDisplayString}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
+                          ),
+                        ),
+                      if (application.isMarketPermission)
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.storefront, size: 16, color: Colors.orange.shade700),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Requesting ongoing permission to create pop-ups at this market',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       else if (application.operatingDays.isNotEmpty)
@@ -646,16 +697,43 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
 
   void _showReviewDialog(VendorApplication application, ApplicationStatus newStatus) {
     final controller = TextEditingController();
+    bool isProcessing = false;
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${newStatus.name.toUpperCase()} Application'),
+        title: Text('${newStatus.name.toUpperCase()} ${application.isMarketPermission ? 'Permission Request' : 'Application'}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Application ${application.id.substring(0, 8)}...'),
+            Text('${application.isMarketPermission ? 'Permission Request' : 'Application'} ${application.id.substring(0, 8)}...'),
+            const SizedBox(height: 8),
+            if (application.isMarketPermission && newStatus == ApplicationStatus.approved)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This will grant ${application.vendorBusinessName} ongoing permission to create pop-ups at your market.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             TextField(
               controller: controller,

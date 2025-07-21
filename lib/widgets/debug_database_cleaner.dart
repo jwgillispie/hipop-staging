@@ -16,7 +16,7 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
   
   // Protected users - these will NOT be deleted
   final List<String> _protectedEmails = [
-    'jozoo@gmail.com',
+    'jozo@gmail.com',
     'vendorjozo@gmail.com',
     'marketjozo@gmail.com',
   ];
@@ -71,7 +71,7 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• Your 3 test accounts (jozoo@gmail.com, vendorjozo@gmail.com, marketjozo@gmail.com)',
+                    '• Your 3 test accounts (jozo@gmail.com, vendorjozo@gmail.com, marketjozo@gmail.com)',
                     style: TextStyle(color: Colors.orange.shade700),
                   ),
                   Text(
@@ -100,6 +100,18 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
                   ),
                   Text(
                     '• All managed vendors',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All vendor-market relationships',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All user subscriptions',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All usage tracking data',
                     style: TextStyle(color: Colors.red.shade600),
                   ),
                   Text(
@@ -187,7 +199,7 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text('✅ jozoo@gmail.com'),
+              Text('✅ jozo@gmail.com'),
               Text('✅ vendorjozo@gmail.com'),
               Text('✅ marketjozo@gmail.com'),
               Text('✅ Any email containing "maria"'),
@@ -389,7 +401,55 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
         _result = log;
       });
       
-      // Step 11: Clear legacy users collection (except protected)
+      // Step 11: Clear vendor-market relationships
+      log += '🗑️ CLEARING VENDOR-MARKET RELATIONSHIPS:\n';
+      final relationshipsSnapshot = await _firestore.collection('vendor_market_relationships').get();
+      for (final doc in relationshipsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${relationshipsSnapshot.docs.length} vendor-market relationships\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 12: Clear user subscriptions
+      log += '🗑️ CLEARING USER SUBSCRIPTIONS:\n';
+      final subscriptionsSnapshot = await _firestore.collection('user_subscriptions').get();
+      for (final doc in subscriptionsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${subscriptionsSnapshot.docs.length} user subscriptions\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 13: Clear usage tracking
+      log += '🗑️ CLEARING USAGE TRACKING:\n';
+      final usageTrackingSnapshot = await _firestore.collection('usage_tracking').get();
+      for (final doc in usageTrackingSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${usageTrackingSnapshot.docs.length} usage tracking records\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 14: Clear user market favorites
+      log += '🗑️ CLEARING USER MARKET FAVORITES:\n';
+      final marketFavoritesSnapshot = await _firestore.collection('user_market_favorites').get();
+      for (final doc in marketFavoritesSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${marketFavoritesSnapshot.docs.length} user market favorites\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 15: Clear legacy users collection (except protected)
       log += '🗑️ CLEARING LEGACY USERS:\n';
       final legacyUsersSnapshot = await _firestore.collection('users').get();
       int deletedLegacyUsers = 0;
@@ -421,6 +481,10 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
       log += '• Deleted ${applicationsSnapshot.docs.length} vendor applications\n';
       log += '• Deleted ${managedVendorsSnapshot.docs.length} managed vendors\n';
       log += '• Deleted ${vendorMarketsSnapshot.docs.length} vendor markets\n';
+      log += '• Deleted ${relationshipsSnapshot.docs.length} vendor-market relationships\n';
+      log += '• Deleted ${subscriptionsSnapshot.docs.length} user subscriptions\n';
+      log += '• Deleted ${usageTrackingSnapshot.docs.length} usage tracking records\n';
+      log += '• Deleted ${marketFavoritesSnapshot.docs.length} user market favorites\n';
       log += '• Deleted ${vendorPostsSnapshot.docs.length} vendor posts\n';
       log += '• Deleted ${favoritesSnapshot.docs.length} user favorites\n';
       log += '• Deleted ${recipesSnapshot.docs.length} recipes\n';

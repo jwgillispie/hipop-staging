@@ -223,8 +223,10 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
         children: [
           TextField(
             controller: _searchController,
+            style: const TextStyle(color: Colors.black87),
             decoration: InputDecoration(
               hintText: 'Search vendors...',
+              hintStyle: TextStyle(color: Colors.grey[600]),
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -253,11 +255,17 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                   items: [
                     const DropdownMenuItem<VendorCategory>(
                       value: null,
-                      child: Text('All Categories'),
+                      child: Text(
+                        'All Categories',
+                        style: TextStyle(color: Colors.black87),
+                      ),
                     ),
                     ...VendorCategory.values.map((category) => DropdownMenuItem(
                           value: category,
-                          child: Text(category.displayName),
+                          child: Text(
+                            category.displayName,
+                            style: const TextStyle(color: Colors.black87),
+                          ),
                         )),
                   ],
                   onChanged: (value) {
@@ -285,10 +293,24 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
   }
 
   Widget _buildVendorsList(String marketId) {
+    debugPrint('🔍 Building vendors list for market: $marketId');
     
     return StreamBuilder<List<ManagedVendor>>(
       stream: ManagedVendorService.getVendorsForMarket(marketId),
       builder: (context, snapshot) {
+        debugPrint('📡 StreamBuilder state: ${snapshot.connectionState}');
+        debugPrint('📡 Has error: ${snapshot.hasError}');
+        if (snapshot.hasError) {
+          debugPrint('📡 Error: ${snapshot.error}');
+        }
+        debugPrint('📡 Has data: ${snapshot.hasData}');
+        if (snapshot.hasData) {
+          debugPrint('📡 Data count: ${snapshot.data?.length}');
+          for (var vendor in snapshot.data ?? []) {
+            debugPrint('📡 Vendor: ${vendor.businessName} (marketId: ${vendor.marketId})');
+          }
+        }
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -422,6 +444,38 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                                   ),
                                 ),
                               ),
+                              if (vendor.metadata['isPermissionBased'] == true) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.verified_user,
+                                        size: 14,
+                                        color: Colors.purple.shade700,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Permission-Based',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.purple.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
                               if (vendor.isFeatured)
                                 Container(
                                   padding: const EdgeInsets.symmetric(

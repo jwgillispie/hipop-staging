@@ -10,11 +10,28 @@ class ManagedVendorService {
   /// Create a new managed vendor
   static Future<String> createVendor(ManagedVendor vendor) async {
     try {
-      final docRef = await _vendorsCollection.add(vendor.toFirestore());
-      debugPrint('Managed vendor created with ID: ${docRef.id}');
+      debugPrint('🔄 Creating ManagedVendor: ${vendor.businessName} for market: ${vendor.marketId}');
+      debugPrint('📋 Vendor metadata: ${vendor.metadata}');
+      
+      final firestoreData = vendor.toFirestore();
+      debugPrint('📄 Firestore data: $firestoreData');
+      
+      final docRef = await _vendorsCollection.add(firestoreData);
+      debugPrint('✅ ManagedVendor created successfully with ID: ${docRef.id}');
+      
+      // Verify the document was created by reading it back
+      final createdDoc = await docRef.get();
+      if (createdDoc.exists) {
+        debugPrint('✅ Verified: Document exists in Firestore');
+        final data = createdDoc.data() as Map<String, dynamic>;
+        debugPrint('📊 Created document data: marketId=${data['marketId']}, businessName=${data['businessName']}');
+      } else {
+        debugPrint('❌ ERROR: Document was not found after creation!');
+      }
+      
       return docRef.id;
     } catch (e) {
-      debugPrint('Error creating managed vendor: $e');
+      debugPrint('❌ Error creating managed vendor: $e');
       throw Exception('Failed to create vendor: $e');
     }
   }

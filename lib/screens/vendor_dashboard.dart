@@ -74,7 +74,7 @@ class _VendorDashboardState extends State<VendorDashboard>
             ],
           ),
           floatingActionButton: FloatingActionButton(
-            onPressed: () => _showCreatePopupMenu(context),
+            onPressed: () => context.go('/vendor/popup-creation'),
             backgroundColor: Colors.orange,
             child: const Icon(Icons.add, color: Colors.white),
           ),
@@ -84,115 +84,135 @@ class _VendorDashboardState extends State<VendorDashboard>
   }
 
   Widget _buildDashboardTab(BuildContext context, Authenticated state) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Debug Account Switcher
-          const DebugAccountSwitcher(),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const CircleAvatar(
-                        backgroundColor: Colors.orange,
-                        child: Icon(Icons.store, color: Colors.white),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome back!',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          Text(
-                            state.user.displayName ?? state.user.email ?? 'Vendor',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Debug Account Switcher
+                const DebugAccountSwitcher(),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const CircleAvatar(
+                              backgroundColor: Colors.orange,
+                              child: Icon(Icons.store, color: Colors.white),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Welcome back!',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                                Text(
+                                  state.user.displayName ?? state.user.email ?? 'Vendor',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Quick Actions',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Quick Actions',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: GridView.count(
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               childAspectRatio: 0.9,
-              children: [
-                _buildActionCard(
-                  context,
-                  'Market',
-                  'Join an existing market',
-                  Icons.store_mall_directory,
-                  Colors.orange,
-                  () => context.go('/vendor/create-popup?type=market'),
-                ),
-                _buildActionCard(
-                  context,
-                  'Independent',
-                  'Create your own location',
-                  Icons.location_on,
-                  Colors.deepOrange,
-                  () => context.go('/vendor/create-popup?type=independent'),
-                ),
-                _buildActionCard(
-                  context,
-                  'My Pop-ups',
-                  'View your active pop-ups',
-                  Icons.store,
-                  Colors.blue,
-                  () => context.go('/vendor/my-popups'),
-                ),
-                _buildActionCard(
-                  context,
-                  'Analytics',
-                  'View your performance',
-                  Icons.analytics,
-                  Colors.green,
-                  () => _showComingSoon(context),
-                ),
-                _buildActionCard(
-                  context,
-                  'Profile',
-                  'Edit your vendor profile',
-                  Icons.person,
-                  Colors.purple,
-                  () => context.go('/vendor/profile'),
-                ),
-                _buildActionCard(
-                  context,
-                  'My Applications',
-                  'View application status',
-                  Icons.assignment,
-                  Colors.indigo,
-                  () => context.go('/vendor/applications'),
-                ),
-              ],
             ),
+            delegate: SliverChildListDelegate([
+              _buildActionCard(
+                context,
+                'Create Pop-up',
+                'Independent or market events',
+                Icons.add_business,
+                Colors.orange,
+                () => context.go('/vendor/popup-creation'),
+              ),
+              _buildActionCard(
+                context,
+                'My Pop-ups',
+                'View and manage your pop-ups',
+                Icons.event_available,
+                Colors.teal,
+                () => context.go('/vendor/my-popups'),
+              ),
+              _buildActionCard(
+                context,
+                'My Applications',
+                'View application status',
+                Icons.assignment,
+                Colors.indigo,
+                () => context.go('/vendor/applications'),
+              ),
+              _buildActionCard(
+                context,
+                'Market Invitations',
+                'Manage market permissions',
+                Icons.storefront,
+                Colors.deepOrange,
+                () => context.go('/vendor/market-permissions'),
+              ),
+              _buildActionCard(
+                context,
+                'Profile',
+                'Edit your vendor profile',
+                Icons.person,
+                Colors.purple,
+                () => context.go('/vendor/profile'),
+              ),
+              _buildActionCard(
+                context,
+                'Calendar',
+                'View your events',
+                Icons.calendar_today,
+                Colors.blue,
+                () => _tabController.animateTo(1), // Switch to calendar tab
+              ),
+              _buildActionCard(
+                context,
+                'Analytics',
+                'View your performance',
+                Icons.analytics,
+                Colors.green,
+                () => _showComingSoon(context),
+              ),
+            ]),
           ),
-        ],
-      ),
+        ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 16), // Bottom padding
+        ),
+      ],
     );
   }
 
@@ -349,112 +369,7 @@ class _VendorDashboardState extends State<VendorDashboard>
     );
   }
 
-  void _showCreatePopupMenu(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Create New Pop-up',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPopupTypeCard(
-                    context,
-                    'Market Pop-up',
-                    'Join an existing market',
-                    Icons.store_mall_directory,
-                    Colors.orange,
-                    () {
-                      Navigator.pop(context);
-                      context.go('/vendor/create-popup?type=market');
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPopupTypeCard(
-                    context,
-                    'Independent Pop-up',
-                    'Create your own location',
-                    Icons.location_on,
-                    Colors.deepOrange,
-                    () {
-                      Navigator.pop(context);
-                      context.go('/vendor/create-popup?type=independent');
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildPopupTypeCard(
-    BuildContext context,
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      elevation: 4,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  size: 32,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
