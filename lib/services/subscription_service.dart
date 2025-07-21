@@ -161,7 +161,7 @@ class SubscriptionService {
       case 'vendor':
         return {'monthly_markets': 5, 'photo_uploads': 3};
       case 'market_organizer':
-        return {'markets_managed': 1, 'events_per_month': 10};
+        return {'markets_managed': -1, 'events_per_month': 10};
       case 'shopper':
         return {'saved_favorites': 10};
       default:
