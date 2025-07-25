@@ -386,7 +386,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${market.operatingDays.length} days/week',
+                      _getOperatingDaysText(market.operatingDays),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -484,5 +484,19 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  String _getOperatingDaysText(Map<String, String> operatingDays) {
+    if (operatingDays.isEmpty) return 'No schedule';
+    
+    // Check if any entries are specific dates (contain underscores and year format)
+    final hasSpecificDates = operatingDays.keys.any((key) => 
+      key.contains('_') && RegExp(r'_\d{4}_\d{1,2}_\d{1,2}$').hasMatch(key));
+    
+    if (hasSpecificDates) {
+      return '${operatingDays.length} specific dates';
+    } else {
+      return '${operatingDays.length} days/week';
+    }
   }
 }
