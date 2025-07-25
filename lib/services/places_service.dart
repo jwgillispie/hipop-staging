@@ -4,7 +4,7 @@ import 'dart:convert';
 
 class PlacesService {
   // Production server URL
-  static const String _productionApiUrl = 'https://hipop-places-server-356168021674.us-central1.run.app/api/places';
+  static const String _productionApiUrl = 'https://hipop-places-server-788332607491.us-central1.run.app/api/places';
 
   static String get _baseUrl {
     if (kIsWeb) {
