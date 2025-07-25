@@ -109,13 +109,13 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
       final startDate = DateTime.now().subtract(const Duration(days: 30));
       final endDate = DateTime.now().add(const Duration(days: 90));
       
-      final favoriteEvents = MarketCalendarService.getMarketEventsForDateRange(
+      final favoriteEvents = await MarketCalendarService.getMarketEventsForDateRange(
         favoriteMarkets,
         startDate,
         endDate,
       );
 
-      final nearbyEvents = MarketCalendarService.getMarketEventsForDateRange(
+      final nearbyEvents = await MarketCalendarService.getMarketEventsForDateRange(
         nearbyMarkets,
         startDate,
         endDate,

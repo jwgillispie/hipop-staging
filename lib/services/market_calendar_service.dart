@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/market.dart';
+import '../models/market_schedule.dart';
+import 'market_service.dart';
 
 class MarketEvent {
   final String id;
@@ -34,42 +36,79 @@ class MarketEvent {
 }
 
 class MarketCalendarService {
-  /// Convert market operating days to calendar events for a specific date range
-  static List<MarketEvent> getMarketEventsForDateRange(
+  /// Convert market operating days and schedules to calendar events for a specific date range
+  static Future<List<MarketEvent>> getMarketEventsForDateRange(
     List<Market> markets,
     DateTime startDate,
     DateTime endDate,
-  ) {
+  ) async {
     final List<MarketEvent> events = [];
     
     for (final market in markets) {
-      if (market.operatingDays.isEmpty) continue;
-      
-      // Generate events for each day in the range
-      final currentDate = DateTime(startDate.year, startDate.month, startDate.day);
-      final lastDate = DateTime(endDate.year, endDate.month, endDate.day);
-      
-      for (var date = currentDate; 
-           date.isBefore(lastDate) || date.isAtSameMomentAs(lastDate); 
-           date = date.add(const Duration(days: 1))) {
-        
-        final dayName = getDayName(date.weekday).toLowerCase();
-        
-        if (market.operatingDays.containsKey(dayName)) {
-          final timeRange = market.operatingDays[dayName]!;
-          final times = _parseTimeRange(timeRange, date);
+      // Handle new schedule system first
+      if (market.scheduleIds != null && market.scheduleIds!.isNotEmpty) {
+        try {
+          final schedules = await MarketService.getMarketSchedules(market.id);
           
-          if (times != null) {
-            events.add(MarketEvent(
-              id: '${market.id}_${date.millisecondsSinceEpoch}',
-              marketId: market.id,
-              marketName: market.name,
-              startTime: times.start,
-              endTime: times.end,
-              day: dayName,
-              timeRange: timeRange,
-              isRecurring: true,
-            ));
+          // Generate events for each day in the range using schedules
+          final currentDate = DateTime(startDate.year, startDate.month, startDate.day);
+          final lastDate = DateTime(endDate.year, endDate.month, endDate.day);
+          
+          for (var date = currentDate; 
+               date.isBefore(lastDate) || date.isAtSameMomentAs(lastDate); 
+               date = date.add(const Duration(days: 1))) {
+            
+            for (final schedule in schedules) {
+              if (schedule.isOperatingOn(date)) {
+                final times = _parseTimeRange(schedule.timeRange, date);
+                
+                if (times != null) {
+                  events.add(MarketEvent(
+                    id: '${market.id}_${schedule.id}_${date.millisecondsSinceEpoch}',
+                    marketId: market.id,
+                    marketName: market.name,
+                    startTime: times.start,
+                    endTime: times.end,
+                    day: getDayName(date.weekday).toLowerCase(),
+                    timeRange: schedule.timeRange,
+                    isRecurring: schedule.type == ScheduleType.recurring,
+                  ));
+                }
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error loading schedules for market ${market.id}: $e');
+        }
+      }
+      // Fall back to old operating days system
+      else if (market.operatingDays.isNotEmpty) {
+        // Generate events for each day in the range
+        final currentDate = DateTime(startDate.year, startDate.month, startDate.day);
+        final lastDate = DateTime(endDate.year, endDate.month, endDate.day);
+        
+        for (var date = currentDate; 
+             date.isBefore(lastDate) || date.isAtSameMomentAs(lastDate); 
+             date = date.add(const Duration(days: 1))) {
+          
+          final dayName = getDayName(date.weekday).toLowerCase();
+          
+          if (market.operatingDays.containsKey(dayName)) {
+            final timeRange = market.operatingDays[dayName]!;
+            final times = _parseTimeRange(timeRange, date);
+            
+            if (times != null) {
+              events.add(MarketEvent(
+                id: '${market.id}_${date.millisecondsSinceEpoch}',
+                marketId: market.id,
+                marketName: market.name,
+                startTime: times.start,
+                endTime: times.end,
+                day: dayName,
+                timeRange: timeRange,
+                isRecurring: true,
+              ));
+            }
           }
         }
       }
@@ -79,7 +118,7 @@ class MarketCalendarService {
   }
 
   /// Get market events for a specific date
-  static List<MarketEvent> getMarketEventsForDate(
+  static Future<List<MarketEvent>> getMarketEventsForDate(
     List<Market> markets,
     DateTime date,
   ) {

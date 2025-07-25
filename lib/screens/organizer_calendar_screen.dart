@@ -72,7 +72,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
       final startDate = DateTime.now().subtract(const Duration(days: 30));
       final endDate = DateTime.now().add(const Duration(days: 90));
       
-      final events = MarketCalendarService.getMarketEventsForDateRange(
+      final events = await MarketCalendarService.getMarketEventsForDateRange(
         markets,
         startDate,
         endDate,
