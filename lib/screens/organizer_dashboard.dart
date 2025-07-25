@@ -223,13 +223,14 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                       Colors.orange,
                       () => context.pushNamed('vendorApplications'),
                     ),
-                    _buildActionCard(
-                      'Analytics',
-                      'View market insights',
-                      Icons.analytics,
-                      Colors.green,
-                      () => context.pushNamed('analytics'),
-                    ),
+                    // TEMPORARILY HIDDEN: Analytics
+                    // _buildActionCard(
+                    //   'Analytics',
+                    //   'View market insights',
+                    //   Icons.analytics,
+                    //   Colors.green,
+                    //   () => context.pushNamed('analytics'),
+                    // ),
                     _buildActionCard(
                       'Market Calendar',
                       'View market schedules',
