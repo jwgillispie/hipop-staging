@@ -284,13 +284,17 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     
     // Then create the schedules and link them to the market
     final scheduleIds = <String>[];
+    debugPrint('Creating ${_marketSchedules.length} schedules for market $createdMarketId');
     for (final schedule in _marketSchedules) {
+      debugPrint('Creating schedule: ${schedule.type} with ${schedule.specificDates?.length ?? 0} specific dates');
       final scheduleWithMarketId = schedule.copyWith(marketId: createdMarketId);
       final scheduleId = await MarketService.createMarketSchedule(scheduleWithMarketId);
       scheduleIds.add(scheduleId);
+      debugPrint('Created schedule $scheduleId');
     }
     
     // Update the market with schedule IDs
+    debugPrint('Updating market $createdMarketId with ${scheduleIds.length} schedule IDs: $scheduleIds');
     final updatedMarket = market.copyWith(
       id: createdMarketId,
       scheduleIds: scheduleIds,
