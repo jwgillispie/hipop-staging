@@ -347,12 +347,40 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
             operatingDays[dayName.toLowerCase()] = '${schedule.startTime}-${schedule.endTime}';
           }
         }
+      } else if (schedule.type == ScheduleType.specificDates && schedule.specificDates != null) {
+        // For specific dates, add each date as a formatted string
+        for (final date in schedule.specificDates!) {
+          final dayName = _getDayNameFromIndex(date.weekday);
+          if (dayName != null) {
+            final dateKey = '${dayName.toLowerCase()}_${date.year}_${date.month}_${date.day}';
+            final dateLabel = '${_getMonthName(date.month)} ${date.day}, ${date.year}';
+            operatingDays[dateKey] = '${schedule.startTime}-${schedule.endTime} ($dateLabel)';
+          }
+        }
       }
     }
     
     return operatingDays;
   }
   
+  String _getMonthName(int month) {
+    switch (month) {
+      case 1: return 'Jan';
+      case 2: return 'Feb';
+      case 3: return 'Mar';
+      case 4: return 'Apr';
+      case 5: return 'May';
+      case 6: return 'Jun';
+      case 7: return 'Jul';
+      case 8: return 'Aug';
+      case 9: return 'Sep';
+      case 10: return 'Oct';
+      case 11: return 'Nov';
+      case 12: return 'Dec';
+      default: return 'Unknown';
+    }
+  }
+
   String? _getDayNameFromIndex(int dayIndex) {
     switch (dayIndex) {
       case 1: return 'Monday';
