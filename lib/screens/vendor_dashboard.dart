@@ -166,14 +166,15 @@ class _VendorDashboardState extends State<VendorDashboard>
                 Colors.teal,
                 () => context.go('/vendor/my-popups'),
               ),
-              _buildActionCard(
-                context,
-                'My Applications',
-                'View application status',
-                Icons.assignment,
-                Colors.indigo,
-                () => context.go('/vendor/applications'),
-              ),
+              // TEMPORARILY HIDDEN: Vendor Applications (only showing permissions for now)
+              // _buildActionCard(
+              //   context,
+              //   'My Applications',
+              //   'View application status',
+              //   Icons.assignment,
+              //   Colors.indigo,
+              //   () => context.go('/vendor/applications'),
+              // ),
               _buildActionCard(
                 context,
                 'Market Invitations',
@@ -198,14 +199,15 @@ class _VendorDashboardState extends State<VendorDashboard>
                 Colors.blue,
                 () => _tabController.animateTo(1), // Switch to calendar tab
               ),
-              _buildActionCard(
-                context,
-                'Analytics',
-                'View your performance',
-                Icons.analytics,
-                Colors.green,
-                () => _showComingSoon(context),
-              ),
+              // TEMPORARILY HIDDEN: Analytics
+              // _buildActionCard(
+              //   context,
+              //   'Analytics',
+              //   'View your performance',
+              //   Icons.analytics,
+              //   Colors.green,
+              //   () => _showComingSoon(context),
+              // ),
             ]),
           ),
         ),
@@ -353,21 +355,6 @@ class _VendorDashboardState extends State<VendorDashboard>
   }
 
 
-  void _showComingSoon(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Coming Soon'),
-        content: const Text('This feature is under development and will be available soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 
 
 

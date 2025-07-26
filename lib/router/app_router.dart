@@ -23,9 +23,7 @@ import '../screens/organizer_analytics_screen.dart';
 import '../screens/organizer_profile_screen.dart';
 import '../screens/vendor_management_screen.dart';
 import '../screens/admin_fix_screen.dart';
-import '../screens/market_organizer_signup_screen.dart';
 import '../screens/market_management_screen.dart';
-import '../screens/vendor_application_form.dart';
 import '../screens/favorites_screen.dart';
 import '../screens/organizer_calendar_screen.dart';
 import '../screens/shopper_recipes_screen.dart';
@@ -38,6 +36,10 @@ import '../screens/vendor_market_permissions_screen.dart';
 import '../screens/vendor_popup_creation_screen.dart';
 import '../screens/legal_documents_screen.dart';
 import '../screens/organizer_event_management_screen.dart';
+import '../screens/vendor_signup_screen.dart';
+import '../screens/market_organizer_comprehensive_signup_screen.dart';
+import '../screens/account_verification_pending_screen.dart';
+import '../screens/ceo_verification_dashboard_screen.dart';
 import '../models/market.dart';
 import '../models/vendor_post.dart';
 
@@ -75,10 +77,32 @@ class AppRouter {
           builder: (context, state) {
             final userType = state.uri.queryParameters['type'] ?? 'shopper';
             if (userType == 'market_organizer') {
-              return const MarketOrganizerSignupScreen();
+              return const MarketOrganizerComprehensiveSignupScreen();
+            } else if (userType == 'vendor') {
+              return const VendorSignupScreen();
             }
             return AuthScreen(userType: userType, isLogin: false);
           },
+        ),
+        GoRoute(
+          path: '/account-verification-pending',
+          name: 'accountVerificationPending',
+          builder: (context, state) => const AccountVerificationPendingScreen(),
+        ),
+        GoRoute(
+          path: '/vendor-verification-pending',
+          name: 'vendorVerificationPending',
+          builder: (context, state) => const AccountVerificationPendingScreen(),
+        ),
+        GoRoute(
+          path: '/organizer-verification-pending',
+          name: 'organizerVerificationPending',
+          builder: (context, state) => const AccountVerificationPendingScreen(),
+        ),
+        GoRoute(
+          path: '/ceo-verification-dashboard',
+          name: 'ceoVerificationDashboard',
+          builder: (context, state) => const CeoVerificationDashboardScreen(),
         ),
         GoRoute(
           path: '/shopper',
@@ -241,23 +265,56 @@ class AppRouter {
               ),
           ],
         ),
-        // Public vendor application form - accessible without authentication
-        GoRoute(
-          path: '/apply/:marketId',
-          name: 'vendorApplication',
-          builder: (context, state) {
-            final marketId = state.pathParameters['marketId']!;
-            return VendorApplicationForm(
-              marketId: marketId,
-            );
-          },
-        ),
+        // TEMPORARILY HIDDEN: Public vendor application form (only showing permissions for now)
+        // GoRoute(
+        //   path: '/apply/:marketId',
+        //   name: 'vendorApplication',
+        //   builder: (context, state) {
+        //     final marketId = state.pathParameters['marketId']!;
+        //     return VendorApplicationForm(
+        //       marketId: marketId,
+        //     );
+        //   },
+        // ),
       ],
       redirect: (BuildContext context, GoRouterState state) {
         final authState = authBloc.state;
         
-        // If authenticated, redirect based on user type
+        // If authenticated, redirect based on user type and verification status
         if (authState is Authenticated) {
+          final userProfile = authState.userProfile;
+          
+          // Allow access to CEO dashboard for anyone (it has its own access control)
+          if (state.matchedLocation == '/ceo-verification-dashboard') {
+            return null;
+          }
+          
+          // Check verification status for vendors and market organizers
+          if (userProfile != null && (userProfile.userType == 'vendor' || userProfile.userType == 'market_organizer')) {
+            final verificationPendingRoutes = [
+              '/account-verification-pending',
+              '/vendor-verification-pending', 
+              '/organizer-verification-pending'
+            ];
+            
+            if (!userProfile.isVerified && !verificationPendingRoutes.contains(state.matchedLocation)) {
+              // Redirect unverified users to pending screen, unless they're already there
+              return '/account-verification-pending';
+            }
+            
+            if (userProfile.isVerified && verificationPendingRoutes.contains(state.matchedLocation)) {
+              // Redirect verified users away from pending screen
+              switch (userProfile.userType) {
+                case 'vendor':
+                  return '/vendor';
+                case 'market_organizer':
+                  return '/organizer';
+                default:
+                  return '/shopper';
+              }
+            }
+          }
+          
           final isAuthRoute = ['/auth', '/login', '/signup'].contains(state.matchedLocation);
           if (isAuthRoute) {
             switch (authState.userType) {
@@ -307,7 +364,17 @@ class AppRouter {
         
         // If unauthenticated and not on auth routes or public routes, go to auth landing
         if (authState is Unauthenticated) {
-          final publicRoutes = ['/auth', '/login', '/signup', '/onboarding', '/legal'];
+          final publicRoutes = [
+            '/auth', 
+            '/login', 
+            '/signup', 
+            '/onboarding', 
+            '/legal',
+            '/account-verification-pending',
+            '/vendor-verification-pending',
+            '/organizer-verification-pending',
+            '/ceo-verification-dashboard'
+          ];
           final isVendorApplication = state.matchedLocation.startsWith('/apply/');
           
           if (!publicRoutes.contains(state.matchedLocation) && !isVendorApplication) {

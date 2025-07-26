@@ -1,5 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+enum VerificationStatus {
+  pending,
+  approved,
+  rejected,
+}
+
 class UserProfile {
   final String userId;
   final String userType; // 'vendor', 'shopper', or 'market_organizer'
@@ -18,6 +24,13 @@ class UserProfile {
   final Map<String, dynamic> preferences; // General user preferences
   final DateTime createdAt;
   final DateTime updatedAt;
+  // Verification fields
+  final VerificationStatus verificationStatus;
+  final DateTime? verificationRequestedAt;
+  final String? verificationNotes; // CEO review notes
+  final String? verifiedBy; // CEO user ID
+  final DateTime? verifiedAt;
+  final bool profileSubmitted; // Has completed full signup flow
 
   UserProfile({
     required this.userId,
@@ -37,6 +50,12 @@ class UserProfile {
     this.preferences = const {},
     required this.createdAt,
     required this.updatedAt,
+    this.verificationStatus = VerificationStatus.pending,
+    this.verificationRequestedAt,
+    this.verificationNotes,
+    this.verifiedBy,
+    this.verifiedAt,
+    this.profileSubmitted = false,
   });
 
   // Create a copy with updated fields
@@ -58,6 +77,12 @@ class UserProfile {
     Map<String, dynamic>? preferences,
     DateTime? createdAt,
     DateTime? updatedAt,
+    VerificationStatus? verificationStatus,
+    DateTime? verificationRequestedAt,
+    String? verificationNotes,
+    String? verifiedBy,
+    DateTime? verifiedAt,
+    bool? profileSubmitted,
   }) {
     return UserProfile(
       userId: userId ?? this.userId,
@@ -77,6 +102,12 @@ class UserProfile {
       preferences: preferences ?? this.preferences,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      verificationRequestedAt: verificationRequestedAt ?? this.verificationRequestedAt,
+      verificationNotes: verificationNotes ?? this.verificationNotes,
+      verifiedBy: verifiedBy ?? this.verifiedBy,
+      verifiedAt: verifiedAt ?? this.verifiedAt,
+      profileSubmitted: profileSubmitted ?? this.profileSubmitted,
     );
   }
 
@@ -100,6 +131,12 @@ class UserProfile {
       'preferences': preferences,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'verificationStatus': verificationStatus.name,
+      'verificationRequestedAt': verificationRequestedAt != null ? Timestamp.fromDate(verificationRequestedAt!) : null,
+      'verificationNotes': verificationNotes,
+      'verifiedBy': verifiedBy,
+      'verifiedAt': verifiedAt != null ? Timestamp.fromDate(verifiedAt!) : null,
+      'profileSubmitted': profileSubmitted,
     };
   }
 
@@ -125,6 +162,15 @@ class UserProfile {
       preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      verificationStatus: VerificationStatus.values.firstWhere(
+        (status) => status.name == data['verificationStatus'],
+        orElse: () => VerificationStatus.pending,
+      ),
+      verificationRequestedAt: (data['verificationRequestedAt'] as Timestamp?)?.toDate(),
+      verificationNotes: data['verificationNotes'],
+      verifiedBy: data['verifiedBy'],
+      verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
+      profileSubmitted: data['profileSubmitted'] ?? false,
     );
   }
 
@@ -148,6 +194,15 @@ class UserProfile {
       preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      verificationStatus: VerificationStatus.values.firstWhere(
+        (status) => status.name == data['verificationStatus'],
+        orElse: () => VerificationStatus.pending,
+      ),
+      verificationRequestedAt: (data['verificationRequestedAt'] as Timestamp?)?.toDate(),
+      verificationNotes: data['verificationNotes'],
+      verifiedBy: data['verifiedBy'],
+      verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
+      profileSubmitted: data['profileSubmitted'] ?? false,
     );
   }
 
@@ -282,6 +337,58 @@ class UserProfile {
     
     return copyWith(
       managedMarketIds: updatedMarkets,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  // Verification helper methods
+  bool get isVerified => verificationStatus == VerificationStatus.approved;
+  bool get isPendingVerification => verificationStatus == VerificationStatus.pending;
+  bool get isRejected => verificationStatus == VerificationStatus.rejected;
+  bool get canAccessApp => isVerified;
+  
+  // CEO check - add your actual CEO email here
+  bool get isCEO => email == 'jordangillispie@outlook.com';
+  
+  String get verificationStatusDisplayName {
+    switch (verificationStatus) {
+      case VerificationStatus.pending:
+        return 'Pending Review';
+      case VerificationStatus.approved:
+        return 'Verified';
+      case VerificationStatus.rejected:
+        return 'Rejected';
+    }
+  }
+  
+  // Mark profile as submitted for verification
+  UserProfile submitForVerification() {
+    return copyWith(
+      profileSubmitted: true,
+      verificationStatus: VerificationStatus.pending,
+      verificationRequestedAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+  
+  // Approve verification (CEO only)
+  UserProfile approveVerification(String ceoUserId, {String? notes}) {
+    return copyWith(
+      verificationStatus: VerificationStatus.approved,
+      verifiedBy: ceoUserId,
+      verifiedAt: DateTime.now(),
+      verificationNotes: notes,
+      updatedAt: DateTime.now(),
+    );
+  }
+  
+  // Reject verification (CEO only)
+  UserProfile rejectVerification(String ceoUserId, {String? notes}) {
+    return copyWith(
+      verificationStatus: VerificationStatus.rejected,
+      verifiedBy: ceoUserId,
+      verifiedAt: DateTime.now(),
+      verificationNotes: notes,
       updatedAt: DateTime.now(),
     );
   }
