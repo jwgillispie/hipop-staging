@@ -644,17 +644,14 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
       
       setState(() => _isLoading = false);
       
-      // Show success and navigate to pending screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile submitted successfully! We\'ll review your account soon.'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
+      // Move to next step to show profile complete
+      setState(() {
+        _currentStep++;
+      });
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
-      
-      // Navigate to pending verification screen (we can reuse the same one)
-      context.go('/organizer-verification-pending');
       
     } catch (e) {
       setState(() => _isLoading = false);
