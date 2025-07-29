@@ -76,17 +76,22 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   Future<void> _loadExistingSchedules() async {
     if (widget.market?.scheduleIds?.isNotEmpty == true) {
       try {
-        // TODO: Load existing schedules from the scheduleIds
-        // For now, we'll convert legacy operatingDays to schedule format
-        _convertLegacyOperatingDays();
+        // Load existing schedules from the database
+        final schedules = await MarketService.getMarketSchedules(widget.market!.id);
+        if (schedules.isNotEmpty) {
+          setState(() {
+            _marketSchedules = schedules;
+          });
+          return;
+        }
       } catch (e) {
+        print('Error loading existing schedules: $e');
         // If loading fails, fall back to legacy conversion
-        _convertLegacyOperatingDays();
       }
-    } else {
-      // Convert legacy operating days to new schedule format
-      _convertLegacyOperatingDays();
     }
+    
+    // If no schedules found or loading failed, convert legacy operating days
+    _convertLegacyOperatingDays();
   }
   
   void _convertLegacyOperatingDays() {
