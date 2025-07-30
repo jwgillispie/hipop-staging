@@ -735,16 +735,18 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
       setState(() => _isLoading = false);
       
       // Show success message and navigate to pending screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile submitted successfully! We\'ll review your account soon.'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      
-      // Navigate to pending verification screen
-      context.go('/vendor-verification-pending');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile submitted successfully! We\'ll review your account soon.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        
+        // Navigate to pending verification screen
+        context.go('/vendor-verification-pending');
+      }
       
     } catch (e) {
       setState(() => _isLoading = false);

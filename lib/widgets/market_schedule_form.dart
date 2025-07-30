@@ -33,12 +33,24 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
   DateTime? _recurrenceEndDate;
   int _intervalWeeks = 1;
   bool _hasEndDate = false;
+  
+  // Loading state to prevent premature validation
+  bool _isInitializing = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.initialSchedules.isNotEmpty) {
+      _isInitializing = true;
       _loadFromExistingSchedules();
+      // Allow one frame for the data to load before showing validation
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _isInitializing = false;
+          });
+        }
+      });
     }
   }
 
@@ -469,7 +481,8 @@ class _MarketScheduleFormState extends State<MarketScheduleForm> {
     final isValid = (_scheduleType == ScheduleType.specificDates && _selectedDates.isNotEmpty) ||
                    (_scheduleType == ScheduleType.recurring && _selectedDaysOfWeek.isNotEmpty && _recurrenceStartDate != null);
 
-    if (!isValid) {
+    // Don't show validation errors while initializing
+    if (!isValid && !_isInitializing) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(

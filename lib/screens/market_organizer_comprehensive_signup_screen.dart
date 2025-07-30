@@ -559,11 +559,6 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
     switch (_currentStep) {
       case 0:
         canProceed = _step1FormKey.currentState?.validate() ?? false;
-        if (canProceed) {
-          // Create account and proceed to profile setup
-          _createAccount();
-          return;
-        }
         break;
       case 1:
         canProceed = _step2FormKey.currentState?.validate() ?? false;
@@ -572,8 +567,8 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
         canProceed = _step3FormKey.currentState?.validate() ?? false;
         break;
       case 3:
-        // Final step - submit profile
-        _submitProfile();
+        // Final step - create account and submit profile
+        _createAccountAndSubmitProfile();
         return;
     }
 
@@ -600,7 +595,7 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
     }
   }
 
-  Future<void> _createAccount() async {
+  Future<void> _createAccountAndSubmitProfile() async {
     setState(() => _isLoading = true);
 
     try {
@@ -657,22 +652,6 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
       setState(() => _isLoading = false);
       _showErrorSnackBar('Error setting up profile: $e');
     }
-  }
-
-  Future<void> _submitProfile() async {
-    setState(() => _isLoading = true);
-    
-    // Show success and navigate to pending screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile submitted successfully! We\'ll review your account soon.'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 3),
-      ),
-    );
-    
-    // Navigate to pending verification screen (we can reuse the same one)
-    context.go('/organizer-verification-pending');
   }
 
   void _showErrorSnackBar(String message) {

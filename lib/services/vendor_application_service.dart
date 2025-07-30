@@ -29,6 +29,21 @@ class VendorApplicationService {
     }
   }
 
+  /// Submit a market permission request
+  static Future<String> submitMarketPermissionRequest({
+    required String vendorId,
+    required String marketId,
+    String? specialMessage,
+    String? howDidYouHear,
+  }) async {
+    return await VendorMarketRelationshipService.submitMarketPermissionRequest(
+      vendorId: vendorId,
+      marketId: marketId,
+      specialMessage: specialMessage,
+      howDidYouHear: howDidYouHear,
+    );
+  }
+
   /// Submit a new vendor application with profile validation (legacy method)
   static Future<String> submitApplicationWithProfile(
     String vendorId,
@@ -87,21 +102,6 @@ class VendorApplicationService {
       debugPrint('Error submitting application with profile: $e');
       rethrow;
     }
-  }
-
-  /// Submit a market permission request
-  static Future<String> submitMarketPermissionRequest({
-    required String vendorId,
-    required String marketId,
-    String? specialMessage,
-    String? howDidYouHear,
-  }) async {
-    return await VendorMarketRelationshipService.submitMarketPermissionRequest(
-      vendorId: vendorId,
-      marketId: marketId,
-      specialMessage: specialMessage,
-      howDidYouHear: howDidYouHear,
-    );
   }
 
   /// Submit a new vendor application with specific dates
@@ -528,9 +528,9 @@ class VendorApplicationService {
       // Create the ManagedVendor record
       debugPrint('🔄 Calling ManagedVendorService.createVendor for: ${managedVendor.businessName}');
       debugPrint('📊 ManagedVendor data: marketId=${managedVendor.marketId}, isPermissionBased=${managedVendor.metadata['isPermissionBased']}');
-      
+
       final createdVendorId = await ManagedVendorService.createVendor(managedVendor);
-      
+
       debugPrint('✅ ManagedVendor created from application: ${application.id} with ID: $createdVendorId');
     } catch (e) {
       debugPrint('Error creating ManagedVendor from application: $e');

@@ -33,6 +33,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
 
   // New schedule system
   List<MarketSchedule> _marketSchedules = [];
+  bool _isLoadingSchedules = false;
   
   // Vendor management
   List<VendorApplication> _approvedApplications = [];
@@ -75,12 +76,17 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   
   Future<void> _loadExistingSchedules() async {
     if (widget.market?.scheduleIds?.isNotEmpty == true) {
+      setState(() {
+        _isLoadingSchedules = true;
+      });
+      
       try {
         // Load existing schedules from the database
         final schedules = await MarketService.getMarketSchedules(widget.market!.id);
         if (schedules.isNotEmpty) {
           setState(() {
             _marketSchedules = schedules;
+            _isLoadingSchedules = false;
           });
           return;
         }
@@ -88,6 +94,10 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
         print('Error loading existing schedules: $e');
         // If loading fails, fall back to legacy conversion
       }
+      
+      setState(() {
+        _isLoadingSchedules = false;
+      });
     }
     
     // If no schedules found or loading failed, convert legacy operating days
@@ -760,14 +770,27 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                       ),
                       const SizedBox(height: 24),
                       // Market Schedule Form
-                      MarketScheduleForm(
-                        initialSchedules: _marketSchedules,
-                        onSchedulesChanged: (schedules) {
-                          setState(() {
-                            _marketSchedules = schedules;
-                          });
-                        },
-                      ),
+                      _isLoadingSchedules
+                          ? Container(
+                              padding: const EdgeInsets.all(32),
+                              child: const Center(
+                                child: Column(
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(height: 16),
+                                    Text('Loading schedule data...'),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : MarketScheduleForm(
+                              initialSchedules: _marketSchedules,
+                              onSchedulesChanged: (schedules) {
+                                setState(() {
+                                  _marketSchedules = schedules;
+                                });
+                              },
+                            ),
                       const SizedBox(height: 24),
                       // Vendor Management Section
                       _buildVendorManagementSection(),

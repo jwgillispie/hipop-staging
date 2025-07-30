@@ -39,6 +39,7 @@ import '../screens/organizer_event_management_screen.dart';
 import '../screens/vendor_signup_screen.dart';
 import '../screens/market_organizer_comprehensive_signup_screen.dart';
 import '../screens/account_verification_pending_screen.dart';
+import '../screens/vendor_verification_pending_screen.dart';
 import '../screens/ceo_verification_dashboard_screen.dart';
 import '../models/market.dart';
 import '../models/vendor_post.dart';
@@ -92,7 +93,7 @@ class AppRouter {
         GoRoute(
           path: '/vendor-verification-pending',
           name: 'vendorVerificationPending',
-          builder: (context, state) => const AccountVerificationPendingScreen(),
+          builder: (context, state) => const VendorVerificationPendingScreen(),
         ),
         GoRoute(
           path: '/organizer-verification-pending',
