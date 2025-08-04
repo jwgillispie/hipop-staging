@@ -1,262 +1,97 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // DEMO MODE: Catch-all permissive rule for testing
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
     // Users collection rules
     match /users/{userId} {
-      // Allow users to read their own profile
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow users to create their own profile during signup
-      allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow users to update their own profile
-      allow update: if request.auth != null && request.auth.uid == userId;
-      
-      // Prevent users from deleting profiles
-      allow delete: if false;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // User profiles collection rules
+    // User profiles collection rules - DEMO MODE (PERMISSIVE)
     match /user_profiles/{userId} {
-      // TEMPORARY: Allow any authenticated user to read and update user profiles (for admin fix)
-      allow read, write: if request.auth != null;
+      allow read, write: if true; // DEMO: Full open access for testing
     }
     
-    // Vendor posts collection rules
-    match /vendor_posts/{postId} {
-      // Allow anyone to read all posts (for shoppers to discover)
-      allow read: if true;
-      
-      // TEMPORARY: Allow anyone to create posts (for demo data)
-      allow create: if true;
-      
-      // TEMPORARY: Allow anyone to update posts (for demo data)
-      allow update: if true;
-      
-      // TEMPORARY: Allow anyone to delete posts (for demo cleanup)
-      allow delete: if true;
-    }
-    
-    // Markets collection rules
+    // Markets collection rules - DEMO MODE (PERMISSIVE)
     match /markets/{marketId} {
-      // Allow anyone to read markets (for shoppers to discover)
-      allow read: if true;
-      
-      // Allow authenticated users to create markets (for admin)
-      allow create: if request.auth != null;
-      
-      // Allow authenticated users to update markets (for admin)
-      allow update: if request.auth != null;
-      
-      // Allow market organizers to delete test markets (for debug cleanup)
-      allow delete: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer' &&
-                       (resource.data.name.matches('Jozo Test Market.*') || 
-                        resource.data.name.matches('Test Market.*'));
+      allow read: if true; // Public read access for all markets
+      allow write: if true; // DEMO: Full open access for testing
     }
     
-    // Vendor-Market relationships collection rules
-    match /vendor_markets/{relationshipId} {
-      // Allow anyone to read vendor-market relationships
-      allow read: if true;
-      
-      // TEMPORARY: Allow anyone to create relationships (for demo data)
-      allow create: if true;
-      
-      // TEMPORARY: Allow anyone to update relationships (for demo data)
-      allow update: if true;
-      
-      // TEMPORARY: Allow anyone to delete relationships (for demo cleanup)
-      allow delete: if true;
+    // Market schedules collection rules
+    match /market_schedules/{scheduleId} {
+      allow read: if true; // Public read access for market schedules
+      allow write: if request.auth != null && isMarketOrganizer();
     }
     
     // Vendor applications collection rules
     match /vendor_applications/{applicationId} {
-      // Allow vendors to read their own applications
-      allow read: if request.auth != null && 
-                     (request.auth.uid == resource.data.vendorId || 
-                      getUserType(request.auth.uid) == 'market_organizer');
-      
-      // Allow vendors to create applications
-      allow create: if request.auth != null && 
-                       request.auth.uid == request.resource.data.vendorId;
-      
-      // Allow market organizers to create test applications
-      allow create: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer';
-      
-      // Allow market organizers to update applications (approve/reject)
-      allow update: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer';
-      
-      // Allow vendors to update their own pending applications
-      allow update: if request.auth != null && 
-                       request.auth.uid == resource.data.vendorId &&
-                       resource.data.status == 'pending';
-      
-      // Allow market organizers to delete applications
-      allow delete: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer';
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.vendorId ||
+        isMarketOrganizerForMarket(resource.data.marketId)
+      );
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.vendorId ||
+        isMarketOrganizerForMarket(resource.data.marketId)
+      );
     }
     
-    // Market events collection rules
-    match /market_events/{eventId} {
-      // Allow market organizers to read events for their markets
-      allow read: if request.auth != null && 
-                     getUserType(request.auth.uid) == 'market_organizer';
-      
-      // Allow shoppers to read public events
-      allow read: if request.auth != null && 
-                     resource.data.isPublic == true && 
-                     resource.data.status == 'published';
-      
-      // Allow market organizers to create events
-      allow create: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer' &&
-                       request.auth.uid == request.resource.data.organizerId;
-      
-      // Allow market organizers to update their own events
-      allow update: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer' &&
-                       request.auth.uid == resource.data.organizerId;
-      
-      // Allow market organizers to delete their own events
-      allow delete: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer' &&
-                       request.auth.uid == resource.data.organizerId;
+    // Managed vendors collection rules - DEMO MODE (PERMISSIVE)
+    match /managed_vendors/{vendorId} {
+      allow read, write: if true; // DEMO: Full open access for testing
+    }
+    
+    // Vendor markets collection rules (many-to-many relationship)
+    match /vendor_markets/{relationshipId} {
+      allow read: if true; // Public read access
+      allow write: if request.auth != null && isMarketOrganizer();
+    }
+    
+    // Vendor posts collection rules - DEMO MODE (VERY PERMISSIVE)
+    match /vendor_posts/{postId} {
+      allow read, write: if true; // DEMO: Full open access for testing
+    }
+    
+    // User favorites collection rules - DEMO MODE (PERMISSIVE)
+    match /user_favorites/{favoriteId} {
+      allow read, write: if true; // DEMO: Full open access for testing
     }
     
     // Recipes collection rules
     match /recipes/{recipeId} {
-      // Allow anyone to read public recipes (for discovery)
-      allow read: if resource.data.isPublic == true;
-      
-      // Allow authenticated users to read all recipes 
-      allow read: if request.auth != null;
-      
-      // TEMPORARY: Super permissive rule for recipe creation (for testing)
-      allow create: if request.auth != null;
-      
-      // Allow market organizers to create recipes (using both user collections for compatibility)
-      allow create: if request.auth != null && 
-                       (getUserType(request.auth.uid) == 'market_organizer' ||
-                        getUserTypeFromProfile(request.auth.uid) == 'market_organizer') &&
-                       request.auth.uid == request.resource.data.organizerId;
-      
-      // Allow any authenticated user to create recipes they own
-      allow create: if request.auth != null && 
-                       request.auth.uid == request.resource.data.organizerId;
-      
-      // TEMPORARY: Super permissive rule for recipe updates (for testing)
-      allow update: if request.auth != null;
-      
-      // Allow market organizers to update their own recipes
-      allow update: if request.auth != null && 
-                       (getUserType(request.auth.uid) == 'market_organizer' ||
-                        getUserTypeFromProfile(request.auth.uid) == 'market_organizer') &&
-                       request.auth.uid == resource.data.organizerId;
-      
-      // Allow any authenticated user to update their own recipes
-      allow update: if request.auth != null && 
-                       request.auth.uid == resource.data.organizerId;
-      
-      // TEMPORARY: Super permissive rule for recipe deletion (for testing)
-      allow delete: if request.auth != null;
-      
-      // Allow market organizers to delete their own recipes
-      allow delete: if request.auth != null && 
-                       (getUserType(request.auth.uid) == 'market_organizer' ||
-                        getUserTypeFromProfile(request.auth.uid) == 'market_organizer') &&
-                       request.auth.uid == resource.data.organizerId;
-      
-      // Allow any authenticated user to delete their own recipes
-      allow delete: if request.auth != null && 
-                       request.auth.uid == resource.data.organizerId;
+      allow read: if true; // Public read access for recipes
+      allow write: if request.auth != null && isMarketOrganizer();
     }
     
     // Market analytics collection rules
     match /market_analytics/{analyticsId} {
-      // Allow market organizers to read analytics (simplified for testing)
-      allow read: if request.auth != null && 
-                     getUserType(request.auth.uid) == 'market_organizer';
-      
-      // Allow market organizers to create analytics data
-      allow create: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer';
-      
-      // Allow market organizers to update analytics
-      allow update: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer';
-      
-      // Allow market organizers to delete analytics
-      allow delete: if request.auth != null && 
-                       getUserType(request.auth.uid) == 'market_organizer';
+      allow read, write: if request.auth != null && isMarketOrganizerForMarket(resource.data.marketId);
     }
     
-    // Managed vendors collection rules (TEMPORARY - very permissive for testing)
-    match /managed_vendors/{vendorId} {
-      // TEMPORARY: Allow anyone to read managed vendors
-      allow read: if true;
-      
-      // TEMPORARY: Allow anyone to create managed vendors
-      allow create: if true;
-      
-      // TEMPORARY: Allow anyone to update managed vendors
-      allow update: if true;
-      
-      // TEMPORARY: Allow anyone to delete managed vendors
-      allow delete: if true;
+    // Events collection rules - DEMO MODE (PERMISSIVE)
+    match /events/{eventId} {
+      allow read, write: if true; // DEMO: Full open access for testing
     }
     
-    // User favorites collection rules
-    match /user_favorites/{favoriteId} {
-      // Allow users to read their own favorites
-      allow read: if request.auth != null && 
-                     request.auth.uid == resource.data.userId;
-      
-      // Allow market organizers to read all favorites for analytics (simplified)
-      // This enables analytics queries without complex ownership validation
-      allow read: if request.auth != null && 
-                     (getUserType(request.auth.uid) == 'market_organizer' ||
-                      getUserTypeFromProfile(request.auth.uid) == 'market_organizer');
-      
-      // Allow users to create their own favorites
-      allow create: if request.auth != null && 
-                       request.auth.uid == request.resource.data.userId;
-      
-      // Allow users to update their own favorites
-      allow update: if request.auth != null && 
-                       request.auth.uid == resource.data.userId;
-      
-      // Allow users to delete their own favorites
-      allow delete: if request.auth != null && 
-                       request.auth.uid == resource.data.userId;
+    // Market events collection rules
+    match /market_events/{eventId} {
+      allow read: if true; // Public read access for events
+      allow write: if request.auth != null && isMarketOrganizerForMarket(resource.data.marketId);
     }
     
-    // Helper function to get user type from users collection
-    function getUserType(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.userType;
+    // Helper functions - DEMO MODE (PERMISSIVE)
+    function isMarketOrganizer() {
+      return request.auth != null; // DEMO: Allow any authenticated user
     }
     
-    // Helper function to get user type from user_profiles collection
-    function getUserTypeFromProfile(userId) {
-      return get(/databases/$(database)/documents/user_profiles/$(userId)).data.userType;
-    }
-    
-    // Helper function to check if a market is owned by an organizer
-    function isMarketOwnedByOrganizer(marketId, organizerId) {
-      return exists(/databases/$(database)/documents/markets/$(marketId)) &&
-             get(/databases/$(database)/documents/markets/$(marketId)).data.organizerId == organizerId;
-    }
-    
-    // Helper function to check if a vendor is in any of the organizer's markets
-    function isVendorInOrganizerMarket(vendorId, organizerId) {
-      // This is a simplified check - for production, implement precise vendor-market checking
-      // For now, allow market organizers to see vendor favorites for analytics
-      // Variables are used for future enhancement
-      let _ = vendorId; // Acknowledge parameter usage
-      let __ = organizerId; // Acknowledge parameter usage
-      return true; // Simplified for initial implementation
+    function isMarketOrganizerForMarket(marketId) {
+      return request.auth != null; // DEMO: Allow any authenticated user
     }
   }
 }

@@ -8,6 +8,7 @@ import '../blocs/auth/auth_event.dart';
 import '../widgets/debug_account_switcher.dart';
 import '../widgets/debug_database_cleaner.dart';
 import '../widgets/debug_market_creator.dart';
+import '../widgets/debug_atlanta_august_creator.dart';
 
 class OrganizerDashboard extends StatefulWidget {
   const OrganizerDashboard({super.key});
@@ -142,6 +143,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                 const DebugDatabaseCleaner(),
                 // Debug Market Creator
                 const DebugMarketCreator(),
+                // Debug Atlanta August Creator
+                const DebugAtlantaAugustCreator(),
                 // Welcome Card
                 Card(
                   child: Padding(
