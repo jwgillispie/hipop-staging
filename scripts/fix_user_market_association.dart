@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../lib/models/market.dart';
-import '../lib/models/user_profile.dart';
+import 'package:hipop/features/market/models/market.dart';
+
 
 // Script to fix market association for existing users
 void main() async {

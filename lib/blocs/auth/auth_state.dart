@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/user_profile.dart';
+import '../../features/shared/models/user_profile.dart';
 
 abstract class AuthState extends Equatable {
   const AuthState();

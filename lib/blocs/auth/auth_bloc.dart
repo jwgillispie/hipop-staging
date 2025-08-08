@@ -3,12 +3,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../repositories/auth_repository.dart';
-import '../../services/user_profile_service.dart';
-import '../../services/favorites_migration_service.dart';
-import '../../models/user_profile.dart';
+import '../../features/shared/services/user_profile_service.dart';
+import '../../features/shared/services/favorites_migration_service.dart';
+import '../../features/shared/models/user_profile.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
-import '../../utils/validation_utils.dart';
+import '../../core/constants/validation_utils.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final IAuthRepository _authRepository;

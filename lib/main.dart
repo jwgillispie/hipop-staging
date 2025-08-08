@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter/foundation.dart';
+import 'core/config/firebase_options.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/vendor_posts_repository.dart';
 import 'repositories/favorites_repository.dart';
@@ -9,19 +12,45 @@ import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/auth/auth_state.dart';
 import 'blocs/favorites/favorites_bloc.dart';
-import 'router/app_router.dart';
-import 'services/remote_config_service.dart';
+import 'core/routing/app_router.dart';
+import 'features/shared/services/remote_config_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
-    await _initializeFirebase();
-    // Initialize Remote Config in background - don't block app startup
-    RemoteConfigService.instance.catchError((e) => null);
+    await _initializeApp();
     runApp(const HiPopApp());
   } catch (e) {
     runApp(ErrorApp(error: e.toString()));
+  }
+}
+
+Future<void> _initializeApp() async {
+  try {
+    // Load environment variables
+    await dotenv.load(fileName: ".env");
+    
+    // Initialize Firebase
+    await _initializeFirebase();
+    
+    // Initialize Stripe (skip on web for now)
+    if (!kIsWeb) {
+      await _initializeStripe();
+    }
+    
+    // Initialize Remote Config in background - don't block app startup
+    RemoteConfigService.instance.catchError((e) => null);
+  } catch (e) {
+    debugPrint('⚠️ Initialization warning: $e');
+    // Continue with app startup even if some services fail
+  }
+}
+
+Future<void> _initializeStripe() async {
+  final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
+  if (publishableKey != null && publishableKey.isNotEmpty) {
+    Stripe.publishableKey = publishableKey;
   }
 }
 

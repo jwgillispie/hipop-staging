@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import '../../services/favorites_service.dart';
-import '../../models/user_favorite.dart';
+import '../../features/shared/services/favorites_service.dart';
+import '../../features/shared/models/user_favorite.dart';
 import '../../repositories/favorites_repository.dart';
 
 part 'favorites_event.dart';
