@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../models/user_subscription.dart';
 
 /// Service to handle Stripe subscription success callbacks
 class SubscriptionSuccessService {
@@ -306,11 +307,47 @@ class SubscriptionSuccessService {
       );
 
       if (success) {
-        // Return success without subscription info since getUserSubscription doesn't exist
-        // The subscription info would be loaded separately by the UI
+        // Get user profile to determine the subscription tier
+        final userProfile = await _userProfileService.getUserProfile(userId);
+        
+        // Create a UserSubscription object based on the user profile
+        UserSubscription? subscription;
+        if (userProfile != null && userProfile.isPremium) {
+          // Determine the tier based on user type
+          SubscriptionTier tier;
+          switch (userProfile.userType) {
+            case 'vendor':
+              tier = SubscriptionTier.vendorPro;
+              break;
+            case 'market_organizer':
+            case 'organizer':
+              tier = SubscriptionTier.marketOrganizerPro;
+              break;
+            case 'shopper':
+            default:
+              tier = SubscriptionTier.shopperPro;
+              break;
+          }
+          
+          subscription = UserSubscription(
+            id: userProfile.stripeSubscriptionId ?? 'sub_$userId',
+            userId: userId,
+            userType: userProfile.userType,
+            tier: tier,
+            status: SubscriptionStatus.active,
+            subscriptionStartDate: DateTime.now(),
+            stripeCustomerId: userProfile.stripeCustomerId ?? 'cus_$userId',
+            stripeSubscriptionId: userProfile.stripeSubscriptionId ?? 'sub_$userId',
+            stripePriceId: userProfile.stripePriceId ?? '',
+            monthlyPrice: _getMonthlyPriceForTier(tier),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        }
+        
         return {
           'success': true,
-          'subscription': null,
+          'subscription': subscription,
           'message': 'Subscription processed successfully',
         };
       } else {
@@ -324,6 +361,22 @@ class SubscriptionSuccessService {
         'success': false,
         'error': 'Exception during subscription processing: $e',
       };
+    }
+  }
+
+  /// Helper method to get monthly price for subscription tier
+  static double _getMonthlyPriceForTier(SubscriptionTier tier) {
+    switch (tier) {
+      case SubscriptionTier.free:
+        return 0.00;
+      case SubscriptionTier.shopperPro:
+        return 4.00; // $4.00/month
+      case SubscriptionTier.vendorPro:
+        return 29.00; // $29.00/month
+      case SubscriptionTier.marketOrganizerPro:
+        return 99.00; // $99.00/month
+      case SubscriptionTier.enterprise:
+        return 199.99; // $199.99/month
     }
   }
 }

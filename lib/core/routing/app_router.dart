@@ -36,6 +36,10 @@ import '../../features/vendor/screens/vendor_verification_pending_screen.dart';
 import '../../features/vendor/screens/edit_popup_screen.dart';
 import '../../features/vendor/screens/vendor_sales_tracker_screen.dart';
 import '../../features/vendor/screens/vendor_analytics_screen.dart';
+import '../../features/vendor/screens/vendor_premium_dashboard.dart';
+import '../../features/vendor/screens/vendor_market_items_screen.dart';
+import '../../features/vendor/screens/vendor_market_items_edit_screen.dart';
+import '../../features/vendor/screens/vendor_market_discovery_screen.dart';
 // Organizer screens
 import '../../features/organizer/screens/organizer_dashboard.dart';
 import '../../features/organizer/screens/organizer_analytics_screen.dart';
@@ -44,6 +48,9 @@ import '../../features/organizer/screens/organizer_calendar_screen.dart';
 import '../../features/organizer/screens/organizer_onboarding_screen.dart';
 import '../../features/organizer/screens/organizer_event_management_screen.dart';
 import '../../features/organizer/screens/market_organizer_comprehensive_signup_screen.dart';
+import '../../features/organizer/screens/organizer_premium_dashboard.dart';
+import '../../features/organizer/screens/organizer_vendor_discovery_screen.dart';
+import '../../features/organizer/screens/organizer_bulk_messaging_screen.dart';
 // Shared screens
 import '../../features/shared/screens/create_popup_screen.dart';
 import '../../features/shared/screens/custom_items_screen.dart';
@@ -62,6 +69,7 @@ import '../../features/shared/services/user_profile_service.dart';
 import '../../features/premium/services/subscription_service.dart';
 import '../../features/premium/models/user_subscription.dart';
 import '../../features/shared/models/user_profile.dart';
+import '../../features/auth/services/onboarding_service.dart';
 import '../../features/market/models/market.dart';
 import '../../features/vendor/models/vendor_post.dart';
 import '../../features/shared/models/event.dart';
@@ -69,7 +77,7 @@ import '../../features/shared/models/event.dart';
 class AppRouter {
   static GoRouter createRouter(AuthBloc authBloc) {
     return GoRouter(
-      initialLocation: '/onboarding',
+      initialLocation: '/auth',
       routes: [
         GoRoute(
           path: '/onboarding',
@@ -296,6 +304,36 @@ class AppRouter {
               name: 'vendorAnalytics',
               builder: (context, state) => const VendorAnalyticsScreen(),
             ),
+            GoRoute(
+              path: 'premium-dashboard',
+              name: 'vendorPremiumDashboard',
+              builder: (context, state) => const VendorPremiumDashboard(),
+            ),
+            GoRoute(
+              path: 'market-discovery',
+              name: 'vendorMarketDiscovery',
+              builder: (context, state) => const VendorMarketDiscoveryScreen(),
+            ),
+            GoRoute(
+              path: 'market-items',
+              name: 'vendorMarketItems',
+              builder: (context, state) => const VendorMarketItemsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'edit',
+                  name: 'vendorMarketItemsEdit',
+                  builder: (context, state) {
+                    final args = state.extra as Map<String, dynamic>;
+                    return VendorMarketItemsEditScreen(
+                      marketId: args['marketId'],
+                      marketName: args['marketName'],
+                      currentItems: List<String>.from(args['currentItems']),
+                      vendorId: args['vendorId'],
+                    );
+                  },
+                ),
+              ],
+            ),
           ],
         ),
         GoRoute(
@@ -352,6 +390,21 @@ class AppRouter {
               path: 'onboarding',
               name: 'organizerOnboarding',
               builder: (context, state) => const OrganizerOnboardingScreen(),
+            ),
+            GoRoute(
+              path: 'premium-dashboard',
+              name: 'organizerPremiumDashboard',
+              builder: (context, state) => const OrganizerPremiumDashboard(),
+            ),
+            GoRoute(
+              path: 'vendor-discovery',
+              name: 'organizerVendorDiscovery',
+              builder: (context, state) => const OrganizerVendorDiscoveryScreen(),
+            ),
+            GoRoute(
+              path: 'vendor-communications',
+              name: 'organizerVendorCommunications',
+              builder: (context, state) => const OrganizerBulkMessagingScreen(),
             ),
             if (kDebugMode)
               GoRoute(
@@ -466,6 +519,40 @@ class AppRouter {
                       ),
                     );
                   }
+                }
+                
+                // Debug logging
+                debugPrint('🔍 Premium dashboard route debug:');
+                debugPrint('🔍 subscription: $subscription');
+                debugPrint('🔍 userProfile: ${userProfile?.displayName}');
+                debugPrint('🔍 userProfile.isPremium: ${userProfile?.isPremium}');
+                debugPrint('🔍 userProfile.userType: ${userProfile?.userType}');
+                
+                // If no subscription found in user_subscriptions collection,
+                // check if user has premium in their profile (legacy data structure)
+                if (subscription == null && userProfile != null && userProfile.isPremium) {
+                  // Create a UserSubscription from user profile data
+                  final profileSubscription = UserSubscription(
+                    id: userId, // Use userId as subscription ID
+                    userId: userId,
+                    tier: userProfile.userType == 'vendor' 
+                        ? SubscriptionTier.vendorPro
+                        : userProfile.userType == 'market_organizer'
+                        ? SubscriptionTier.marketOrganizerPro 
+                        : SubscriptionTier.shopperPro,
+                    status: SubscriptionStatus.active,
+                    userType: userProfile.userType,
+                    createdAt: userProfile.createdAt ?? DateTime.now(),
+                    updatedAt: userProfile.updatedAt ?? DateTime.now(),
+                    stripeCustomerId: userProfile.stripeCustomerId,
+                    stripeSubscriptionId: userProfile.stripeSubscriptionId,
+                    stripePriceId: userProfile.stripePriceId,
+                  );
+                  
+                  return TierSpecificDashboard(
+                    userId: userId,
+                    subscription: profileSubscription,
+                  );
                 }
                 
                 if (subscription == null) {

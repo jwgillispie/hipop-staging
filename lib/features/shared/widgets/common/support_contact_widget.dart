@@ -10,7 +10,6 @@ class SupportContactWidget extends StatelessWidget {
   final String? subtitle;
   final Color? primaryColor;
   final bool showEmailOption;
-  final bool showHelpCenterOption;
   final bool showPhoneOption;
   final bool compact;
 
@@ -22,7 +21,6 @@ class SupportContactWidget extends StatelessWidget {
     this.subtitle,
     this.primaryColor,
     this.showEmailOption = true,
-    this.showHelpCenterOption = true,
     this.showPhoneOption = false, // Phone disabled by default
     this.compact = false,
   });
@@ -168,16 +166,6 @@ class SupportContactWidget extends StatelessWidget {
       ));
     }
     
-    if (showHelpCenterOption) {
-      options.add(_buildContactOption(
-        icon: Icons.help_center_outlined,
-        title: 'Help Center',
-        subtitle: 'Browse FAQs and guides',
-        onTap: () => _handleHelpCenterContact(),
-        colorScheme: colorScheme,
-        compact: compact,
-      ));
-    }
     
     if (showPhoneOption) {
       options.add(_buildContactOption(
@@ -323,14 +311,6 @@ class SupportContactWidget extends StatelessWidget {
     }
   }
 
-  void _handleHelpCenterContact() async {
-    try {
-      await SupportService.openHelpCenter();
-    } catch (e) {
-      debugPrint('Error opening help center: $e');
-      // Could show a snackbar or dialog here for error handling
-    }
-  }
 
   void _handlePhoneContact() async {
     try {

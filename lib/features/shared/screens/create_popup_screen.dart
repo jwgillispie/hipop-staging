@@ -7,8 +7,11 @@ import '../../../repositories/vendor_posts_repository.dart';
 import '../../market/models/market.dart';
 import '../widgets/common/hipop_text_field.dart';
 import '../widgets/common/simple_places_widget.dart';
+import '../widgets/common/photo_upload_widget.dart';
 import '../services/places_service.dart';
+import '../services/photo_service.dart';
 import '../../market/services/market_service.dart';
+import 'dart:io';
 
 class CreatePopUpScreen extends StatefulWidget {
   final IVendorPostsRepository postsRepository;
@@ -30,6 +33,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _instagramController = TextEditingController();
+  
+  List<File> _selectedPhotos = [];
   
   DateTime? _selectedStartDateTime;
   DateTime? _selectedEndDateTime;
@@ -87,6 +92,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       if (duplicateFrom.marketId != null) {
         _setSelectedMarketById(duplicateFrom.marketId!);
       }
+      
+      // For duplication, we'll start with empty photos and let user add new ones
     } else if (widget.editingPost != null) {
       // Edit mode - copy everything including date/time
       final post = widget.editingPost!;
@@ -112,6 +119,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       if (post.marketId != null) {
         _setSelectedMarketById(post.marketId!);
       }
+      
+      // For editing, the PhotoUploadWidget will handle existing photos via initialImagePaths
     } else {
       // New post mode - set default vendor name from user profile
       final user = FirebaseAuth.instance.currentUser;
@@ -370,6 +379,17 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             }
             return null;
           },
+        ),
+        const SizedBox(height: 16),
+        PhotoUploadWidget(
+          onPhotosSelected: (photos) {
+            setState(() {
+              _selectedPhotos = photos;
+            });
+          },
+          initialImagePaths: widget.editingPost?.photoUrls,
+          userId: FirebaseAuth.instance.currentUser?.uid,
+          userType: 'vendor',
         ),
         const SizedBox(height: 16),
         HiPopTextField(
@@ -854,6 +874,18 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       
       if (widget.editingPost != null) {
         // Update existing post
+        List<String> photoUrls = widget.editingPost!.photoUrls;
+        
+        // Upload new photos if any
+        if (_selectedPhotos.isNotEmpty) {
+          // Filter out existing photos (File objects created from URLs won't be real files)
+          final newPhotos = _selectedPhotos.where((photo) => photo.existsSync()).toList();
+          if (newPhotos.isNotEmpty) {
+            final newUrls = await PhotoService.uploadPostPhotos(widget.editingPost!.id, newPhotos);
+            photoUrls = [...photoUrls, ...newUrls];
+          }
+        }
+        
         final updatedPost = widget.editingPost!.copyWith(
           vendorName: _vendorNameController.text.trim(),
           location: _locationController.text.trim(),
@@ -870,6 +902,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           instagramHandle: _instagramController.text.trim().isEmpty 
               ? null 
               : _instagramController.text.trim(),
+          photoUrls: photoUrls,
           marketId: _selectedMarket?.id,
           updatedAt: now,
         );
@@ -887,7 +920,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         }
       } else {
         // Create new post
-        final post = VendorPost(
+        final tempPost = VendorPost(
           id: '', // Will be set by repository
           vendorId: user.uid,
           vendorName: _vendorNameController.text.trim(),
@@ -910,7 +943,23 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           updatedAt: now,
         );
         
-        await widget.postsRepository.createPost(post);
+        // Create the post first to get an ID
+        final postId = await widget.postsRepository.createPost(tempPost);
+        
+        // Upload photos if any
+        List<String> photoUrls = [];
+        if (_selectedPhotos.isNotEmpty) {
+          photoUrls = await PhotoService.uploadPostPhotos(postId, _selectedPhotos);
+          
+          // Update the post with photo URLs
+          if (photoUrls.isNotEmpty) {
+            final finalPost = tempPost.copyWith(
+              id: postId,
+              photoUrls: photoUrls,
+            );
+            await widget.postsRepository.updatePost(finalPost);
+          }
+        }
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

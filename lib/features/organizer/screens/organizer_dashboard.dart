@@ -5,6 +5,7 @@ import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
+import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/shared/widgets/debug_atlanta_august_creator.dart';
 import 'package:hipop/features/shared/widgets/debug_database_cleaner.dart';
@@ -18,10 +19,14 @@ class OrganizerDashboard extends StatefulWidget {
 }
 
 class _OrganizerDashboardState extends State<OrganizerDashboard> {
+  bool _hasPremiumAccess = false;
+  bool _isCheckingPremium = true;
+
   @override
   void initState() {
     super.initState();
     _checkOnboarding();
+    _checkPremiumAccess();
   }
 
   Future<void> _checkOnboarding() async {
@@ -44,6 +49,44 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         });
       }
     } catch (e) {
+      debugPrint('Error checking onboarding: $e');
+    }
+  }
+
+  Future<void> _checkPremiumAccess() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      try {
+        // Check user profile directly for premium status (same logic as vendor dashboard)
+        final userProfileService = UserProfileService();
+        final userProfile = await userProfileService.getUserProfile(authState.user.uid);
+        
+        final hasAccess = userProfile?.isPremium ?? false;
+        debugPrint('🔍 Organizer Premium access check: $hasAccess');
+        debugPrint('🔍 Organizer User profile isPremium: ${userProfile?.isPremium}');
+        debugPrint('🔍 Organizer User subscription status: ${userProfile?.subscriptionStatus}');
+        
+        if (mounted) {
+          setState(() {
+            _hasPremiumAccess = hasAccess;
+            _isCheckingPremium = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('❌ Error checking organizer premium access: $e');
+        if (mounted) {
+          setState(() {
+            _hasPremiumAccess = false;
+            _isCheckingPremium = false;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isCheckingPremium = false;
+        });
+      }
     }
   }
 
@@ -64,6 +107,18 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,
             actions: [
+              if (_hasPremiumAccess) ...[ 
+                IconButton(
+                  icon: const Icon(Icons.diamond),
+                  tooltip: 'Premium Dashboard',
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is Authenticated) {
+                      context.go('/organizer/premium-dashboard');
+                    }
+                  },
+                ),
+              ],
               PopupMenuButton<String>(
                 icon: const Icon(Icons.settings),
                 tooltip: 'Settings',
@@ -248,6 +303,13 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                       Colors.purple,
                       () => context.pushNamed('customItems'),
                     ),
+                    _buildPremiumActionCard(
+                      'Vendor Discovery',
+                      'Find qualified vendors',
+                      Icons.search,
+                      Colors.deepPurple,
+                      () => _showVendorDiscoveryUpgrade(),
+                    ),
                   ],
                 ),
               ],
@@ -309,6 +371,120 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     );
   }
 
+  Widget _buildPremiumActionCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 28),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade300),
+                    ),
+                    child: Text(
+                      'PRO',
+                      style: TextStyle(
+                        color: Colors.amber.shade700,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showVendorDiscoveryUpgrade() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.diamond, color: Colors.deepPurple),
+            SizedBox(width: 8),
+            Text('Vendor Discovery - Premium Feature'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vendor Discovery helps you find and invite qualified vendors to your markets using intelligent matching algorithms.',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Premium features include:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text('• Smart vendor matching by categories'),
+            Text('• Vendor ratings and performance metrics'),
+            Text('• Bulk invitation capabilities'),
+            Text('• Response tracking and analytics'),
+            Text('• Advanced filtering and search'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              final authState = context.read<AuthBloc>().state;
+              if (authState is Authenticated) {
+                context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${authState.user.uid}');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade to Pro - \$99/month'),
+          ),
+        ],
+      ),
+    );
+  }
 
 
 }

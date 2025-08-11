@@ -79,10 +79,9 @@ class AccountVerificationPendingScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(32),
@@ -273,10 +272,9 @@ class AccountVerificationPendingScreen extends StatelessWidget {
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.all(32),
@@ -401,8 +399,8 @@ class AccountVerificationPendingScreen extends StatelessWidget {
   }
 
   void _refresh(BuildContext context) {
-    // Force a rebuild by navigating to the same route
-    context.go('/account-verification-pending');
+    // Reload user profile to check for verification status updates
+    context.read<AuthBloc>().add(ReloadUserEvent());
   }
 
   void _contactSupport() {

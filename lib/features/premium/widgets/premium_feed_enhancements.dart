@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hipop/features/shopper/services/personalized_recommendation_service.dart';
-import 'package:hipop/features/vendor/services/vendor_following_service.dart';
 import '../services/subscription_service.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
@@ -19,7 +18,6 @@ class PremiumFeedEnhancements extends StatefulWidget {
 }
 
 class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with WidgetsBindingObserver {
-  List<Map<String, dynamic>> _followedVendors = [];
   List<Map<String, dynamic>> _recommendations = [];
   bool _isLoading = false;
   bool _hasPremiumAccess = false;
@@ -94,18 +92,14 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
     });
 
     try {
-      final futures = await Future.wait([
-        VendorFollowingService.getFollowedVendors(_currentUserId),
-        PersonalizedRecommendationService.generateRecommendations(
-          shopperId: _currentUserId,
-          limit: 6,
-        ),
-      ]);
+      final recommendations = await PersonalizedRecommendationService.generateRecommendations(
+        shopperId: _currentUserId,
+        limit: 6,
+      );
 
       if (mounted) {
         setState(() {
-          _followedVendors = futures[0] as List<Map<String, dynamic>>;
-          _recommendations = futures[1] as List<Map<String, dynamic>>;
+          _recommendations = recommendations;
           _isLoading = false;
         });
       }
@@ -145,10 +139,6 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
 
     return Column(
       children: [
-        if (_followedVendors.isNotEmpty) ...[
-          _buildFollowedVendorsSection(),
-          const SizedBox(height: 16),
-        ],
         if (_recommendations.isNotEmpty && _showRecommendations) ...[
           _buildRecommendationsSection(),
           const SizedBox(height: 16),
@@ -183,7 +173,7 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -201,7 +191,7 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Discover Your Perfect Vendors',
+                        'Find Your Perfect Pop-Ups',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.grey.shade800,
@@ -209,7 +199,7 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Get AI-powered recommendations based on your preferences',
+                        'Discover amazing pop-up markets and vendors near you',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 14,
@@ -224,7 +214,7 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
             Row(
               children: [
                 Expanded(
-                  child: _buildMiniFeature(Icons.notifications, 'Get Vendor Updates'),
+                  child: _buildMiniFeature(Icons.search, 'Enhanced Search'),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -232,7 +222,7 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildMiniFeature(Icons.recommend, 'Smart Recommendations'),
+                  child: _buildMiniFeature(Icons.auto_awesome, 'Smart Recommendations'),
                 ),
               ],
             ),
@@ -271,7 +261,7 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.8),
+        color: Colors.white.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -297,104 +287,6 @@ class _PremiumFeedEnhancementsState extends State<PremiumFeedEnhancements> with 
     );
   }
 
-  Widget _buildFollowedVendorsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.notifications,
-                    color: Colors.blue.shade600,
-                    size: 16,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Vendor Updates',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    'Premium',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'New updates from ${_followedVendors.length} vendors',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _followedVendors.take(5).length,
-                itemBuilder: (context, index) {
-                  final vendor = _followedVendors[index];
-                  return Container(
-                    width: 80,
-                    margin: const EdgeInsets.only(right: 12),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundImage: vendor['profileImageUrl'] != null
-                              ? NetworkImage(vendor['profileImageUrl'])
-                              : null,
-                          child: vendor['profileImageUrl'] == null
-                              ? const Icon(Icons.store)
-                              : null,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          vendor['vendorName'] ?? 'Vendor',
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildRecommendationsSection() {
     return Card(

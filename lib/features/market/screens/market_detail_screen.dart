@@ -6,9 +6,11 @@ import 'package:hipop/features/shared/services/url_launcher_service.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
+import 'package:hipop/features/shared/widgets/common/vendor_items_widget.dart';
 import 'package:hipop/features/shared/widgets/share_button.dart';
 import 'package:hipop/features/vendor/models/managed_vendor.dart';
 import 'package:hipop/features/vendor/services/managed_vendor_service.dart';
+import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
 import '../../market/models/market.dart';
 
 
@@ -91,13 +93,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                 ],
               );
             },
-          ),
-          ShareButton.market(
-            onGetShareContent: () async {
-              return _buildMarketShareContent(widget.market);
-            },
-            style: ShareButtonStyle.icon,
-            size: ShareButtonSize.medium,
           ),
           FavoriteButton(
             itemId: widget.market.id,
@@ -403,19 +398,28 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16.0),
-          itemCount: vendors.length,
-          itemBuilder: (context, index) {
-            final vendor = vendors[index];
-            return _buildVendorCard(vendor);
+        return FutureBuilder<Map<String, List<String>>>(
+          future: VendorMarketItemsService.getMarketVendorItems(widget.market.id),
+          builder: (context, itemsSnapshot) {
+            final vendorItemsMap = itemsSnapshot.data ?? <String, List<String>>{};
+            
+            return ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: vendors.length,
+              itemBuilder: (context, index) {
+                final vendor = vendors[index];
+                // Get market-specific items for this vendor
+                final vendorItems = vendorItemsMap[vendor.id] ?? <String>[];
+                return _buildVendorCard(vendor, vendorItems);
+              },
+            );
           },
         );
       },
     );
   }
 
-  Widget _buildVendorCard(ManagedVendor vendor) {
+  Widget _buildVendorCard(ManagedVendor vendor, List<String> marketItems) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -460,10 +464,22 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                     ],
                   ),
                 ),
-                FavoriteButton(
-                  itemId: vendor.id,
-                  type: FavoriteType.vendor,
-                  size: 20,
+                Row(
+                  children: [
+                    ShareButton(
+                      onGetShareContent: () async {
+                        return _buildVendorShareContent(vendor);
+                      },
+                      style: ShareButtonStyle.icon,
+                      size: ShareButtonSize.small,
+                    ),
+                    const SizedBox(width: 8),
+                    FavoriteButton(
+                      itemId: vendor.id,
+                      type: FavoriteType.vendor,
+                      size: 20,
+                    ),
+                  ],
                 ),
                 if (vendor.isFeatured)
                   Container(
@@ -505,39 +521,57 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
               ),
             ],
             
-            if (vendor.products.isNotEmpty) ...[
+            // Show market-specific items if available, otherwise show general products
+            if (marketItems.isNotEmpty || vendor.products.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: vendor.products.take(6).map((product) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    product,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.blue[800],
-                      fontWeight: FontWeight.w500,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (marketItems.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.local_grocery_store,
+                          size: 14,
+                          color: Colors.green[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Available at this market:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                )).toList(),
+                    const SizedBox(height: 6),
+                    VendorItemsWidget.full(items: marketItems),
+                  ] else if (vendor.products.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'General products:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    VendorItemsWidget.full(items: vendor.products),
+                  ],
+                ],
               ),
-              if (vendor.products.length > 6)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '+ ${vendor.products.length - 6} more',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
             ],
             
             if (vendor.phoneNumber != null || vendor.email != null || vendor.instagramHandle != null) ...[
@@ -718,6 +752,42 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
       case 12: return 'Dec';
       default: return 'Month';
     }
+  }
+
+  String _buildVendorShareContent(ManagedVendor vendor) {
+    final buffer = StringBuffer();
+    
+    buffer.writeln('🛒 Check out ${vendor.businessName}!');
+    buffer.writeln();
+    
+    if (vendor.description.isNotEmpty) {
+      buffer.writeln('${vendor.description}');
+      buffer.writeln();
+    }
+    
+    buffer.writeln('📋 Categories: ${vendor.categoriesDisplay}');
+    
+    if (vendor.products.isNotEmpty) {
+      buffer.writeln('🥬 Products: ${vendor.products.take(5).join(", ")}${vendor.products.length > 5 ? "..." : ""}');
+    }
+    
+    if (vendor.phoneNumber != null) {
+      buffer.writeln('📞 Phone: ${vendor.phoneNumber}');
+    }
+    
+    if (vendor.email != null) {
+      buffer.writeln('📧 Email: ${vendor.email}');
+    }
+    
+    if (vendor.instagramHandle != null) {
+      buffer.writeln('📱 Instagram: @${vendor.instagramHandle}');
+    }
+    
+    buffer.writeln();
+    buffer.writeln('Find them at ${widget.market.name}!');
+    buffer.writeln('Shared via HiPop 🍎');
+    
+    return buffer.toString();
   }
 
   String _buildMarketShareContent(Market market) {

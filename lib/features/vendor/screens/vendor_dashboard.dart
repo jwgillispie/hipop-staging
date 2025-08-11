@@ -10,6 +10,8 @@ import 'package:hipop/features/vendor/widgets/vendor/vendor_calendar_widget.dart
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
+import 'package:hipop/features/premium/services/subscription_service.dart';
+import 'package:hipop/features/shared/services/user_profile_service.dart';
 
 class VendorDashboard extends StatefulWidget {
   const VendorDashboard({super.key});
@@ -22,11 +24,86 @@ class _VendorDashboardState extends State<VendorDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final VendorPostsRepository _vendorPostsRepository = VendorPostsRepository();
+  bool _hasPremiumAccess = false;
+  bool _isCheckingPremium = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _checkPremiumAccess();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-check premium access when dependencies change (e.g., after hot restart)
+    _checkPremiumAccess();
+  }
+
+  Future<void> _checkPremiumAccess() async {
+    if (!mounted) return;
+    
+    final authState = context.read<AuthBloc>().state;
+    debugPrint('🔄 Checking premium access - Auth state: ${authState.runtimeType}');
+    
+    if (authState is Authenticated) {
+      try {
+        setState(() {
+          _isCheckingPremium = true;
+        });
+
+        // Check user profile directly for premium status
+        final userProfileService = UserProfileService();
+        final userProfile = await userProfileService.getUserProfile(authState.user.uid);
+        
+        final hasAccess = userProfile?.isPremium == true && 
+                         (userProfile?.subscriptionStatus == 'active' || 
+                          userProfile?.stripeSubscriptionId?.isNotEmpty == true);
+        
+        debugPrint('');
+        debugPrint('🔍 ========= PREMIUM ACCESS CHECK =========');
+        debugPrint('👤 User ID: ${authState.user.uid}');
+        debugPrint('📧 User Email: ${authState.user.email}');
+        debugPrint('✅ Has Premium Access: $hasAccess');
+        debugPrint('💎 Profile isPremium: ${userProfile?.isPremium}');
+        debugPrint('📋 Subscription Status: ${userProfile?.subscriptionStatus}');
+        debugPrint('🔑 Stripe Sub ID: ${userProfile?.stripeSubscriptionId}');
+        debugPrint('🏪 Stripe Customer ID: ${userProfile?.stripeCustomerId}');
+        debugPrint('⏰ Timestamp: ${DateTime.now()}');
+        debugPrint('🔍 ===================================');
+        debugPrint('');
+        
+        if (mounted) {
+          setState(() {
+            _hasPremiumAccess = hasAccess;
+            _isCheckingPremium = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('');
+        debugPrint('❌ ========= PREMIUM ACCESS ERROR =========');
+        debugPrint('💥 Error: $e');
+        debugPrint('📍 Stack trace: ${StackTrace.current}');
+        debugPrint('❌ ===================================');
+        debugPrint('');
+        
+        if (mounted) {
+          setState(() {
+            _hasPremiumAccess = false;
+            _isCheckingPremium = false;
+          });
+        }
+      }
+    } else {
+      debugPrint('⚠️  User not authenticated - resetting premium access');
+      if (mounted) {
+        setState(() {
+          _hasPremiumAccess = false;
+          _isCheckingPremium = false;
+        });
+      }
+    }
   }
 
   @override
@@ -37,7 +114,13 @@ class _VendorDashboardState extends State<VendorDashboard>
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        // Re-check premium access when auth state changes (e.g., after hot restart)
+        if (state is Authenticated) {
+          _checkPremiumAccess();
+        }
+      },
       builder: (context, state) {
         if (state is! Authenticated) {
           return const Scaffold(
@@ -51,6 +134,30 @@ class _VendorDashboardState extends State<VendorDashboard>
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
             actions: [
+              if (_isCheckingPremium) ...[
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+              ] else if (_hasPremiumAccess) ...[
+                IconButton(
+                  icon: const Icon(Icons.diamond),
+                  tooltip: 'Premium Dashboard',
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is Authenticated) {
+                      context.go('/vendor/premium-dashboard');
+                    }
+                  },
+                ),
+              ],
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () => _showLogoutDialog(context),
@@ -94,6 +201,62 @@ class _VendorDashboardState extends State<VendorDashboard>
               children: [
                 // Debug Account Switcher
                 const DebugAccountSwitcher(),
+                
+                // Premium Access Debug Info
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _isCheckingPremium 
+                      ? Colors.blue.shade50
+                      : _hasPremiumAccess 
+                        ? Colors.green.shade50 
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _isCheckingPremium 
+                        ? Colors.blue
+                        : _hasPremiumAccess 
+                          ? Colors.green 
+                          : Colors.grey,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (_isCheckingPremium) ...[
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Checking Premium Access...',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ] else ...[
+                        Icon(
+                          _hasPremiumAccess ? Icons.diamond : Icons.info_outline,
+                          color: _hasPremiumAccess ? Colors.green : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _hasPremiumAccess 
+                            ? 'Premium Access: ACTIVE' 
+                            : 'Premium Access: NOT ACTIVE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _hasPremiumAccess ? Colors.green.shade700 : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -177,11 +340,28 @@ class _VendorDashboardState extends State<VendorDashboard>
               // ),
               _buildActionCard(
                 context,
+                'Market Discovery',
+                'Find markets seeking vendors',
+                Icons.search,
+                Colors.amber,
+                () => context.go('/vendor/market-discovery'),
+                isPremium: !_hasPremiumAccess,
+              ),
+              _buildActionCard(
+                context,
                 'Market Invitations',
                 'Manage market permissions',
                 Icons.storefront,
                 Colors.deepOrange,
                 () => context.go('/vendor/market-permissions'),
+              ),
+              _buildActionCard(
+                context,
+                'Market Items',
+                'Customize items per market',
+                Icons.inventory_2,
+                Colors.brown,
+                () => context.go('/vendor/market-items'),
               ),
               _buildActionCard(
                 context,
@@ -303,8 +483,9 @@ class _VendorDashboardState extends State<VendorDashboard>
     String subtitle,
     IconData icon,
     Color color,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    bool isPremium = false,
+  }) {
     return Card(
       elevation: 4,
       child: InkWell(
@@ -330,15 +511,30 @@ class _VendorDashboardState extends State<VendorDashboard>
               ),
               const SizedBox(height: 8),
               Flexible(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isPremium) ...[
+                      Icon(
+                        Icons.diamond,
+                        size: 16,
+                        color: Colors.amber[700],
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Flexible(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 4),

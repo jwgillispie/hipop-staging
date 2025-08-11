@@ -5,8 +5,6 @@ import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../models/user_profile.dart';
 import '../services/user_profile_service.dart';
-import '../../premium/services/subscription_service.dart';
-import '../../premium/widgets/upgrade_to_premium_button.dart';
 
 class CeoVerificationDashboardScreen extends StatefulWidget {
   const CeoVerificationDashboardScreen({super.key});
@@ -20,38 +18,14 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
   String _searchQuery = '';
   String? _selectedUserType;
   VerificationStatus? _selectedStatus;
-  bool _hasPremiumAccess = false;
-  bool _isCheckingPremium = true;
 
   @override
   void initState() {
     super.initState();
     // Force Firebase index creation by running all queries immediately
     _triggerIndexCreation();
-    _checkPremiumAccess();
   }
 
-  Future<void> _checkPremiumAccess() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      final hasAccess = await SubscriptionService.hasFeature(
-        authState.user.uid,
-        'vendor_performance_metrics',
-      );
-      if (mounted) {
-        setState(() {
-          _hasPremiumAccess = hasAccess;
-          _isCheckingPremium = false;
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _isCheckingPremium = false;
-        });
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -160,11 +134,6 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
           body: Column(
             children: [
               _buildSearchAndFilters(),
-              if (_hasPremiumAccess) ...[
-                _buildPremiumAnalytics(),
-              ] else if (!_isCheckingPremium) ...[
-                _buildMarketOrganizerUpgradePrompt(),
-              ],
               Expanded(child: _buildAccountsList()),
             ],
           ),
@@ -780,160 +749,8 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
     setState(() {});
   }
 
-  Widget _buildPremiumAnalytics() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.analytics,
-                      color: Colors.purple,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Market Organizer Analytics',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildAnalyticCard('Total Vendors', '127', Icons.store),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildAnalyticCard('Pending Reviews', '8', Icons.pending_actions),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildAnalyticCard('Revenue Insights', '\$2.4K', Icons.trending_up),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildAnalyticCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.purple.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.purple, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.purple,
-            ),
-          ),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildMarketOrganizerUpgradePrompt() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Card(
-        color: Colors.purple.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.star_outline,
-                      color: Colors.purple,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Unlock Advanced Market Analytics',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Upgrade to Market Organizer Premium (\$39/month) for:',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('📊 Comprehensive vendor performance analytics', style: TextStyle(fontSize: 12)),
-                  Text('💰 Revenue tracking & financial insights', style: TextStyle(fontSize: 12)),
-                  Text('🎯 Smart vendor recruitment tools', style: TextStyle(fontSize: 12)),
-                  Text('📈 Market health & growth metrics', style: TextStyle(fontSize: 12)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              UpgradeToPremiumButton(
-                userType: 'market_organizer',
-                onSuccess: () {
-                  _checkPremiumAccess();
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ReviewDialog extends StatefulWidget {

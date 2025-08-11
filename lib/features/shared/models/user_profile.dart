@@ -20,6 +20,7 @@ class UserProfile {
   final String? website;
   final List<String> categories; // For vendors - what they sell
   final String? specificProducts; // For vendors - specific product details
+  final String? featuredItems; // For vendors - featured items text field
   final List<String> ccEmails; // For vendors - additional contact emails
   final Map<String, dynamic> preferences; // General user preferences
   final DateTime createdAt;
@@ -55,6 +56,7 @@ class UserProfile {
     this.website,
     this.categories = const [],
     this.specificProducts,
+    this.featuredItems,
     this.ccEmails = const [],
     this.preferences = const {},
     required this.createdAt,
@@ -90,6 +92,7 @@ class UserProfile {
     String? website,
     List<String>? categories,
     String? specificProducts,
+    String? featuredItems,
     List<String>? ccEmails,
     Map<String, dynamic>? preferences,
     DateTime? createdAt,
@@ -123,6 +126,7 @@ class UserProfile {
       website: website ?? this.website,
       categories: categories ?? this.categories,
       specificProducts: specificProducts ?? this.specificProducts,
+      featuredItems: featuredItems ?? this.featuredItems,
       ccEmails: ccEmails ?? this.ccEmails,
       preferences: preferences ?? this.preferences,
       createdAt: createdAt ?? this.createdAt,
@@ -160,6 +164,7 @@ class UserProfile {
       'website': website,
       'categories': categories,
       'specificProducts': specificProducts,
+      'featuredItems': featuredItems,
       'ccEmails': ccEmails,
       'preferences': preferences,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -199,6 +204,7 @@ class UserProfile {
       website: data['website'],
       categories: List<String>.from(data['categories'] ?? []),
       specificProducts: data['specificProducts'],
+      featuredItems: data['featuredItems'],
       ccEmails: List<String>.from(data['ccEmails'] ?? []),
       preferences: Map<String, dynamic>.from(data['preferences'] ?? {}),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),

@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/blocs/favorites/favorites_bloc.dart';
-import 'package:hipop/features/shared/widgets/common/simple_places_widget.dart';
 import 'package:hipop/features/shared/services/places_service.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/shared/widgets/common/settings_dropdown.dart';
 import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
+import 'package:hipop/features/shared/widgets/share_button.dart';
+import 'package:hipop/features/shared/widgets/common/vendor_items_widget.dart';
+import 'package:hipop/features/shared/widgets/common/simple_places_widget.dart';
 import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/shared/services/url_launcher_service.dart';
 import 'package:hipop/features/market/models/market.dart';
@@ -18,13 +20,12 @@ import 'package:hipop/core/constants/place_utils.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/models/event.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
-import 'package:hipop/features/premium/widgets/premium_search_widget.dart';
 import 'package:hipop/features/premium/widgets/premium_feed_enhancements.dart';
 import 'package:hipop/features/premium/services/subscription_service.dart';
-import 'package:hipop/features/premium/widgets/upgrade_to_premium_button.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
-import 'shopper_premium_demo_screen.dart';
+import 'package:hipop/features/auth/services/onboarding_service.dart';
+import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
 
 enum FeedFilter { markets, vendors, events, all }
 
@@ -50,6 +51,15 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     _vendorPostsRepository = VendorPostsRepository();
     WidgetsBinding.instance.addObserver(this);
     _checkPremiumAccess();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final shouldShowOnboarding = await OnboardingService.shouldShowShopperOnboarding();
+    if (shouldShowOnboarding && mounted) {
+      // Navigate to onboarding screen
+      context.go('/onboarding');
+    }
   }
 
   @override
@@ -273,156 +283,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPremiumSearchSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Premium Features',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Advanced search & discovery tools for premium shoppers',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('🔍 Advanced search coming soon!'),
-                          backgroundColor: Colors.blue,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.search, size: 18),
-                    label: const Text('Advanced Search'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('👥 My followed vendors coming soon!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.favorite, size: 18),
-                    label: const Text('My Vendors'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpgradePrompt() {
-    return Card(
-      color: Colors.blue.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.star_outline,
-                    color: Colors.blue,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Unlock Premium Features',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              '• Get vendor notifications & updates\n• Advanced search by product/category\n• Personalized recommendations',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ShopperPremiumDemoScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text('Upgrade to Premium - \$4/month'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -536,13 +396,17 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 // Premium Features Integration
                 const PremiumFeedEnhancements(),
                 const SizedBox(height: 24),
-                // Premium search widget with integrated advanced features
-                PremiumSearchWidget(
-                  onSearchResults: (results) {
-                    // Handle search results in the main feed
-                    debugPrint('Search returned ${results.length} results');
-                  },
-                  initialLocation: _selectedCity,
+                // Location search - main feature
+                Text(
+                  _getSearchHeaderText(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SimplePlacesWidget(
+                  initialLocation: _searchLocation,
+                  onLocationSelected: _performPlaceSearch,
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -916,18 +780,26 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                       ],
                     ),
                   ),
-                  Column(
+                  Row(
                     children: [
-                      FavoriteButton(
-                        itemId: post.id,
-                        type: FavoriteType.post,
-                        size: 20,
+                      ShareButton(
+                        onGetShareContent: () async {
+                          return _buildVendorPostShareContent(post);
+                        },
+                        style: ShareButtonStyle.icon,
+                        size: ShareButtonSize.small,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(width: 8),
                       VendorFollowButton(
                         vendorId: post.vendorId,
                         vendorName: post.vendorName,
                         isCompact: true,
+                      ),
+                      const SizedBox(width: 8),
+                      FavoriteButton(
+                        itemId: post.id,
+                        type: FavoriteType.post,
+                        size: 20,
                       ),
                     ],
                   ),
@@ -971,6 +843,67 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+              // Show Instagram handle if available
+              if (post.instagramHandle != null && post.instagramHandle!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _launchInstagram(post.instagramHandle!),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '@${post.instagramHandle!}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              // Show vendor items if available
+              FutureBuilder<List<String>>(
+                future: _getVendorItemsForMarket(post.vendorId, post.marketId),
+                builder: (context, snapshot) {
+                  final items = snapshot.data ?? [];
+                  if (items.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.local_grocery_store,
+                              size: 14,
+                              color: Colors.green[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Available items:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        VendorItemsWidget.compact(items: items),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
             ],
           ),
         ),
@@ -1009,6 +942,54 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   List<VendorPost> _filterCurrentAndFuturePosts(List<VendorPost> posts) {
     final now = DateTime.now();
     return posts.where((post) => post.popUpEndDateTime.isAfter(now)).toList();
+  }
+
+  String _buildVendorPostShareContent(VendorPost post) {
+    final buffer = StringBuffer();
+    
+    buffer.writeln('🎪 Pop-up Event Alert!');
+    buffer.writeln();
+    buffer.writeln('🛒 ${post.vendorName}');
+    
+    if (post.description.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln(post.description);
+    }
+    
+    buffer.writeln();
+    buffer.writeln('📅 ${_formatPostDateTime(post.popUpStartDateTime)} - ${_formatTime(post.popUpEndDateTime)}');
+    
+    if (post.locationName != null && post.locationName!.isNotEmpty) {
+      buffer.writeln('📍 ${post.locationName}');
+    }
+    
+    if (post.instagramHandle != null && post.instagramHandle!.isNotEmpty) {
+      buffer.writeln('📱 @${post.instagramHandle}');
+    }
+    
+    buffer.writeln();
+    buffer.writeln('Don\'t miss out on fresh local products!');
+    buffer.writeln('Shared via HiPop 🍎');
+    
+    return buffer.toString();
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour == 0 ? 12 : dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  Future<List<String>> _getVendorItemsForMarket(String vendorId, String? marketId) async {
+    if (marketId == null) return [];
+    
+    try {
+      final vendorItems = await VendorMarketItemsService.getVendorMarketItems(vendorId, marketId);
+      return vendorItems?.itemList ?? [];
+    } catch (e) {
+      debugPrint('Error fetching vendor items: $e');
+      return [];
+    }
   }
 
   Widget _buildEventCard(Event event) {
@@ -1191,10 +1172,28 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                       ],
                     ),
                   ),
-                  FavoriteButton(
-                    itemId: market.id,
-                    type: FavoriteType.market,
-                    size: 20,
+                  Row(
+                    children: [
+                      ShareButton(
+                        onGetShareContent: () async {
+                          return _buildMarketShareContent(market);
+                        },
+                        style: ShareButtonStyle.icon,
+                        size: ShareButtonSize.small,
+                      ),
+                      const SizedBox(width: 8),
+                      VendorFollowButton(
+                        vendorId: market.id,
+                        vendorName: market.name,
+                        isCompact: true,
+                      ),
+                      const SizedBox(width: 8),
+                      FavoriteButton(
+                        itemId: market.id,
+                        type: FavoriteType.market,
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1343,5 +1342,55 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
         );
       }
     }
+  }
+
+  Future<void> _launchInstagram(String handle) async {
+    try {
+      await UrlLauncherService.launchInstagram(handle);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open Instagram: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _buildMarketShareContent(Market market) {
+    final buffer = StringBuffer();
+    
+    buffer.writeln('🏪 Market Discovery!');
+    buffer.writeln();
+    buffer.writeln('📍 ${market.name}');
+    if (market.description != null && market.description!.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln(market.description);
+    }
+    buffer.writeln();
+    buffer.writeln('📍 Location: ${market.address}');
+    buffer.writeln();
+    
+    // Add schedule information if available
+    if (market.operatingDays.isNotEmpty) {
+      buffer.writeln('🗓️ Operating Schedule:');
+      market.operatingDays.entries.take(3).forEach((entry) {
+        final dayKey = entry.key.toUpperCase();
+        buffer.writeln('• $dayKey: ${entry.value}');
+      });
+      buffer.writeln();
+    }
+    
+    buffer.writeln('🛒 Visit this amazing local market!');
+    buffer.writeln();
+    
+    buffer.writeln('Discovered on HiPop - Find local markets & pop-ups');
+    buffer.writeln('Download: https://hipopapp.com');
+    buffer.writeln();
+    buffer.writeln('#FarmersMarket #LocalMarket #SupportLocal #HiPop');
+    
+    return buffer.toString();
   }
 }

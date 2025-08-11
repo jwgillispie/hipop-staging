@@ -195,9 +195,9 @@ class UserSubscription extends Equatable {
       case SubscriptionTier.shopperPro:
         return 4.00; // $4.00/month
       case SubscriptionTier.vendorPro:
-        return 19.99; // $19.99/month
+        return 29.00; // $29.00/month
       case SubscriptionTier.marketOrganizerPro:
-        return 49.99; // $49.99/month
+        return 99.00; // $99.00/month
       case SubscriptionTier.enterprise:
         return 199.99; // $199.99/month
       default:
@@ -314,6 +314,7 @@ class UserSubscription extends Equatable {
       case SubscriptionTier.vendorPro:
         return {
           // Vendor Pro Features
+          'market_discovery': true,
           'full_vendor_analytics': true,
           'unlimited_markets': true,
           'sales_tracking': true,
@@ -326,8 +327,13 @@ class UserSubscription extends Equatable {
       case SubscriptionTier.marketOrganizerPro:
         return {
           // Market Organizer Pro Features
+          'vendor_discovery': true,
           'multi_market_management': true,
           'vendor_analytics_dashboard': true,
+          'vendor_communication_suite': true,
+          'bulk_messaging': true,
+          'message_templates': true,
+          'communication_analytics': true,
           'financial_reporting': true,
           'vendor_performance_ranking': true,
           'automated_recruitment': true,
@@ -338,8 +344,13 @@ class UserSubscription extends Equatable {
       case SubscriptionTier.enterprise:
         return {
           // All Market Organizer Pro features
+          'vendor_discovery': true,
           'multi_market_management': true,
           'vendor_analytics_dashboard': true,
+          'vendor_communication_suite': true,
+          'bulk_messaging': true,
+          'message_templates': true,
+          'communication_analytics': true,
           'financial_reporting': true,
           'vendor_performance_ranking': true,
           'automated_recruitment': true,

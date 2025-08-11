@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:hipop/features/shared/services/url_launcher_service.dart';
 import 'package:hipop/features/shared/models/user_profile.dart';
 
@@ -48,16 +49,6 @@ class SupportService {
     }
   }
 
-  /// Launch help center/FAQ website
-  static Future<void> openHelpCenter() async {
-    try {
-      // Replace with actual help center URL when available
-      await UrlLauncherService.launchWebsite('https://hipop.app/help');
-    } catch (e) {
-      debugPrint('Error launching help center: $e');
-      rethrow;
-    }
-  }
 
   /// Get context-specific email subject
   static String _getEmailSubject(SupportContext context) {
@@ -202,7 +193,8 @@ class SupportService {
   /// Internal method to launch mailto URLs
   static Future<void> _launchMailtoUrl(String mailtoUrl) async {
     try {
-      await UrlLauncherService.launchWebsite(mailtoUrl);
+      final uri = Uri.parse(mailtoUrl);
+      await launchUrl(uri);
     } catch (e) {
       debugPrint('Error launching mailto URL: $e');
       rethrow;

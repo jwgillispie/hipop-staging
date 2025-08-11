@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../repositories/auth_repository.dart';
 import '../../features/shared/services/user_profile_service.dart';
 import '../../features/shared/services/favorites_migration_service.dart';
+import '../../features/auth/services/onboarding_service.dart';
 import '../../features/shared/models/user_profile.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -202,6 +203,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           userProfile = await _userProfileService.getUserProfile(userCredential.user!.uid);  
         } catch (e) {
           // Failed to load user profile after creation, continue without it
+        }
+        
+        // Mark first-time signup for shoppers to trigger onboarding
+        if (event.userType == 'shopper') {
+          await OnboardingService.markShopperFirstTimeSignup();
         }
         
         // Emit authenticated state directly to avoid race condition

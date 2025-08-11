@@ -16,6 +16,7 @@ class VendorPost extends Equatable {
   final DateTime popUpStartDateTime;
   final DateTime popUpEndDateTime;
   final String? instagramHandle;
+  final List<String> photoUrls;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
@@ -35,6 +36,7 @@ class VendorPost extends Equatable {
     required this.popUpStartDateTime,
     required this.popUpEndDateTime,
     this.instagramHandle,
+    this.photoUrls = const [],
     required this.createdAt,
     required this.updatedAt,
     this.isActive = true,
@@ -65,6 +67,9 @@ class VendorPost extends Equatable {
             ? (data['popUpEndDateTime'] as Timestamp).toDate()
             : (data['popUpDateTime'] as Timestamp?)?.toDate().add(const Duration(hours: 4)) ?? DateTime.now().add(const Duration(hours: 4)),
         instagramHandle: data['instagramHandle'],
+        photoUrls: data['photoUrls'] != null 
+            ? List<String>.from(data['photoUrls']) 
+            : [],
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         isActive: data['isActive'] ?? true,
@@ -89,6 +94,7 @@ class VendorPost extends Equatable {
       'popUpStartDateTime': Timestamp.fromDate(popUpStartDateTime),
       'popUpEndDateTime': Timestamp.fromDate(popUpEndDateTime),
       'instagramHandle': instagramHandle,
+      'photoUrls': photoUrls,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isActive': isActive,
@@ -110,6 +116,7 @@ class VendorPost extends Equatable {
     DateTime? popUpStartDateTime,
     DateTime? popUpEndDateTime,
     String? instagramHandle,
+    List<String>? photoUrls,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isActive,
@@ -129,6 +136,7 @@ class VendorPost extends Equatable {
       popUpStartDateTime: popUpStartDateTime ?? this.popUpStartDateTime,
       popUpEndDateTime: popUpEndDateTime ?? this.popUpEndDateTime,
       instagramHandle: instagramHandle ?? this.instagramHandle,
+      photoUrls: photoUrls ?? this.photoUrls,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
@@ -240,6 +248,7 @@ class VendorPost extends Equatable {
         popUpStartDateTime,
         popUpEndDateTime,
         instagramHandle,
+        photoUrls,
         createdAt,
         updatedAt,
         isActive,

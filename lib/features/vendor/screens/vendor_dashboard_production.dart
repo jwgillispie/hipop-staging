@@ -79,6 +79,18 @@ class _VendorDashboardState extends State<VendorDashboard>
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
             actions: [
+              if (_hasPremiumAccess) ...[
+                IconButton(
+                  icon: const Icon(Icons.diamond),
+                  tooltip: 'Premium Dashboard',
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is Authenticated) {
+                      context.go('/premium/dashboard?userId=${authState.user.uid}');
+                    }
+                  },
+                ),
+              ],
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () => _showLogoutDialog(context),

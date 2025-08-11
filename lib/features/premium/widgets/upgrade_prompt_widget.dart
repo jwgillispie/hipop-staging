@@ -243,6 +243,14 @@ class UpgradePromptWidget extends StatelessWidget {
           'Centralized management',
           'Performance comparison tools',
         ];
+      case 'unlimited_photos per post':
+      case 'unlimited_photo_uploads':
+        return [
+          'Upload unlimited photos per post',
+          'Showcase your products better',
+          'Advanced photo management',
+          'Higher engagement rates',
+        ];
       case 'api_access':
         return [
           'Full API access',
@@ -272,7 +280,7 @@ class UpgradePromptWidget extends StatelessWidget {
       case 'vendor':
         return {
           'title': 'Vendor Pro',
-          'price': '\$19.99',
+          'price': '\$29.00',
           'tier': SubscriptionTier.vendorPro,
         };
       case 'market_organizer':
@@ -284,7 +292,7 @@ class UpgradePromptWidget extends StatelessWidget {
       default:
         return {
           'title': 'Vendor Pro',
-          'price': '\$19.99',
+          'price': '\$29.00',
           'tier': SubscriptionTier.vendorPro,
         };
     }

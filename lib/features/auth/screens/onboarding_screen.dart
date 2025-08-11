@@ -48,12 +48,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _checkOnboardingStatus() async {
-    // Check if onboarding has already been completed
-    final isCompleted = await OnboardingService.isShopperOnboardingComplete();
+    // Check if shopper should see onboarding (first time signup and not completed)
+    final shouldShow = await OnboardingService.shouldShowShopperOnboarding();
     
     if (mounted) {
-      if (isCompleted) {
-        // Onboarding already completed, redirect to auth
+      if (!shouldShow) {
+        // Don't show onboarding, redirect to auth
         context.go('/auth');
       } else {
         // Show onboarding
@@ -91,8 +91,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _completeOnboarding() async {
-    // Mark onboarding as completed
+    // Mark onboarding as completed and clear first time flag
     await OnboardingService.markShopperOnboardingComplete();
+    await OnboardingService.clearFirstTimeSignupFlag();
     if (mounted) {
       context.go('/auth');
     }

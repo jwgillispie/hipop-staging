@@ -400,15 +400,27 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
       if (!mounted) return;
       
       if (userProfile == null) {
-        // Fallback to generic premium dashboard
-        context.go('/premium/dashboard?userId=${widget.userId}');
+        // Fallback to shopper dashboard (most common case)
+        context.go('/shopper');
         return;
       }
       
-      // Navigate based on user type and subscription tier
+      // Navigate based on user type to their specific premium experience
       final userType = userProfile.userType;
       if (_subscription != null && _subscription!.isPremium) {
-        context.go('/premium/dashboard?userId=${widget.userId}');
+        switch (userType) {
+          case 'vendor':
+            context.go('/vendor'); // Vendor dashboard shows premium features when user has subscription
+            break;
+          case 'market_organizer':
+          case 'organizer':
+            context.go('/organizer'); // Organizer dashboard shows premium features when user has subscription
+            break;
+          case 'shopper':
+          default:
+            context.go('/shopper'); // Shopper dashboard shows premium features when user has subscription
+            break;
+        }
       } else {
         // If no premium subscription, redirect to appropriate dashboard
         _navigateToUserDashboard(context, userType: userType);
@@ -416,8 +428,8 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
     } catch (e) {
       debugPrint('Error navigating to premium features: $e');
       if (!mounted) return;
-      // Fallback navigation
-      context.go('/premium/dashboard?userId=${widget.userId}');
+      // Fallback navigation to shopper dashboard (safest default)
+      context.go('/shopper');
     }
   }
   

@@ -5,6 +5,7 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/premium/widgets/upgrade_to_premium_button.dart';
 import '../../services/vendor_following_service.dart';
+import '../../../shared/services/user_profile_service.dart';
 
 
 class VendorNotificationButton extends StatefulWidget {
@@ -92,11 +93,17 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
     });
 
     try {
-      // Check if user has premium subscription for enhanced features
-      final hasFeature = await SubscriptionService.hasFeature(
-        authState.user.uid,
-        'vendor_following_system',
-      );
+      // Check if user has premium subscription for enhanced features (dual check system)
+      final futures = await Future.wait([
+        SubscriptionService.hasFeature(authState.user.uid, 'vendor_following_system'),
+        _checkUserProfilePremiumStatus(authState.user.uid),
+      ]);
+      
+      final hasFeatureAccess = futures[0];
+      final hasProfilePremium = futures[1];
+      
+      // User is premium if either check returns true
+      final hasFeature = hasFeatureAccess || hasProfilePremium;
 
       if (_isNotifying) {
         await VendorFollowingService.unfollowVendor(
@@ -127,13 +134,17 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
             content: Text(message),
             backgroundColor: _isNotifying ? Colors.blue : Colors.grey,
             duration: const Duration(seconds: 2),
-            action: !hasFeature && _isNotifying ? SnackBarAction(
-              label: 'Upgrade',
-              textColor: Colors.white,
-              onPressed: () => _showPremiumRequired(),
-            ) : null,
           ),
         );
+        
+        // Only show premium dialog when user is trying to enable notifications without premium
+        if (!hasFeature && _isNotifying) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              _showPremiumRequired();
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -169,6 +180,16 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
     );
   }
 
+  Future<bool> _checkUserProfilePremiumStatus(String userId) async {
+    try {
+      final userProfileService = UserProfileService();
+      return await userProfileService.hasPremiumAccess(userId);
+    } catch (e) {
+      debugPrint('Error checking user profile premium status: $e');
+      return false;
+    }
+  }
+
   void _showPremiumRequired() {
     showDialog(
       context: context,
@@ -193,7 +214,7 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
             const SizedBox(height: 8),
             const Text('• Get notified when vendors post new locations'),
             const Text('• Receive updates about vendor activities'),
-            const Text('• Use advanced search with location filters'),
+            const Text('• Advanced category search'),
             const Text('• Get personalized vendor recommendations'),
             const SizedBox(height: 16),
             UpgradeToPremiumButton(
@@ -235,44 +256,30 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
         onTap: _isProcessing ? null : _toggleFollow,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
             color: _isNotifying 
                 ? (widget.backgroundColor ?? Colors.blue.shade100)
                 : (widget.backgroundColor ?? Colors.grey.shade100),
-            borderRadius: BorderRadius.circular(20),
+            shape: BoxShape.circle,
             border: Border.all(
               color: _isNotifying ? Colors.blue : Colors.grey,
               width: 1,
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_isProcessing) ...[
-                const SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
-                ),
-                const SizedBox(width: 4),
-              ] else ...[
-                Icon(
-                  _isNotifying ? Icons.notifications : Icons.notifications_none,
-                  size: 14,
-                  color: widget.foregroundColor ?? (_isNotifying ? Colors.blue : Colors.grey),
-                ),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                _isNotifying ? 'Notifying' : 'Get Updates',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: widget.foregroundColor ?? (_isNotifying ? Colors.blue : Colors.grey),
-                ),
-              ),
-            ],
+          child: Center(
+            child: _isProcessing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  )
+                : Icon(
+                    _isNotifying ? Icons.notifications : Icons.notifications_none,
+                    size: 16,
+                    color: widget.foregroundColor ?? (_isNotifying ? Colors.blue : Colors.grey.shade600),
+                  ),
           ),
         ),
       );

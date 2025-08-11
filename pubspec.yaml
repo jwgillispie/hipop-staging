@@ -49,8 +49,8 @@ dependencies:
   # Routing
   go_router: ^14.2.7
   
-  # Image handling (disabled for now)
-  # image_picker: ^1.1.2
+  # Image handling
+  image_picker: ^1.1.2
   
   # Google Maps
   google_maps_flutter: ^2.9.0

@@ -148,13 +148,25 @@ class _PremiumSearchWidgetState extends State<PremiumSearchWidget>
           location: _locationSearchText.isNotEmpty ? _locationSearchText : null,
           limit: 20,
         );
-      } else if (query.isNotEmpty) {
-        // Basic search for non-premium users (no location search)
-        results = await EnhancedSearchService.searchByProduct(
-          productQuery: query,
-          location: null, // Free users don't get location search
-          limit: 10, // Limited results for non-premium
-        );
+      } else if (query.isNotEmpty || _locationSearchText.isNotEmpty) {
+        // Basic search for non-premium users (includes location search as main feature)
+        if (query.isNotEmpty) {
+          // Product search with optional location
+          results = await EnhancedSearchService.searchByProduct(
+            productQuery: query,
+            location: _locationSearchText.isNotEmpty ? _locationSearchText : null,
+            limit: 15,
+          );
+        } else if (_locationSearchText.isNotEmpty) {
+          // Location-only search - use advanced search with just location
+          results = await EnhancedSearchService.advancedSearch(
+            shopperId: _currentUserId,
+            location: _locationSearchText,
+            limit: 15,
+          );
+        } else {
+          results = [];
+        }
       } else {
         results = [];
       }
@@ -194,8 +206,8 @@ class _PremiumSearchWidgetState extends State<PremiumSearchWidget>
                         controller: _searchController,
                         decoration: InputDecoration(
                           hintText: _hasPremiumAccess 
-                              ? 'Search products, vendors, or categories...'
-                              : 'Search products...',
+                              ? 'Search by location, products, vendors, or categories...'
+                              : 'Search by location...',
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: _hasPremiumAccess
                               ? IconButton(
