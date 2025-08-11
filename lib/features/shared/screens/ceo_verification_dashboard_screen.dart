@@ -5,6 +5,8 @@ import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../models/user_profile.dart';
 import '../services/user_profile_service.dart';
+import '../models/user_feedback.dart';
+import '../services/user_feedback_service.dart';
 
 class CeoVerificationDashboardScreen extends StatefulWidget {
   const CeoVerificationDashboardScreen({super.key});
@@ -13,7 +15,9 @@ class CeoVerificationDashboardScreen extends StatefulWidget {
   State<CeoVerificationDashboardScreen> createState() => _CeoVerificationDashboardScreenState();
 }
 
-class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboardScreen> {
+class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboardScreen> 
+    with TickerProviderStateMixin {
+  late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String? _selectedUserType;
@@ -22,6 +26,7 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     // Force Firebase index creation by running all queries immediately
     _triggerIndexCreation();
   }
@@ -29,6 +34,7 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
 
   @override
   void dispose() {
+    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -121,7 +127,7 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Account Verification Dashboard'),
+            title: const Text('CEO Dashboard'),
             backgroundColor: Colors.purple,
             foregroundColor: Colors.white,
             actions: [
@@ -130,11 +136,29 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
                 onPressed: _showFilterDialog,
               ),
             ],
+            bottom: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              tabs: const [
+                Tab(icon: Icon(Icons.verified_user), text: 'User Verification'),
+                Tab(icon: Icon(Icons.feedback), text: 'User Feedback'),
+              ],
+            ),
           ),
-          body: Column(
+          body: TabBarView(
+            controller: _tabController,
             children: [
-              _buildSearchAndFilters(),
-              Expanded(child: _buildAccountsList()),
+              // Verification Tab
+              Column(
+                children: [
+                  _buildSearchAndFilters(),
+                  Expanded(child: _buildAccountsList()),
+                ],
+              ),
+              // Feedback Tab
+              _buildFeedbackTab(),
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
@@ -749,7 +773,539 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
     setState(() {});
   }
 
+  Widget _buildFeedbackTab() {
+    return Column(
+      children: [
+        _buildFeedbackFilters(),
+        Expanded(child: _buildFeedbackList()),
+      ],
+    );
+  }
 
+  Widget _buildFeedbackFilters() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                labelText: 'User Type',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              items: const [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('All Users'),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'vendor',
+                  child: Text('Vendors'),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'market_organizer',
+                  child: Text('Market Organizers'),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'shopper',
+                  child: Text('Shoppers'),
+                ),
+              ],
+              onChanged: (value) {
+                // TODO: Implement feedback filtering
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonFormField<FeedbackStatus>(
+              decoration: InputDecoration(
+                labelText: 'Status',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              items: const [
+                DropdownMenuItem<FeedbackStatus>(
+                  value: null,
+                  child: Text('All Statuses'),
+                ),
+                DropdownMenuItem<FeedbackStatus>(
+                  value: FeedbackStatus.submitted,
+                  child: Text('New'),
+                ),
+                DropdownMenuItem<FeedbackStatus>(
+                  value: FeedbackStatus.reviewing,
+                  child: Text('Reviewing'),
+                ),
+                DropdownMenuItem<FeedbackStatus>(
+                  value: FeedbackStatus.inProgress,
+                  child: Text('In Progress'),
+                ),
+                DropdownMenuItem<FeedbackStatus>(
+                  value: FeedbackStatus.resolved,
+                  child: Text('Resolved'),
+                ),
+              ],
+              onChanged: (value) {
+                // TODO: Implement status filtering
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeedbackList() {
+    return StreamBuilder<List<UserFeedback>>(
+      stream: UserFeedbackService.streamAllFeedback(limit: 100),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error loading feedback: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => setState(() {}),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final feedbackList = snapshot.data ?? [];
+
+        if (feedbackList.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.feedback_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No Feedback Yet',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'User feedback will appear here once submitted',
+                  style: TextStyle(color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: feedbackList.length,
+          itemBuilder: (context, index) {
+            final feedback = feedbackList[index];
+            return _buildFeedbackCard(feedback);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFeedbackCard(UserFeedback feedback) {
+    final statusColor = _getFeedbackStatusColor(feedback.status);
+    final priorityColor = _getFeedbackPriorityColor(feedback.priority);
+    final userTypeColor = feedback.userType == 'vendor' 
+        ? Colors.green 
+        : feedback.userType == 'market_organizer' 
+        ? Colors.indigo 
+        : Colors.blue;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        feedback.title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: priorityColor.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        feedback.priority.displayName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: priorityColor.shade700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        feedback.status.displayName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: statusColor.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      feedback.category.icon,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      feedback.category.displayName,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: userTypeColor.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        _getUserTypeDisplayName(feedback.userType),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: userTypeColor.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'From: ${feedback.userName ?? feedback.userEmail}',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  feedback.userEmail,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  feedback.description,
+                  style: const TextStyle(fontSize: 14),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Submitted ${_formatFeedbackDate(feedback.createdAt)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (feedback.hasResponse) ...[
+                      const SizedBox(width: 16),
+                      Icon(Icons.reply, size: 16, color: Colors.green[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Responded',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (feedback.hasResponse && feedback.adminResponse != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.admin_panel_settings, size: 16, color: Colors.green[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Admin Response:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    feedback.adminResponse!,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                if (!feedback.hasResponse) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _respondToFeedback(feedback),
+                      icon: const Icon(Icons.reply, size: 16),
+                      label: const Text('Respond'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: DropdownButtonFormField<FeedbackStatus>(
+                    value: feedback.status,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: FeedbackStatus.values.map((status) {
+                      return DropdownMenuItem(
+                        value: status,
+                        child: Text(
+                          status.displayName,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (newStatus) {
+                      if (newStatus != null && newStatus != feedback.status) {
+                        _updateFeedbackStatus(feedback, newStatus);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _viewFeedbackDetails(feedback),
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'More options',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  MaterialColor _getFeedbackStatusColor(FeedbackStatus status) {
+    switch (status) {
+      case FeedbackStatus.submitted:
+        return Colors.blue;
+      case FeedbackStatus.reviewing:
+        return Colors.orange;
+      case FeedbackStatus.inProgress:
+        return Colors.purple;
+      case FeedbackStatus.resolved:
+        return Colors.green;
+      case FeedbackStatus.closed:
+        return Colors.grey;
+    }
+  }
+
+  MaterialColor _getFeedbackPriorityColor(FeedbackPriority priority) {
+    switch (priority) {
+      case FeedbackPriority.low:
+        return Colors.green;
+      case FeedbackPriority.medium:
+        return Colors.orange;
+      case FeedbackPriority.high:
+        return Colors.red;
+      case FeedbackPriority.critical:
+        return Colors.red;
+    }
+  }
+
+  String _getUserTypeDisplayName(String userType) {
+    switch (userType) {
+      case 'vendor':
+        return 'Vendor';
+      case 'market_organizer':
+        return 'Organizer';
+      case 'shopper':
+        return 'Shopper';
+      default:
+        return userType;
+    }
+  }
+
+  String _formatFeedbackDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      if (difference.inHours == 0) {
+        return '${difference.inMinutes} min ago';
+      }
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays == 1) {
+      return 'yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${date.month}/${date.day}/${date.year}';
+    }
+  }
+
+  Future<void> _updateFeedbackStatus(UserFeedback feedback, FeedbackStatus newStatus) async {
+    try {
+      await UserFeedbackService.updateFeedbackStatus(feedback.id, newStatus);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Feedback status updated to ${newStatus.displayName}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating status: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _respondToFeedback(UserFeedback feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => _FeedbackResponseDialog(
+        feedback: feedback,
+        onSubmit: (response) => _submitFeedbackResponse(feedback, response),
+      ),
+    );
+  }
+
+  Future<void> _submitFeedbackResponse(UserFeedback feedback, String response) async {
+    try {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! Authenticated) return;
+
+      await UserFeedbackService.respondToFeedback(
+        feedbackId: feedback.id,
+        response: response,
+        adminUserId: authState.user.uid,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Response sent successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sending response: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _viewFeedbackDetails(UserFeedback feedback) {
+    showDialog(
+      context: context,
+      builder: (context) => _FeedbackDetailsDialog(feedback: feedback),
+    );
+  }
 
 }
 
@@ -942,5 +1498,322 @@ class _AccountDetailsDialog extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _FeedbackResponseDialog extends StatefulWidget {
+  final UserFeedback feedback;
+  final Function(String) onSubmit;
+
+  const _FeedbackResponseDialog({
+    required this.feedback,
+    required this.onSubmit,
+  });
+
+  @override
+  State<_FeedbackResponseDialog> createState() => _FeedbackResponseDialogState();
+}
+
+class _FeedbackResponseDialogState extends State<_FeedbackResponseDialog> {
+  final _responseController = TextEditingController();
+
+  @override
+  void dispose() {
+    _responseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Respond to Feedback'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Responding to: ${widget.feedback.title}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text('From: ${widget.feedback.userName ?? widget.feedback.userEmail}'),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _responseController,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Your Response',
+              hintText: 'Type your response to the user...',
+              border: OutlineInputBorder(),
+            ),
+            maxLength: 1000,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final response = _responseController.text.trim();
+            if (response.isNotEmpty) {
+              Navigator.pop(context);
+              widget.onSubmit(response);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter a response')),
+              );
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Send Response'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeedbackDetailsDialog extends StatelessWidget {
+  final UserFeedback feedback;
+
+  const _FeedbackDetailsDialog({required this.feedback});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxHeight: 700),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: _getCategoryColor(feedback.category),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    feedback.category.icon,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Feedback Details',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow('Title', feedback.title),
+                    _buildDetailRow('Category', feedback.category.displayName),
+                    _buildDetailRow('Priority', feedback.priority.displayName),
+                    _buildDetailRow('Status', feedback.status.displayName),
+                    _buildDetailRow('User', feedback.userName ?? feedback.userEmail),
+                    _buildDetailRow('User Email', feedback.userEmail),
+                    _buildDetailRow('User Type', _getUserTypeDisplayName(feedback.userType)),
+                    _buildDetailRow('Submitted', feedback.createdAt.toString()),
+                    if (feedback.updatedAt != feedback.createdAt)
+                      _buildDetailRow('Last Updated', feedback.updatedAt.toString()),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Description:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Text(
+                        feedback.description,
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    if (feedback.hasResponse) ...[
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Admin Response:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green[300]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              feedback.adminResponse!,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            if (feedback.respondedAt != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Responded on: ${feedback.respondedAt!}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green[700],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (feedback.tags.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Tags:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: feedback.tags.map((tag) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            tag,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[800],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        )).toList(),
+                      ),
+                    ],
+                    if (feedback.metadata.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Additional Information:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...feedback.metadata.entries.map((entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '${entry.key}: ${entry.value}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      )),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getCategoryColor(FeedbackCategory category) {
+    switch (category) {
+      case FeedbackCategory.bug:
+        return Colors.red;
+      case FeedbackCategory.feature:
+        return Colors.blue;
+      case FeedbackCategory.improvement:
+        return Colors.green;
+      case FeedbackCategory.general:
+        return Colors.grey;
+      case FeedbackCategory.tutorial:
+        return Colors.purple;
+      case FeedbackCategory.support:
+        return Colors.orange;
+    }
+  }
+
+  String _getUserTypeDisplayName(String userType) {
+    switch (userType) {
+      case 'vendor':
+        return 'Vendor';
+      case 'market_organizer':
+        return 'Market Organizer';
+      case 'shopper':
+        return 'Shopper';
+      default:
+        return userType;
+    }
   }
 }

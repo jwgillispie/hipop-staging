@@ -357,11 +357,11 @@ class _VendorDashboardState extends State<VendorDashboard>
               ),
               _buildActionCard(
                 context,
-                'Market Items',
-                'Customize items per market',
+                'Products & Market Items',
+                'Manage your products and market assignments',
                 Icons.inventory_2,
                 Colors.brown,
-                () => context.go('/vendor/market-items'),
+                () => context.go('/vendor/products-management'),
               ),
               _buildActionCard(
                 context,
@@ -386,14 +386,6 @@ class _VendorDashboardState extends State<VendorDashboard>
                 Icons.analytics,
                 Colors.deepPurple,
                 () => context.go('/vendor/analytics'),
-              ),
-              _buildActionCard(
-                context,
-                'Calendar',
-                'View your events',
-                Icons.calendar_today,
-                Colors.blue,
-                () => _tabController.animateTo(1), // Switch to calendar tab
               ),
             ]),
           ),

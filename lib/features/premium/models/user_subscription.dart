@@ -377,6 +377,7 @@ class UserSubscription extends Equatable {
     return {
       'monthly_markets': -1, // unlimited
       'photo_uploads': -1, // unlimited
+      'global_products': -1, // unlimited
       'markets_managed': -1, // unlimited
       'events_per_month': -1, // unlimited
       'saved_favorites': -1, // unlimited

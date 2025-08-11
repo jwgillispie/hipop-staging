@@ -191,7 +191,7 @@ class SubscriptionService {
   static Map<String, int> _getFreeLimits(String userType) {
     switch (userType) {
       case 'vendor':
-        return {'monthly_markets': 5, 'photo_uploads': 3};
+        return {'monthly_markets': 5, 'photo_uploads': 3, 'global_products': 10};
       case 'market_organizer':
         return {'markets_managed': -1, 'events_per_month': 10};
       case 'shopper':

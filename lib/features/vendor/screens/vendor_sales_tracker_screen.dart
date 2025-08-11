@@ -46,7 +46,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   // State variables
   DateTime _selectedDate = DateTime.now();
   String? _selectedMarketId;
-  List<ProductSaleData> _products = [];
   bool _isLoading = false;
   bool _isSaving = false;
   VendorSalesData? _existingSalesData;
@@ -54,23 +53,11 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   // Quick entry mode for busy vendors
   bool _quickEntryMode = false;
   
-  // Pre-defined product categories for quick selection
-  final List<String> _productCategories = [
-    'Fresh Produce',
-    'Prepared Foods',
-    'Baked Goods',
-    'Beverages',
-    'Crafts & Art',
-    'Clothing & Accessories',
-    'Health & Beauty',
-    'Home & Garden',
-    'Other',
-  ];
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 1, vsync: this);
     _selectedDate = widget.selectedDate ?? DateTime.now();
     _selectedMarketId = widget.marketId;
     _commissionRateController.text = '5.0'; // Default 5% commission
@@ -118,7 +105,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           _marketFeeController.text = salesData.marketFee.toStringAsFixed(2);
           _commissionRateController.text = (salesData.commissionPaid / salesData.revenue * 100).toStringAsFixed(2);
           _notesController.text = salesData.notes ?? '';
-          _products = List.from(salesData.products);
+          // Products are now managed in the centralized Products & Market Items screen
         });
       }
     } catch (e) {
@@ -149,7 +136,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
         date: _selectedDate,
         revenue: revenue,
         transactions: transactions,
-        products: _products,
+        products: [], // Products are now managed in centralized Products & Market Items screen
         commissionPaid: commissionPaid,
         marketFee: marketFee,
         photoUrls: [], // Empty for now since no image picker
@@ -173,7 +160,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           'date': _selectedDate.toIso8601String(),
           'revenue': revenue,
           'transactions': transactions,
-          'productsCount': _products.length,
+          'productsCount': 0, // Products now tracked separately in Products & Market Items
         },
       );
       
@@ -217,7 +204,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.attach_money), text: 'Revenue'),
-            Tab(icon: Icon(Icons.inventory), text: 'Products'),
           ],
         ),
         actions: [
@@ -238,7 +224,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                 controller: _tabController,
                 children: [
                   _buildRevenueTab(),
-                  _buildProductsTab(),
                 ],
               ),
             ),
@@ -276,7 +261,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                     ),
                   )
                 : Text(
-                    _existingSalesData != null ? 'UPDATE SALES DATA' : 'SAVE SALES DATA',
+                    _existingSalesData != null ? 'UPDATE REVENUE DATA' : 'SAVE REVENUE DATA',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -577,288 +562,5 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     );
   }
   
-  Widget _buildProductsTab() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Products (${_products.length})',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: _addProduct,
-                icon: const Icon(Icons.add),
-                label: const Text('Add Product'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _products.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No products added yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Track individual product performance\nfor better insights',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: _products.length,
-                  itemBuilder: (context, index) {
-                    return _buildProductCard(_products[index], index);
-                  },
-                ),
-        ),
-      ],
-    );
-  }
   
-  Widget _buildProductCard(ProductSaleData product, int index) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          child: Text(
-            product.name.isNotEmpty ? product.name[0].toUpperCase() : 'P',
-            style: TextStyle(
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        title: Text(
-          product.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${product.category} • ${product.quantitySold} sold'),
-            Text('\$${product.unitPrice.toStringAsFixed(2)} each • \$${product.totalRevenue.toStringAsFixed(2)} total'),
-          ],
-        ),
-        trailing: PopupMenuButton(
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('Edit'),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: ListTile(
-                leading: Icon(Icons.delete, color: Colors.red),
-                title: Text('Delete', style: TextStyle(color: Colors.red)),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ],
-          onSelected: (value) {
-            if (value == 'edit') {
-              _editProduct(index);
-            } else if (value == 'delete') {
-              _deleteProduct(index);
-            }
-          },
-        ),
-        onTap: () => _editProduct(index),
-      ),
-    );
-  }
-  
-  void _addProduct() {
-    _showProductDialog();
-  }
-  
-  void _editProduct(int index) {
-    _showProductDialog(existingProduct: _products[index], index: index);
-  }
-  
-  void _deleteProduct(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Product'),
-        content: Text('Remove "${_products[index].name}" from sales data?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() => _products.removeAt(index));
-              Navigator.of(context).pop();
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _showProductDialog({ProductSaleData? existingProduct, int? index}) {
-    final isEditing = existingProduct != null;
-    final nameController = TextEditingController(text: existingProduct?.name ?? '');
-    String selectedCategory = existingProduct?.category ?? _productCategories.first;
-    final quantityController = TextEditingController(
-        text: existingProduct?.quantitySold.toString() ?? '');
-    final unitPriceController = TextEditingController(
-        text: existingProduct?.unitPrice.toStringAsFixed(2) ?? '');
-    final costPriceController = TextEditingController(
-        text: existingProduct?.costPrice.toStringAsFixed(2) ?? '');
-    
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isEditing ? 'Edit Product' : 'Add Product'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Product Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedCategory,
-                  decoration: const InputDecoration(
-                    labelText: 'Category',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _productCategories.map((category) {
-                    return DropdownMenuItem(
-                      value: category,
-                      child: Text(category),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      selectedCategory = value ?? _productCategories.first;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: quantityController,
-                  decoration: const InputDecoration(
-                    labelText: 'Quantity Sold',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: unitPriceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit Price',
-                    prefixText: '\$ ',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: costPriceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Cost Price (Optional)',
-                    prefixText: '\$ ',
-                    border: OutlineInputBorder(),
-                    helperText: 'Your cost to calculate profit margin',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                final quantity = int.tryParse(quantityController.text) ?? 0;
-                final unitPrice = double.tryParse(unitPriceController.text) ?? 0.0;
-                final costPrice = double.tryParse(costPriceController.text) ?? 0.0;
-                
-                if (name.isEmpty || quantity <= 0 || unitPrice <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please fill in all required fields'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-                
-                final product = ProductSaleData(
-                  name: name,
-                  category: selectedCategory,
-                  quantitySold: quantity,
-                  unitPrice: unitPrice,
-                  totalRevenue: quantity * unitPrice,
-                  costPrice: costPrice,
-                );
-                
-                setState(() {
-                  if (isEditing && index != null) {
-                    _products[index] = product;
-                  } else {
-                    _products.add(product);
-                  }
-                });
-                
-                Navigator.of(context).pop();
-              },
-              child: Text(isEditing ? 'Update' : 'Add'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

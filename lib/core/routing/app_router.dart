@@ -37,8 +37,7 @@ import '../../features/vendor/screens/edit_popup_screen.dart';
 import '../../features/vendor/screens/vendor_sales_tracker_screen.dart';
 import '../../features/vendor/screens/vendor_analytics_screen.dart';
 import '../../features/vendor/screens/vendor_premium_dashboard.dart';
-import '../../features/vendor/screens/vendor_market_items_screen.dart';
-import '../../features/vendor/screens/vendor_market_items_edit_screen.dart';
+import '../../features/vendor/screens/vendor_products_management_screen.dart';
 import '../../features/vendor/screens/vendor_market_discovery_screen.dart';
 // Organizer screens
 import '../../features/organizer/screens/organizer_dashboard.dart';
@@ -315,24 +314,9 @@ class AppRouter {
               builder: (context, state) => const VendorMarketDiscoveryScreen(),
             ),
             GoRoute(
-              path: 'market-items',
-              name: 'vendorMarketItems',
-              builder: (context, state) => const VendorMarketItemsScreen(),
-              routes: [
-                GoRoute(
-                  path: 'edit',
-                  name: 'vendorMarketItemsEdit',
-                  builder: (context, state) {
-                    final args = state.extra as Map<String, dynamic>;
-                    return VendorMarketItemsEditScreen(
-                      marketId: args['marketId'],
-                      marketName: args['marketName'],
-                      currentItems: List<String>.from(args['currentItems']),
-                      vendorId: args['vendorId'],
-                    );
-                  },
-                ),
-              ],
+              path: 'products-management',
+              name: 'vendorProductsManagement',
+              builder: (context, state) => const VendorProductsManagementScreen(),
             ),
           ],
         ),
