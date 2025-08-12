@@ -32,9 +32,10 @@ class SubscriptionService {
   ) async {
     try {
       final subscription = UserSubscription.createFree(userId, userType);
+      debugPrint('🔍 DEBUG: Created free subscription object - tier: ${subscription.tier.name}, userType: ${subscription.userType}, isFree: ${subscription.isFree}');
       
       final docRef = await _subscriptionsCollection.add(subscription.toFirestore());
-      debugPrint('✅ Free subscription created for user: $userId');
+      debugPrint('✅ Free subscription created for user: $userId with ID: ${docRef.id}');
       
       return subscription.copyWith(id: docRef.id);
     } catch (e) {
@@ -156,16 +157,55 @@ class SubscriptionService {
     try {
       final subscription = await getUserSubscription(userId);
       if (subscription == null) {
+        debugPrint('🔍 DEBUG: No subscription found for user: $userId, creating free subscription');
         // Create free subscription if none exists
         final userProfile = await _firestore.collection('users').doc(userId).get();
+        debugPrint('🔍 DEBUG: User profile exists: ${userProfile.exists}');
+        if (userProfile.exists) {
+          debugPrint('🔍 DEBUG: User profile data: ${userProfile.data()}');
+        }
         final userType = userProfile.data()?['userType'] ?? 'shopper';
-        final newSubscription = await createFreeSubscription(userId, userType);
-        return newSubscription.isWithinLimit(limitName, currentUsage);
+        debugPrint('🔍 DEBUG: User type from profile: $userType (default: shopper)');
+        
+        // Critical fix: If we're checking vendor-specific limits but userType is wrong, override it
+        String actualUserType = userType;
+        if (limitName == 'global_products' && userType != 'vendor') {
+          debugPrint('🔧 FIX: Checking global_products limit suggests this is a vendor. Overriding userType from $userType to vendor');
+          actualUserType = 'vendor';
+        }
+        final newSubscription = await createFreeSubscription(userId, actualUserType);
+        debugPrint('🔍 DEBUG: Created subscription - tier: ${newSubscription.tier.name}, userType: ${newSubscription.userType}');
+        final limit = newSubscription.getLimit(limitName);
+        debugPrint('🔍 DEBUG: Limit for $limitName: $limit');
+        final withinLimit = newSubscription.isWithinLimit(limitName, currentUsage);
+        debugPrint('🔍 DEBUG: isWithinLimit($limitName, $currentUsage) = $withinLimit (limit: $limit)');
+        return withinLimit;
       }
 
-      return subscription.isWithinLimit(limitName, currentUsage);
+      debugPrint('🔍 DEBUG: Found existing subscription - tier: ${subscription.tier.name}, userType: ${subscription.userType}');
+      
+      // Critical check: If subscription has wrong userType, fix it
+      if (limitName == 'global_products' && subscription.userType != 'vendor') {
+        debugPrint('🔧 FIX: Found subscription with wrong userType for vendor operation. Updating subscription.');
+        final updatedSubscription = subscription.copyWith(userType: 'vendor', updatedAt: DateTime.now());
+        await _subscriptionsCollection
+            .doc(subscription.id)
+            .update(updatedSubscription.toFirestore());
+        
+        final limit = updatedSubscription.getLimit(limitName);
+        debugPrint('🔍 DEBUG: Limit for $limitName after fix: $limit');
+        final withinLimit = updatedSubscription.isWithinLimit(limitName, currentUsage);
+        debugPrint('🔍 DEBUG: isWithinLimit($limitName, $currentUsage) = $withinLimit (limit: $limit) after fix');
+        return withinLimit;
+      }
+      
+      final limit = subscription.getLimit(limitName);
+      debugPrint('🔍 DEBUG: Limit for $limitName: $limit');
+      final withinLimit = subscription.isWithinLimit(limitName, currentUsage);
+      debugPrint('🔍 DEBUG: isWithinLimit($limitName, $currentUsage) = $withinLimit (limit: $limit)');
+      return withinLimit;
     } catch (e) {
-      debugPrint('Error checking usage limit: $e');
+      debugPrint('❌ Error checking usage limit: $e');
       return false;
     }
   }
@@ -191,7 +231,12 @@ class SubscriptionService {
   static Map<String, int> _getFreeLimits(String userType) {
     switch (userType) {
       case 'vendor':
-        return {'monthly_markets': 5, 'photo_uploads': 3, 'global_products': 10};
+        return {
+          'monthly_markets': 5, 
+          'photo_uploads_per_post': 3, 
+          'global_products': 3,
+          'product_lists': 1,
+        };
       case 'market_organizer':
         return {'markets_managed': -1, 'events_per_month': 10};
       case 'shopper':

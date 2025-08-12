@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -229,14 +230,22 @@ class UserSubscription extends Equatable {
 
   int getLimit(String limitName) {
     if (isFree) {
-      return _getFreeLimits(userType)[limitName] ?? 0;
+      final freeLimits = _getFreeLimits(userType);
+      debugPrint('🔍 DEBUG: Getting free limits for userType: $userType, limits: $freeLimits');
+      final limit = freeLimits[limitName] ?? 0;
+      debugPrint('🔍 DEBUG: Limit for $limitName: $limit');
+      return limit;
     }
     return limits[limitName] ?? -1; // -1 means unlimited
   }
 
   bool isWithinLimit(String limitName, int currentUsage) {
     final limit = getLimit(limitName);
-    return limit == -1 || currentUsage < limit; // -1 means unlimited
+    final result = limit == -1 || currentUsage < limit; // -1 means unlimited
+    debugPrint('🔍 DEBUG: isWithinLimit($limitName, $currentUsage) - tier: ${tier.name}, userType: $userType, isFree: $isFree');
+    debugPrint('🔍 DEBUG: isWithinLimit - limit: $limit, currentUsage: $currentUsage, result: $result');
+    debugPrint('🔍 DEBUG: isWithinLimit - calculation: $limit == -1 (${limit == -1}) || $currentUsage < $limit (${currentUsage < limit}) = $result');
+    return result;
   }
 
   List<String> _getFreeFeatures(String userType) {
@@ -274,6 +283,8 @@ class UserSubscription extends Equatable {
         return {
           'market_applications_per_month': 5,
           'photo_uploads_per_post': 3,
+          'global_products': 3,
+          'product_lists': 1,
           'markets_managed': -1, // unlimited for vendors
         };
       case 'market_organizer':
@@ -316,8 +327,10 @@ class UserSubscription extends Equatable {
           // Vendor Pro Features
           'market_discovery': true,
           'full_vendor_analytics': true,
-          'unlimited_markets': true,
+          'product_performance_analytics': true,
+          'revenue_tracking': true,
           'sales_tracking': true,
+          'unlimited_markets': true,
           'customer_acquisition_analysis': true,
           'profit_optimization': true,
           'market_expansion_recommendations': true,
@@ -376,8 +389,9 @@ class UserSubscription extends Equatable {
   Map<String, int> get defaultPremiumLimits {
     return {
       'monthly_markets': -1, // unlimited
-      'photo_uploads': -1, // unlimited
+      'photo_uploads_per_post': -1, // unlimited
       'global_products': -1, // unlimited
+      'product_lists': -1, // unlimited
       'markets_managed': -1, // unlimited
       'events_per_month': -1, // unlimited
       'saved_favorites': -1, // unlimited

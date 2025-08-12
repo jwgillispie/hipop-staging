@@ -315,10 +315,29 @@ class VendorProductService {
       final currentProducts = await getVendorProducts(vendorId);
       final productCount = currentProducts.length;
       
-      // Check subscription limits
-      return await SubscriptionService.isWithinLimit(vendorId, 'global_products', productCount);
+      debugPrint('🔍 DEBUG: Checking product limit - Current: $productCount products for vendor: $vendorId');
+      
+      // Check subscription limits - current usage should be within limit
+      final canCreate = await SubscriptionService.isWithinLimit(vendorId, 'global_products', productCount);
+      debugPrint('🔍 DEBUG: Can create product? $canCreate');
+      
+      return canCreate;
     } catch (e) {
-      debugPrint('Error checking product limit: $e');
+      debugPrint('❌ Error checking product limit: $e');
+      return false; // Err on the side of caution
+    }
+  }
+
+  /// Check if vendor can create more product lists based on their subscription
+  static Future<bool> _canCreateProductList(String vendorId) async {
+    try {
+      final currentLists = await getProductLists(vendorId);
+      final listCount = currentLists.length;
+      
+      // Check subscription limits
+      return await SubscriptionService.isWithinLimit(vendorId, 'product_lists', listCount);
+    } catch (e) {
+      debugPrint('Error checking product list limit: $e');
       return false; // Err on the side of caution
     }
   }
@@ -386,6 +405,12 @@ class VendorProductService {
     String? color,
   }) async {
     try {
+      // Check if vendor can create more product lists (premium limit check)
+      final canCreate = await _canCreateProductList(vendorId);
+      if (!canCreate) {
+        throw Exception('Product list limit reached. Upgrade to premium for unlimited product lists.');
+      }
+
       final list = VendorProductList.create(
         vendorId: vendorId,
         name: name,
