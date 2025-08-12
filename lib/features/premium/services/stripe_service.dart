@@ -142,7 +142,7 @@ class StripeService {
       case 'shopper':
         return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
       case 'vendor':
-        return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
+        return dotenv.env['STRIPE_PRICE_VENDOR_PRO'] ?? '';
       case 'market_organizer':
         return dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '';
       default:
@@ -167,14 +167,18 @@ class StripeService {
         };
       case 'vendor':
         return {
-          'price': 15.00,
-          'name': 'Vendor Premium',
-          'description': 'Advanced analytics and multi-market management',
+          'price': 29.00,
+          'name': 'Vendor Pro',
+          'description': 'Advanced analytics, market discovery, and multi-market management',
           'features': [
             'Advanced analytics dashboard',
-            'Master product lists',
-            'Multi-market management',
-            'Push notifications',
+            'Master product lists & inventory tracking',
+            'Multi-market management tools',
+            'Market discovery & vendor matching',
+            'Revenue tracking & financial insights',
+            'Customer demographics & behavior analysis',
+            'Location performance comparison',
+            'Priority customer support',
           ],
         };
       case 'market_organizer':

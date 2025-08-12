@@ -276,9 +276,9 @@ class AppRouter {
               builder: (context, state) => const VendorApplicationStatusScreen(),
             ),
             GoRoute(
-              path: 'market-permissions',
-              name: 'vendorMarketPermissions',
-              builder: (context, state) => const VendorMarketPermissionsScreen(),
+              path: 'market-connections',
+              name: 'vendorMarketConnections',
+              builder: (context, state) => const VendorMarketConnectionsScreen(),
             ),
             GoRoute(
               path: 'popup-creation',

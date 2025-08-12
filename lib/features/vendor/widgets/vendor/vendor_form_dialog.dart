@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/managed_vendor.dart';
 import '../../services/managed_vendor_service.dart';
+import '../../../shared/services/user_profile_service.dart';
+import '../../../shared/models/user_profile.dart';
+import '../../services/vendor_contact_service.dart';
 
 class VendorFormDialog extends StatefulWidget {
   final String marketId;
@@ -21,10 +24,14 @@ class VendorFormDialog extends StatefulWidget {
 class _VendorFormDialogState extends State<VendorFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
+  final UserProfileService _userProfileService = UserProfileService();
+  final VendorContactService _contactService = VendorContactService();
   
   bool get isEditing => widget.vendor != null;
   bool _isLoading = false;
   int _currentPage = 0;
+  UserProfile? _linkedUserProfile;
+  String? _userSearchEmail;
   
   // Form controllers
   final _businessNameController = TextEditingController();
@@ -71,16 +78,81 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
     }
   }
 
+  Future<void> _loadLinkedUserProfile(String? userProfileId) async {
+    if (userProfileId == null) return;
+    
+    try {
+      _linkedUserProfile = await _userProfileService.getUserProfile(userProfileId);
+      if (mounted) {
+        setState(() {});
+        _populateContactFromProfile();
+      }
+    } catch (e) {
+      debugPrint('Error loading linked user profile: $e');
+    }
+  }
+
+  void _populateContactFromProfile() {
+    if (_linkedUserProfile == null) return;
+
+    // Auto-populate contact fields from user profile
+    _emailController.text = _linkedUserProfile!.email;
+    if (_linkedUserProfile!.phoneNumber?.isNotEmpty == true) {
+      _phoneController.text = _linkedUserProfile!.phoneNumber!;
+    }
+    if (_linkedUserProfile!.website?.isNotEmpty == true) {
+      _websiteController.text = _linkedUserProfile!.website!;
+    }
+    if (_linkedUserProfile!.instagramHandle?.isNotEmpty == true) {
+      _instagramController.text = _linkedUserProfile!.instagramHandle!;
+    }
+  }
+
+  Future<void> _searchUserByEmail() async {
+    if (_userSearchEmail?.isEmpty != false) return;
+
+    setState(() => _isLoading = true);
+    
+    try {
+      // This is a simplified search - in a real app you'd want a proper search endpoint
+      // For now, we'll assume email uniqueness and try to find the user
+      // This would need to be implemented in UserProfileService
+      // _linkedUserProfile = await _userProfileService.findUserByEmail(_userSearchEmail!);
+      // if (mounted) {
+      //   setState(() {});
+      //   _populateContactFromProfile();
+      // }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error searching for user: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   void _loadVendorData() {
     final vendor = widget.vendor!;
     _businessNameController.text = vendor.businessName;
     _vendorNameController.text = vendor.vendorName ?? '';
     _contactNameController.text = vendor.contactName;
     _descriptionController.text = vendor.description;
-    _emailController.text = vendor.email ?? '';
-    _phoneController.text = vendor.phoneNumber ?? '';
-    _websiteController.text = vendor.website ?? '';
-    _instagramController.text = vendor.instagramHandle ?? '';
+    
+    // Load linked user profile if available
+    if (vendor.userProfileId != null) {
+      _loadLinkedUserProfile(vendor.userProfileId);
+    } else {
+      // Use local contact data if no profile linked
+      _emailController.text = vendor.email ?? '';
+      _phoneController.text = vendor.phoneNumber ?? '';
+      _websiteController.text = vendor.website ?? '';
+      _instagramController.text = vendor.instagramHandle ?? '';
+    }
+    
     _facebookController.text = vendor.facebookHandle ?? '';
     _addressController.text = vendor.address ?? '';
     _cityController.text = vendor.city ?? '';
@@ -399,6 +471,106 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
     );
   }
 
+  Widget _buildUserProfileLinkSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Link to Vendor Account',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            if (_linkedUserProfile != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border.all(color: Colors.green.shade200),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Linked to: ${_linkedUserProfile!.displayTitle}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                          Text(
+                            _linkedUserProfile!.email,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green.shade600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Contact info will be auto-populated from their profile',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _linkedUserProfile = null;
+                        });
+                        // Clear the auto-populated fields
+                        _emailController.clear();
+                        _phoneController.clear();
+                        _websiteController.clear();
+                        _instagramController.clear();
+                      },
+                      icon: const Icon(Icons.close),
+                      color: Colors.grey,
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const Text(
+                'If this vendor has a HiPop account, search for them by email to auto-populate contact information.',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Search by email',
+                        hintText: 'vendor@example.com',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      onChanged: (value) => _userSearchEmail = value,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _searchUserByEmail,
+                    child: const Text('Search'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContactLocationPage() {
     return SingleChildScrollView(
       child: Column(
@@ -409,22 +581,38 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
+          _buildUserProfileLinkSection(),
+          const SizedBox(height: 16),
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'EMAIL',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              suffixIcon: _linkedUserProfile != null 
+                  ? const Icon(Icons.link, color: Colors.green)
+                  : null,
+              helperText: _linkedUserProfile != null 
+                  ? 'From linked profile'
+                  : null,
             ),
             keyboardType: TextInputType.emailAddress,
+            readOnly: _linkedUserProfile != null,
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _phoneController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'PHONE NUMBER',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
+              suffixIcon: _linkedUserProfile != null 
+                  ? const Icon(Icons.link, color: Colors.green)
+                  : null,
+              helperText: _linkedUserProfile != null 
+                  ? 'From linked profile'
+                  : null,
             ),
             keyboardType: TextInputType.phone,
+            readOnly: _linkedUserProfile != null,
           ),
           const SizedBox(height: 16),
           _buildStringListField(
@@ -435,12 +623,19 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _websiteController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Website',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
               hintText: 'https://...',
+              suffixIcon: _linkedUserProfile != null 
+                  ? const Icon(Icons.link, color: Colors.green)
+                  : null,
+              helperText: _linkedUserProfile != null 
+                  ? 'From linked profile'
+                  : null,
             ),
             keyboardType: TextInputType.url,
+            readOnly: _linkedUserProfile != null,
           ),
           const SizedBox(height: 16),
           Row(
@@ -448,11 +643,18 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
               Expanded(
                 child: TextFormField(
                   controller: _instagramController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Instagram Handle',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                     hintText: 'username (without @)',
+                    suffixIcon: _linkedUserProfile != null 
+                        ? const Icon(Icons.link, color: Colors.green)
+                        : null,
+                    helperText: _linkedUserProfile != null 
+                        ? 'From linked profile'
+                        : null,
                   ),
+                  readOnly: _linkedUserProfile != null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -969,6 +1171,7 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
         id: isEditing ? widget.vendor!.id : '',
         marketId: widget.marketId,
         organizerId: widget.organizerId,
+        userProfileId: _linkedUserProfile?.userId,
         businessName: _businessNameController.text.trim(),
         vendorName: _vendorNameController.text.trim().isEmpty ? null : _vendorNameController.text.trim(),
         contactName: _contactNameController.text.trim(),

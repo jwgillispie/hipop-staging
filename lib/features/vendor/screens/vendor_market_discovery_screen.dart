@@ -153,19 +153,19 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       if (user == null) throw Exception('User not authenticated');
 
       // Navigate to market application with market pre-selected
-      context.go('/vendor/market-permissions');
+      context.go('/vendor/market-connections');
       
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Navigate to Market Permissions to apply to ${market.name}'),
+            content: Text('Navigate to Market Connections to connect to ${market.name}'),
             backgroundColor: Colors.orange,
             action: SnackBarAction(
               label: 'GO',
               textColor: Colors.white,
               onPressed: () {
-                context.go('/vendor/market-permissions');
+                context.go('/vendor/market-connections');
               },
             ),
           ),

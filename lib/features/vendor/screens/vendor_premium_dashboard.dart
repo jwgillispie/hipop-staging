@@ -8,6 +8,7 @@ import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/vendor/screens/vendor_sales_tracker_screen.dart';
 import 'package:hipop/features/vendor/screens/vendor_analytics_screen.dart';
+import 'package:hipop/features/premium/widgets/vendor_premium_dashboard_components.dart';
 
 class VendorPremiumDashboard extends StatefulWidget {
   const VendorPremiumDashboard({super.key});
@@ -137,66 +138,100 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
   }
 
   Widget _buildOverviewTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome to Vendor Pro! 🎉',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'You now have access to:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildFeatureList(),
-                ],
-              ),
-            ),
+    return PremiumDashboardLayout(
+      children: [
+        VendorPremiumDashboardComponents.buildPremiumHeader(
+          context,
+          title: 'Welcome to Vendor Pro!',
+          subtitle: 'Professional tools to grow your vendor business and maximize revenue opportunities.',
+        ),
+        VendorPremiumDashboardComponents.buildValueProposition(context),
+        _buildQuickStatsGrid(),
+        Text(
+          'Your Premium Features',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
+        ),
+        _buildPremiumFeaturesList(),
+      ],
     );
   }
 
-  Widget _buildFeatureList() {
-    final features = [
-      '🔍 Market Discovery - Find markets actively seeking your products',
-      '💰 Sales Tracker - Track daily revenue from each pop-up',
-      '📊 Analytics - View sales trends and performance insights',
-      '📦 Items List - Manage your inventory and product catalog',
-      '🎯 Market Performance - See which markets drive the most revenue',
-    ];
-
-    return Column(
-      children: features.map((feature) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('✅', style: TextStyle(fontSize: 16)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                feature,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ),
-          ],
+  Widget _buildQuickStatsGrid() {
+    return VendorPremiumDashboardComponents.buildAnalyticsGrid(
+      metrics: [
+        VendorPremiumDashboardComponents.buildPremiumMetricCard(
+          title: 'This Month Revenue',
+          value: '\$0.00',
+          icon: Icons.attach_money,
+          color: Colors.green,
+          trend: '+0%',
+          showTrend: true,
         ),
-      )).toList(),
+        VendorPremiumDashboardComponents.buildPremiumMetricCard(
+          title: 'Markets Active',
+          value: '0',
+          icon: Icons.storefront,
+          color: Colors.blue,
+        ),
+        VendorPremiumDashboardComponents.buildPremiumMetricCard(
+          title: 'Products Listed',
+          value: '0',
+          icon: Icons.inventory,
+          color: Colors.purple,
+        ),
+        VendorPremiumDashboardComponents.buildPremiumMetricCard(
+          title: 'Total Views',
+          value: '0',
+          icon: Icons.visibility,
+          color: Colors.orange,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumFeaturesList() {
+    return Column(
+      children: [
+        VendorPremiumDashboardComponents.buildPremiumFeatureCard(
+          title: 'Advanced Analytics',
+          description: 'Deep insights into customer behavior, peak sales times, and location performance to optimize your business strategy.',
+          icon: Icons.analytics,
+          color: Colors.blue,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const VendorAnalyticsScreen()),
+          ),
+        ),
+        const SizedBox(height: 16),
+        VendorPremiumDashboardComponents.buildPremiumFeatureCard(
+          title: 'Market Discovery',
+          description: 'AI-powered matching with markets actively seeking vendors in your category. Find the best opportunities in your area.',
+          icon: Icons.search,
+          color: Colors.amber,
+          onTap: () => context.go('/vendor/market-discovery'),
+        ),
+        const SizedBox(height: 16),
+        VendorPremiumDashboardComponents.buildPremiumFeatureCard(
+          title: 'Sales Tracker',
+          description: 'Comprehensive revenue tracking, daily sales monitoring, and financial insights to maximize profitability.',
+          icon: Icons.attach_money,
+          color: Colors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const VendorSalesTrackerScreen()),
+          ),
+        ),
+        const SizedBox(height: 16),
+        VendorPremiumDashboardComponents.buildPremiumFeatureCard(
+          title: 'Master Product Catalog',
+          description: 'Unlimited items per market, inventory tracking across multiple locations, and product performance analytics.',
+          icon: Icons.inventory,
+          color: Colors.purple,
+          onTap: () => Navigator.pushNamed(context, '/vendor/products-management'),
+        ),
+      ],
     );
   }
 
@@ -684,7 +719,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            _showComingSoonDialog();
+                            Navigator.pushNamed(context, '/vendor/products-management');
                           },
                           icon: const Icon(Icons.add),
                           label: const Text('Add Product'),
@@ -698,10 +733,10 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            _showComingSoonDialog();
+                            Navigator.pushNamed(context, '/vendor/products-management');
                           },
                           icon: const Icon(Icons.import_export),
-                          label: const Text('Import'),
+                          label: const Text('Manage'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.purple,
                           ),
@@ -735,7 +770,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
         ),
         const SizedBox(height: 8),
         Text(
-          'Create and manage your master product list for consistent tracking',
+          'Create and manage your product catalog with unlimited items',
           style: TextStyle(
             color: Colors.grey[600],
             fontSize: 14,
@@ -754,7 +789,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No Products Yet',
+                  'Build Your Product Catalog',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -763,7 +798,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Add products to your catalog to track inventory\nacross all your pop-ups',
+                  'Create products once, use across multiple markets\nwith premium unlimited catalog',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.grey[500],
@@ -772,7 +807,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () {
-                    _showComingSoonDialog();
+                    Navigator.pushNamed(context, '/vendor/products-management');
                   },
                   icon: const Icon(Icons.add),
                   label: const Text('Add First Product'),
@@ -789,21 +824,4 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
     );
   }
 
-  void _showComingSoonDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Coming Soon!'),
-        content: const Text(
-          'The Master Items List feature is currently under development. It will allow you to:\n\n• Create a reusable product catalog\n• Track inventory across markets\n• Quickly add products to sales tracker\n• Analyze product performance',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
 }

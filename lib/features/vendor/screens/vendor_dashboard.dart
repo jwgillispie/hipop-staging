@@ -349,11 +349,11 @@ class _VendorDashboardState extends State<VendorDashboard>
               ),
               _buildActionCard(
                 context,
-                'Market Invitations',
-                'Manage market permissions',
+                'Market Connections',
+                'Manage market connections',
                 Icons.storefront,
                 Colors.deepOrange,
-                () => context.go('/vendor/market-permissions'),
+                () => context.go('/vendor/market-connections'),
               ),
               _buildActionCard(
                 context,

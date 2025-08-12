@@ -66,6 +66,7 @@ class ManagedVendor extends Equatable {
   final String id;
   final String marketId;
   final String organizerId; // Market organizer who created this vendor
+  final String? userProfileId; // Link to UserProfile if vendor has an account
   final String businessName;
   final String? vendorName; // Individual vendor name (separate from business)
   final String contactName;
@@ -122,6 +123,7 @@ class ManagedVendor extends Equatable {
     required this.id,
     required this.marketId,
     required this.organizerId,
+    this.userProfileId,
     required this.businessName,
     this.vendorName,
     required this.contactName,
@@ -170,6 +172,7 @@ class ManagedVendor extends Equatable {
       id: doc.id,
       marketId: data['marketId'] ?? '',
       organizerId: data['organizerId'] ?? '',
+      userProfileId: data['userProfileId'],
       businessName: data['businessName'] ?? '',
       vendorName: data['vendorName'],
       contactName: data['contactName'] ?? '',
@@ -221,6 +224,7 @@ class ManagedVendor extends Equatable {
     return {
       'marketId': marketId,
       'organizerId': organizerId,
+      'userProfileId': userProfileId,
       'businessName': businessName,
       'vendorName': vendorName,
       'contactName': contactName,
@@ -267,6 +271,7 @@ class ManagedVendor extends Equatable {
     String? id,
     String? marketId,
     String? organizerId,
+    String? userProfileId,
     String? businessName,
     String? vendorName,
     String? contactName,
@@ -311,6 +316,7 @@ class ManagedVendor extends Equatable {
       id: id ?? this.id,
       marketId: marketId ?? this.marketId,
       organizerId: organizerId ?? this.organizerId,
+      userProfileId: userProfileId ?? this.userProfileId,
       businessName: businessName ?? this.businessName,
       vendorName: vendorName ?? this.vendorName,
       contactName: contactName ?? this.contactName,

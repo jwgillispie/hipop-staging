@@ -158,7 +158,7 @@ class SubscriptionTestScreen extends StatelessWidget {
 
                 // Test Vendor Subscription
                 Text(
-                  'Test Vendor Premium (\$15/month)',
+                  'Test Vendor Pro (\$29/month)',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

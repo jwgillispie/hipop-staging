@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
+import '../../shared/models/user_profile.dart';
+import '../services/vendor_contact_service.dart';
 
 class VendorPost extends Equatable {
   final String id;
@@ -15,6 +17,8 @@ class VendorPost extends Equatable {
   final String? marketId; // New field for market relationship
   final DateTime popUpStartDateTime;
   final DateTime popUpEndDateTime;
+  /// @deprecated Use getVendorContactInfo() instead. This field will be removed in future versions.
+  /// Contact information should come from the vendor's UserProfile.
   final String? instagramHandle;
   final List<String> photoUrls;
   final DateTime createdAt;
@@ -230,6 +234,21 @@ class VendorPost extends Equatable {
     }
     
     return keywords.toList();
+  }
+
+  /// Get vendor contact information from UserProfile (single source of truth)
+  /// This replaces the deprecated instagramHandle field
+  Future<VendorContactInfo?> getVendorContactInfo() async {
+    final contactService = VendorContactService();
+    return await contactService.getVendorContactInfo(vendorId);
+  }
+
+  /// Check if vendor has contact information available
+  /// This method provides a way to check contact availability without loading the profile
+  static Future<bool> hasVendorContactInfo(String vendorId) async {
+    final contactService = VendorContactService();
+    final contactInfo = await contactService.getVendorContactInfo(vendorId);
+    return VendorContactService.hasContactInfo(contactInfo);
   }
 
   @override

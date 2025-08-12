@@ -654,7 +654,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Unlock Advanced Analytics',
+                    'Unlock Vendor Pro Analytics',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -666,7 +666,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Upgrade to Vendor Premium (\$15/month) to unlock:',
+              'Upgrade to Vendor Pro (\$29/month) to unlock:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),

@@ -1,0 +1,1876 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:io';
+import '../../../blocs/auth/auth_bloc.dart';
+import '../../../blocs/auth/auth_state.dart';
+import '../../../core/constants/constants.dart';
+import '../../shared/widgets/common/loading_widget.dart';
+import '../../shared/widgets/common/photo_upload_widget.dart';
+import '../../shared/services/photo_service.dart';
+import '../models/vendor_product.dart';
+import '../models/vendor_market_product_assignment.dart';
+import '../models/vendor_product_list.dart';
+import '../services/vendor_product_service.dart';
+import '../../market/models/market.dart';
+import '../../market/services/market_service.dart';
+import '../../vendor/services/vendor_application_service.dart';
+import '../../shared/models/user_feedback.dart';
+import '../../shared/services/user_feedback_service.dart';
+
+/// Unified screen for managing vendor's global product catalog and market assignments
+/// Replaces both the old Market Items screen and Products tab in Sales Tracker
+class VendorProductsManagementScreen extends StatefulWidget {
+  const VendorProductsManagementScreen({super.key});
+
+  @override
+  State<VendorProductsManagementScreen> createState() => _VendorProductsManagementScreenState();
+}
+
+class _VendorProductsManagementScreenState extends State<VendorProductsManagementScreen> 
+    with TickerProviderStateMixin {
+  late TabController _tabController;
+  
+  List<VendorProduct> _products = [];
+  List<VendorProductList> _productLists = [];
+  List<Market> _approvedMarkets = [];
+  Map<String, List<VendorMarketProductAssignment>> _marketAssignments = {};
+  bool _isLoading = true;
+  String _currentUserId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _loadInitialData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialData() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+
+    setState(() {
+      _currentUserId = authState.user.uid;
+      _isLoading = true;
+    });
+
+    try {
+      // Load all data in parallel
+      final futures = await Future.wait([
+        VendorProductService.getVendorProducts(_currentUserId),
+        VendorProductService.getProductLists(_currentUserId),
+        _loadApprovedMarkets(),
+        _loadMarketAssignments(),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _products = futures[0] as List<VendorProduct>;
+          _productLists = futures[1] as List<VendorProductList>;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading vendor products data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<List<Market>> _loadApprovedMarkets() async {
+    try {
+      // Get applications for this vendor (as Stream, so we take first result)
+      final applicationsStream = VendorApplicationService.getApplicationsForVendor(_currentUserId);
+      final approvedApplications = await applicationsStream.first;
+      final approvedMarketIds = approvedApplications
+          .where((app) => app.status.name == 'approved')
+          .map((app) => app.marketId)
+          .toList();
+
+      final markets = <Market>[];
+      for (final marketId in approvedMarketIds) {
+        final market = await MarketService.getMarket(marketId);
+        if (market != null) markets.add(market);
+      }
+
+      if (mounted) {
+        setState(() => _approvedMarkets = markets);
+      }
+
+      return markets;
+    } catch (e) {
+      debugPrint('Error loading approved markets: $e');
+      return [];
+    }
+  }
+
+  Future<void> _loadMarketAssignments() async {
+    try {
+      final assignments = <String, List<VendorMarketProductAssignment>>{};
+      
+      for (final market in _approvedMarkets) {
+        final marketAssignments = await VendorProductService.getMarketAssignments(_currentUserId, market.id);
+        assignments[market.id] = marketAssignments;
+      }
+
+      if (mounted) {
+        setState(() => _marketAssignments = assignments);
+      }
+    } catch (e) {
+      debugPrint('Error loading market assignments: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Products & Market Items'),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(icon: Icon(Icons.inventory), text: 'My Products'),
+            Tab(icon: Icon(Icons.list_alt), text: 'Product Lists'),
+            Tab(icon: Icon(Icons.store), text: 'Market Assignments'),
+            Tab(icon: Icon(Icons.settings), text: 'Settings'),
+          ],
+        ),
+      ),
+      body: _isLoading
+          ? const LoadingWidget(message: 'Loading your products...')
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildMyProductsTab(),
+                _buildProductListsTab(),
+                _buildMarketAssignmentsTab(),
+                _buildSettingsTab(),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildMyProductsTab() {
+    return Column(
+      children: [
+        // Header with stats and add button
+        Container(
+          padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+          color: Colors.grey[50],
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_products.length} Products',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Your global product catalog',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _showAddProductDialog,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Product'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Products list
+        Expanded(
+          child: _products.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.inventory,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No products yet',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create your first product to get started. Products can be used across multiple markets.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+                  itemCount: _products.length,
+                  itemBuilder: (context, index) {
+                    final product = _products[index];
+                    return _buildProductCard(product);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductCard(VendorProduct product) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Product image or placeholder
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: product.imageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            product.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.image, color: Colors.grey),
+                          ),
+                        )
+                      : const Icon(Icons.inventory, color: Colors.grey),
+                ),
+                const SizedBox(width: AppConstants.mediumSpacing),
+                
+                // Product details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        product.category,
+                        style: TextStyle(
+                          color: Colors.orange[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (product.description != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          product.description!,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                
+                // Price and actions
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      product.displayPrice,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => _showEditProductDialog(product),
+                          icon: const Icon(Icons.edit, size: 20),
+                          color: Colors.blue,
+                          tooltip: 'Edit Product',
+                        ),
+                        IconButton(
+                          onPressed: () => _showDeleteProductDialog(product),
+                          icon: const Icon(Icons.delete, size: 20),
+                          color: Colors.red,
+                          tooltip: 'Delete Product',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            // Tags
+            if (product.tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: product.tags.map((tag) => Chip(
+                  label: Text(
+                    tag,
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                  backgroundColor: Colors.blue[50],
+                  side: BorderSide(color: Colors.blue[200]!),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                )).toList(),
+              ),
+            ],
+            
+            // Market assignments info
+            FutureBuilder<List<VendorMarketProductAssignment>>(
+              future: VendorProductService.getProductAssignments(product.id),
+              builder: (context, snapshot) {
+                final assignments = snapshot.data ?? [];
+                if (assignments.isEmpty) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.orange[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Colors.orange[700]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Not assigned to any markets yet',
+                          style: TextStyle(
+                            color: Colors.orange[700],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.store, size: 16, color: Colors.green[700]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Available in ${assignments.length} market${assignments.length == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductListsTab() {
+    return Column(
+      children: [
+        // Header with add list button
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Product Lists',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Create custom product lists like "Grant Park List" for easy market assignment',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () => _createProductList(),
+                icon: const Icon(Icons.add),
+                label: const Text('Create List'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Product lists grid
+        Expanded(
+          child: _productLists.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.list_alt,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No Product Lists Yet',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Create your first product list to organize products\nfor specific markets or events.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _createProductList(),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create Product List'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.2,
+                    ),
+                    itemCount: _productLists.length,
+                    itemBuilder: (context, index) {
+                      final list = _productLists[index];
+                      return _buildProductListCard(list);
+                    },
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductListCard(VendorProductList list) {
+    final color = list.color != null 
+        ? Color(int.parse(list.color!.substring(1), radix: 16) + 0xFF000000)
+        : Theme.of(context).primaryColor;
+
+    return Card(
+      elevation: 4,
+      child: InkWell(
+        onTap: () => _viewProductList(list),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [
+                color.withAlpha(20),
+                color.withAlpha(5),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      list.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'edit':
+                          _editProductList(list);
+                          break;
+                        case 'assign':
+                          _assignListToMarket(list);
+                          break;
+                        case 'delete':
+                          _deleteProductList(list);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(
+                          leading: Icon(Icons.edit),
+                          title: Text('Edit List'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'assign',
+                        child: ListTile(
+                          leading: Icon(Icons.store),
+                          title: Text('Assign to Market'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(Icons.delete),
+                          title: Text('Delete List'),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (list.description?.isNotEmpty == true) ...[
+                Text(
+                  list.description!,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+              ],
+              const Spacer(),
+              Row(
+                children: [
+                  Icon(
+                    Icons.inventory,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${list.productCount} products',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMarketAssignmentsTab() {
+    if (_approvedMarkets.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.store,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Approved Markets',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Once you\'re approved for markets, you can assign your products to them here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+      itemCount: _approvedMarkets.length,
+      itemBuilder: (context, index) {
+        final market = _approvedMarkets[index];
+        final assignments = _marketAssignments[market.id] ?? [];
+        
+        return _buildMarketAssignmentCard(market, assignments);
+      },
+    );
+  }
+
+  Widget _buildMarketAssignmentCard(Market market, List<VendorMarketProductAssignment> assignments) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
+      child: ExpansionTile(
+        leading: const Icon(Icons.store, color: Colors.orange),
+        title: Text(
+          market.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text('${assignments.length} product${assignments.length == 1 ? '' : 's'} assigned'),
+        children: [
+          if (assignments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+              child: Column(
+                children: [
+                  Text(
+                    'No products assigned to this market yet',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAssignProductsDialog(market),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Assign Products'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            ...assignments.map((assignment) => _buildAssignmentTile(market, assignment)),
+          
+          // Add more products button
+          if (assignments.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _showAssignProductsDialog(market),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Assign More Products'),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAssignmentTile(Market market, VendorMarketProductAssignment assignment) {
+    // Find the product for this assignment
+    final product = _products.firstWhere(
+      (p) => p.id == assignment.productId,
+      orElse: () => VendorProduct(
+        id: assignment.productId,
+        vendorId: assignment.vendorId,
+        name: 'Unknown Product',
+        category: 'Unknown',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    return ListTile(
+      leading: const Icon(Icons.inventory, size: 20),
+      title: Text(product.name),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(assignment.getDisplayPrice(product.basePrice)),
+          Text(
+            assignment.availabilityStatus,
+            style: TextStyle(
+              color: assignment.isAvailable ? Colors.green[700] : Colors.red[700],
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (value) {
+          switch (value) {
+            case 'edit':
+              _showEditAssignmentDialog(market, product, assignment);
+              break;
+            case 'remove':
+              _showRemoveAssignmentDialog(market, product, assignment);
+              break;
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'edit',
+            child: Row(
+              children: [
+                Icon(Icons.edit, size: 16),
+                SizedBox(width: 8),
+                Text('Edit'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'remove',
+            child: Row(
+              children: [
+                Icon(Icons.remove, size: 16, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Remove'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: VendorProductService.getProductStats(_currentUserId),
+      builder: (context, snapshot) {
+        final stats = snapshot.data ?? {};
+        
+        return Padding(
+          padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Product Statistics',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppConstants.mediumSpacing),
+              
+              _buildStatCard('Total Products', stats['totalProducts']?.toString() ?? '0', Icons.inventory),
+              _buildStatCard('Market Assignments', stats['totalAssignments']?.toString() ?? '0', Icons.store),
+              _buildStatCard('Active Assignments', stats['activeAssignments']?.toString() ?? '0', Icons.check_circle),
+              _buildStatCard('Markets with Products', stats['marketsWithProducts']?.toString() ?? '0', Icons.location_on),
+              _buildStatCard('Avg Products per Market', stats['averageProductsPerMarket']?.toString() ?? '0', Icons.analytics),
+              
+              const SizedBox(height: AppConstants.largeSpacing),
+              
+              // Actions
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _loadInitialData,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh Data'),
+                ),
+              ),
+              
+              const SizedBox(height: AppConstants.mediumSpacing),
+              
+              // Feedback button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _showFeedbackDialog,
+                  icon: const Icon(Icons.feedback),
+                  label: const Text('Send Feedback'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.orange),
+        title: Text(title),
+        trailing: Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.orange,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =============================================================================
+  // DIALOG METHODS
+  // =============================================================================
+
+  void _showAddProductDialog() {
+    _showProductDialog();
+  }
+
+  void _showProductDialog([VendorProduct? existingProduct]) {
+    final isEditing = existingProduct != null;
+    final nameController = TextEditingController(text: existingProduct?.name ?? '');
+    final descriptionController = TextEditingController(text: existingProduct?.description ?? '');
+    final priceController = TextEditingController(
+      text: existingProduct?.basePrice?.toStringAsFixed(2) ?? '',
+    );
+    
+    String selectedCategory = existingProduct?.category ?? VendorProduct.commonCategories.first;
+    List<String> tags = List<String>.from(existingProduct?.tags ?? []);
+    List<File> selectedPhotos = [];
+    String? uploadedImageUrl = existingProduct?.imageUrl;
+
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.95,
+          constraints: const BoxConstraints(maxHeight: 600),
+          child: StatefulBuilder(
+            builder: (context, setState) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isEditing ? Icons.edit : Icons.add_business,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          isEditing ? 'Edit Product' : 'Add New Product',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Form content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Name
+                          TextFormField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Product Name *',
+                              hintText: 'e.g., Organic Honey, Handmade Scarf',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Product name is required';
+                              }
+                              if (value.trim().length < 2) {
+                                return 'Product name must be at least 2 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Category
+                          DropdownButtonFormField<String>(
+                            value: selectedCategory,
+                            decoration: const InputDecoration(
+                              labelText: 'Category *',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: VendorProduct.commonCategories.map((category) {
+                              return DropdownMenuItem(
+                                value: category,
+                                child: Text(category),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => selectedCategory = value);
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please select a category';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Description
+                          TextFormField(
+                            controller: descriptionController,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              labelText: 'Description (Optional)',
+                              hintText: 'Describe your product, ingredients, materials, etc.',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value != null && value.length > 500) {
+                                return 'Description must be less than 500 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Price
+                          TextFormField(
+                            controller: priceController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Base Price (Optional)',
+                              hintText: '0.00',
+                              prefixText: '\$',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                final price = double.tryParse(value);
+                                if (price == null) {
+                                  return 'Please enter a valid price';
+                                }
+                                if (price < 0) {
+                                  return 'Price cannot be negative';
+                                }
+                                if (price > 999999) {
+                                  return 'Price cannot exceed \$999,999';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Photo Upload Section
+                          Text(
+                            'Product Photo',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          PhotoUploadWidget(
+                            userId: _currentUserId,
+                            userType: 'vendor',
+                            onPhotosSelected: (photos) {
+                              setState(() => selectedPhotos = photos);
+                            },
+                            initialImagePaths: uploadedImageUrl != null ? [uploadedImageUrl] : null,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Tags
+                          Text(
+                            'Tags (Optional)',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildTagsSection(tags, setState),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Footer buttons
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => _saveProduct(
+                                context,
+                                setState,
+                                formKey,
+                                existingProduct,
+                                nameController,
+                                descriptionController,
+                                priceController,
+                                selectedCategory,
+                                tags,
+                                selectedPhotos,
+                                uploadedImageUrl,
+                              ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text(isEditing ? 'Update Product' : 'Create Product'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTagsSection(List<String> tags, StateSetter setState) {
+    final tagController = TextEditingController();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: tagController,
+                decoration: const InputDecoration(
+                  hintText: 'Add a tag...',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (value) {
+                  final tag = value.trim();
+                  if (tag.isNotEmpty && !tags.contains(tag) && tags.length < 10) {
+                    setState(() => tags.add(tag));
+                    tagController.clear();
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              onPressed: () {
+                final tag = tagController.text.trim();
+                if (tag.isNotEmpty && !tags.contains(tag) && tags.length < 10) {
+                  setState(() => tags.add(tag));
+                  tagController.clear();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+        if (tags.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: tags.map((tag) => Chip(
+              label: Text(
+                tag,
+                style: const TextStyle(fontSize: 12),
+              ),
+              deleteIcon: const Icon(Icons.close, size: 16),
+              onDeleted: () {
+                setState(() => tags.remove(tag));
+              },
+              backgroundColor: Colors.blue[50],
+              side: BorderSide(color: Colors.blue[200]!),
+            )).toList(),
+          ),
+        ],
+        if (tags.length >= 10)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Maximum 10 tags allowed',
+              style: TextStyle(
+                color: Colors.orange[600],
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _saveProduct(
+    BuildContext dialogContext,
+    StateSetter setState,
+    GlobalKey<FormState> formKey,
+    VendorProduct? existingProduct,
+    TextEditingController nameController,
+    TextEditingController descriptionController,
+    TextEditingController priceController,
+    String selectedCategory,
+    List<String> tags,
+    List<File> selectedPhotos,
+    String? currentImageUrl,
+  ) async {
+    if (!formKey.currentState!.validate()) return;
+
+    try {
+      setState(() {}); // Trigger loading state
+
+      String? finalImageUrl = currentImageUrl;
+
+      // Upload new photo if selected
+      if (selectedPhotos.isNotEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Uploading photo...')),
+          );
+        }
+
+        finalImageUrl = await PhotoService.uploadPhoto(
+          selectedPhotos.first,
+          'products',
+          _currentUserId,
+        );
+      }
+
+      // Parse price
+      double? price;
+      if (priceController.text.trim().isNotEmpty) {
+        price = double.tryParse(priceController.text.trim());
+      }
+
+      VendorProduct savedProduct;
+
+      if (existingProduct != null) {
+        // Update existing product
+        savedProduct = await VendorProductService.updateProduct(
+          productId: existingProduct.id,
+          name: nameController.text.trim(),
+          category: selectedCategory,
+          description: descriptionController.text.trim().isEmpty 
+              ? null 
+              : descriptionController.text.trim(),
+          basePrice: price,
+          imageUrl: finalImageUrl,
+          tags: tags,
+        );
+      } else {
+        // Create new product
+        savedProduct = await VendorProductService.createProduct(
+          vendorId: _currentUserId,
+          name: nameController.text.trim(),
+          category: selectedCategory,
+          description: descriptionController.text.trim().isEmpty 
+              ? null 
+              : descriptionController.text.trim(),
+          basePrice: price,
+          imageUrl: finalImageUrl,
+          tags: tags,
+        );
+      }
+
+      Navigator.pop(dialogContext);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              existingProduct != null
+                  ? 'Product "${savedProduct.name}" updated successfully!'
+                  : 'Product "${savedProduct.name}" created successfully!',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the products list
+        _loadInitialData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving product: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEditProductDialog(VendorProduct product) {
+    _showProductDialog(product);
+  }
+
+  void _showDeleteProductDialog(VendorProduct product) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete "${product.name}"?'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This will also remove the product from all markets where it\'s currently assigned.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deleteProduct(product);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteProduct(VendorProduct product) async {
+    try {
+      // Show loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Deleting "${product.name}"...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      await VendorProductService.deleteProduct(product.id);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Product "${product.name}" deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the products list
+        _loadInitialData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting product: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAssignProductsDialog(Market market) {
+    // TODO: Implement assign products dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Assign products to ${market.name} - Coming soon!')),
+    );
+  }
+
+  void _showEditAssignmentDialog(Market market, VendorProduct product, VendorMarketProductAssignment assignment) {
+    // TODO: Implement edit assignment dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Edit ${product.name} assignment to ${market.name} - Coming soon!')),
+    );
+  }
+
+  void _showRemoveAssignmentDialog(Market market, VendorProduct product, VendorMarketProductAssignment assignment) {
+    // TODO: Implement remove assignment dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Remove ${product.name} from ${market.name} - Coming soon!')),
+    );
+  }
+
+  // =============================================================================
+  // PRODUCT LIST MANAGEMENT METHODS
+  // =============================================================================
+
+  void _createProductList() {
+    _showProductListDialog(null);
+  }
+
+  void _editProductList(VendorProductList list) {
+    _showProductListDialog(list);
+  }
+
+  void _viewProductList(VendorProductList list) {
+    // TODO: Implement detailed product list view with products
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('View ${list.name} details - Coming soon!')),
+    );
+  }
+
+  void _assignListToMarket(VendorProductList list) {
+    if (_approvedMarkets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You need to be approved for markets first')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Assign "${list.name}" to Market'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Select a market to assign all ${list.productCount} products from "${list.name}":'),
+            const SizedBox(height: 16),
+            DropdownButton<Market>(
+              value: null,
+              hint: const Text('Select Market'),
+              isExpanded: true,
+              items: _approvedMarkets.map((market) {
+                return DropdownMenuItem(
+                  value: market,
+                  child: Text(market.name),
+                );
+              }).toList(),
+              onChanged: (market) {
+                if (market != null) {
+                  Navigator.pop(context);
+                  _performListAssignment(list, market);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performListAssignment(VendorProductList list, Market market) async {
+    try {
+      final assignments = await VendorProductService.assignProductListToMarket(
+        vendorId: _currentUserId,
+        marketId: market.id,
+        listId: list.id,
+        isAvailable: true,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully assigned ${assignments.length}/${list.productCount} products from "${list.name}" to ${market.name}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadInitialData(); // Refresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error assigning list to market: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _deleteProductList(VendorProductList list) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Product List'),
+        content: Text('Are you sure you want to delete "${list.name}"?\n\nThis will not delete the products themselves, only the list.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _performListDeletion(list);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performListDeletion(VendorProductList list) async {
+    try {
+      await VendorProductService.deleteProductList(list.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted "${list.name}"'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadInitialData(); // Refresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showProductListDialog(VendorProductList? existingList) {
+    final nameController = TextEditingController(text: existingList?.name ?? '');
+    final descriptionController = TextEditingController(text: existingList?.description ?? '');
+    String? selectedColor = existingList?.color;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(existingList != null ? 'Edit Product List' : 'Create Product List'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'List Name',
+                  hintText: 'e.g., Grant Park List, Summer Items',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                  hintText: 'What products are in this list?',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              const Text('Color (Optional):'),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: VendorProductList.suggestedColors.map((colorHex) {
+                  final color = Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+                  return GestureDetector(
+                    onTap: () {
+                      selectedColor = selectedColor == colorHex ? null : colorHex;
+                      (context as Element).markNeedsBuild();
+                    },
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: selectedColor == colorHex
+                            ? Border.all(color: Colors.black, width: 3)
+                            : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter a list name')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              _saveProductList(existingList, name, descriptionController.text.trim(), selectedColor);
+            },
+            child: Text(existingList != null ? 'Update' : 'Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveProductList(VendorProductList? existingList, String name, String description, String? color) async {
+    try {
+      if (existingList != null) {
+        // Update existing list
+        final updatedList = existingList.copyWith(
+          name: name,
+          description: description.isEmpty ? null : description,
+          color: color,
+        );
+        await VendorProductService.updateProductList(updatedList);
+      } else {
+        // Create new list
+        await VendorProductService.createProductList(
+          vendorId: _currentUserId,
+          name: name,
+          description: description.isEmpty ? null : description,
+          color: color,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(existingList != null ? 'List updated!' : 'List created!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadInitialData(); // Refresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // =============================================================================
+  // FEEDBACK METHODS
+  // =============================================================================
+
+  void _showFeedbackDialog() {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    FeedbackCategory selectedCategory = FeedbackCategory.general;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send Feedback'),
+        content: SingleChildScrollView(
+          child: StatefulBuilder(
+            builder: (context, setState) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Help us improve HiPOP! Your feedback goes directly to our team.',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 16),
+                
+                // Category selection
+                const Text('Category:'),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<FeedbackCategory>(
+                  value: selectedCategory,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: FeedbackCategory.values.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(_getCategoryDisplayName(category)),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedCategory = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Title
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    hintText: 'Brief summary of your feedback',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLength: 200,
+                ),
+                const SizedBox(height: 16),
+
+                // Description
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Please provide details about your feedback',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 4,
+                  maxLength: 2000,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final title = titleController.text.trim();
+              final description = descriptionController.text.trim();
+              
+              if (title.isEmpty || description.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill in all fields')),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+              _submitFeedback(selectedCategory, title, description);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Send Feedback'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCategoryDisplayName(FeedbackCategory category) {
+    switch (category) {
+      case FeedbackCategory.bug:
+        return 'Bug Report';
+      case FeedbackCategory.feature:
+        return 'Feature Request';
+      case FeedbackCategory.improvement:
+        return 'Improvement Suggestion';
+      case FeedbackCategory.general:
+        return 'General Feedback';
+      case FeedbackCategory.tutorial:
+        return 'Tutorial Feedback';
+      case FeedbackCategory.support:
+        return 'Support Request';
+    }
+  }
+
+  Future<void> _submitFeedback(FeedbackCategory category, String title, String description) async {
+    try {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! Authenticated) return;
+
+      await UserFeedbackService.submitFeedback(
+        userId: authState.user.uid,
+        userType: 'vendor',
+        userEmail: authState.user.email ?? '',
+        userName: authState.user.displayName,
+        category: category,
+        title: title,
+        description: description,
+        metadata: {
+          'screen': 'vendor_products_management',
+          'timestamp': DateTime.now().toIso8601String(),
+          'appSection': 'products_settings',
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thank you for your feedback! We\'ll review it soon.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sending feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+}

@@ -11,21 +11,23 @@ import 'package:hipop/features/vendor/services/vendor_market_relationship_servic
 import '../services/vendor_application_service.dart';
 
 
-class VendorMarketPermissionsScreen extends StatefulWidget {
-  const VendorMarketPermissionsScreen({super.key});
+class VendorMarketConnectionsScreen extends StatefulWidget {
+  const VendorMarketConnectionsScreen({super.key});
 
   @override
-  State<VendorMarketPermissionsScreen> createState() => _VendorMarketPermissionsScreenState();
+  State<VendorMarketConnectionsScreen> createState() => _VendorMarketConnectionsScreenState();
 }
 
-class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsScreen>
+class _VendorMarketConnectionsScreenState extends State<VendorMarketConnectionsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   
   List<Market> _allMarkets = [];
   List<Market> _approvedMarkets = [];
   List<VendorApplication> _pendingApplications = [];
+  List<Market> _filteredMarkets = [];
   
+  final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _error;
@@ -40,6 +42,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -80,6 +83,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
         _allMarkets = allMarkets;
         _approvedMarkets = approvedMarkets;
         _pendingApplications = pendingPermissionApps;
+        _filteredMarkets = allMarkets;
         _isLoading = false;
       });
     } catch (e) {
@@ -90,11 +94,27 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
     }
   }
 
+  void _filterMarkets(String searchTerm) {
+    setState(() {
+      if (searchTerm.isEmpty) {
+        _filteredMarkets = _allMarkets;
+      } else {
+        _filteredMarkets = _allMarkets.where((market) {
+          final searchLower = searchTerm.toLowerCase();
+          return market.name.toLowerCase().contains(searchLower) ||
+                 market.city.toLowerCase().contains(searchLower) ||
+                 market.state.toLowerCase().contains(searchLower) ||
+                 market.fullAddress.toLowerCase().contains(searchLower);
+        }).toList();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Market Permissions'),
+        title: const Text('My Market Connections'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         bottom: TabBar(
@@ -103,7 +123,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(text: 'Browse Markets', icon: Icon(Icons.search)),
-            Tab(text: 'My Markets', icon: Icon(Icons.verified)),
+            Tab(text: 'My Connections', icon: Icon(Icons.verified)),
             Tab(text: 'Pending', icon: Icon(Icons.pending)),
           ],
         ),
@@ -133,11 +153,11 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
       return const Center(child: Text('Please log in to continue'));
     }
 
-    // Filter out markets where vendor already has permission or pending request
+    // Filter out markets where vendor already has connection or pending request
     final approvedMarketIds = _approvedMarkets.map((m) => m.id).toSet();
     final pendingMarketIds = _pendingApplications.map((app) => app.marketId).toSet();
     
-    final availableMarkets = _allMarkets.where((market) => 
+    final availableMarkets = _filteredMarkets.where((market) => 
       !approvedMarketIds.contains(market.id) && !pendingMarketIds.contains(market.id)
     ).toList();
 
@@ -155,7 +175,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
               ),
               const SizedBox(height: 16),
               Text(
-                'All Set!',
+                'All Connected!',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.green[600],
                   fontWeight: FontWeight.bold,
@@ -163,7 +183,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
               ),
               const SizedBox(height: 8),
               Text(
-                'You have permissions or pending requests for all available markets.',
+                'You have connections or pending requests for all available markets.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[600],
                 ),
@@ -175,13 +195,67 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: availableMarkets.length,
-      itemBuilder: (context, index) {
-        final market = availableMarkets[index];
-        return _buildMarketCard(market, canRequest: true);
-      },
+    return Column(
+      children: [
+        // Help text section
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'How Market Connections Work',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You must apply directly with each market first. Once approved by the market organizer, connect them here to create pop-ups through HiPOP.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Search field
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: HiPopTextField(
+            controller: _searchController,
+            labelText: 'Search Markets',
+            hintText: 'Search by name, city, or state...',
+            prefixIcon: const Icon(Icons.search),
+            onChanged: _filterMarkets,
+          ),
+        ),
+        // Markets list
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: availableMarkets.length,
+            itemBuilder: (context, index) {
+              final market = availableMarkets[index];
+              return _buildMarketCard(market, canConnect: true);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -200,14 +274,14 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
               ),
               const SizedBox(height: 16),
               Text(
-                'No Market Permissions',
+                'No Market Connections',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Request permission from market organizers to create pop-ups at their markets.',
+                'Connect markets where you\'re already approved to create pop-ups through HiPOP.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[500],
                 ),
@@ -249,14 +323,14 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
               ),
               const SizedBox(height: 16),
               Text(
-                'No Pending Requests',
+                'No Pending Connections',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'You don\'t have any pending permission requests.',
+                'You don\'t have any pending connection requests.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[500],
                 ),
@@ -291,7 +365,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
     );
   }
 
-  Widget _buildMarketCard(Market market, {bool canRequest = false, bool isApproved = false}) {
+  Widget _buildMarketCard(Market market, {bool canConnect = false, bool isApproved = false}) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -368,12 +442,12 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
                 }).toList(),
               ),
             ],
-            if (canRequest) ...[
+            if (canConnect) ...[
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : () => _showRequestPermissionDialog(market),
+                  onPressed: _isSubmitting ? null : () => _showConnectToMarketDialog(market),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
@@ -387,7 +461,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Request Permission'),
+                      : const Text('Connect to Market'),
                 ),
               ),
             ],
@@ -487,27 +561,56 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
     );
   }
 
-  void _showRequestPermissionDialog(Market market) {
+  void _showConnectToMarketDialog(Market market) {
     final messageController = TextEditingController();
     final howDidYouHearController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Request Permission: ${market.name}'),
+        title: Text('Connect to Market: ${market.name}'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Send a permission request to the market organizer. Once approved, you can create pop-ups for this market.',
-                style: Theme.of(context).textTheme.bodyMedium,
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Important',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.blue.shade700,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'You must already be approved by ${market.name} to connect. HiPOP does not process market applications - we only facilitate connections for pre-approved vendors.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               HiPopTextField(
                 controller: messageController,
                 labelText: 'Message to Organizer (Optional)',
-                hintText: 'Tell them about your business...',
+                hintText: 'Reference your approved application...',
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
@@ -527,20 +630,20 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              await _submitPermissionRequest(
+              await _submitConnectionRequest(
                 market,
                 messageController.text.trim(),
                 howDidYouHearController.text.trim(),
               );
             },
-            child: const Text('Send Request'),
+            child: const Text('Connect Market'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _submitPermissionRequest(Market market, String message, String howDidYouHear) async {
+  Future<void> _submitConnectionRequest(Market market, String message, String howDidYouHear) async {
     setState(() => _isSubmitting = true);
 
     try {
@@ -557,7 +660,7 @@ class _VendorMarketPermissionsScreenState extends State<VendorMarketPermissionsS
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Permission request sent to ${market.name}'),
+            content: Text('Connection request sent to ${market.name}'),
             backgroundColor: Colors.green,
           ),
         );

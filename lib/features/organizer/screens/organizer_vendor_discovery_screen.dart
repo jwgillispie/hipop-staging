@@ -8,6 +8,8 @@ import '../../premium/services/subscription_service.dart';
 import '../services/organizer_vendor_discovery_service.dart';
 import '../services/organizer_vendor_invitation_service.dart';
 import '../services/organizer_vendor_discovery_analytics_service.dart';
+import '../../vendor/services/vendor_contact_service.dart';
+import '../../shared/models/user_profile.dart';
 
 class OrganizerVendorDiscoveryScreen extends StatefulWidget {
   const OrganizerVendorDiscoveryScreen({super.key});
@@ -19,6 +21,7 @@ class OrganizerVendorDiscoveryScreen extends StatefulWidget {
 class _OrganizerVendorDiscoveryScreenState extends State<OrganizerVendorDiscoveryScreen> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
+  final VendorContactService _contactService = VendorContactService();
   
   bool _isLoading = true;
   bool _hasPremiumAccess = false;
@@ -722,6 +725,9 @@ class _OrganizerVendorDiscoveryScreenState extends State<OrganizerVendorDiscover
                 const SizedBox(height: 12),
               ],
               
+              // Contact Information
+              _buildContactInfoSection(result.vendor),
+              
               // Action button
               SizedBox(
                 width: double.infinity,
@@ -743,6 +749,128 @@ class _OrganizerVendorDiscoveryScreenState extends State<OrganizerVendorDiscover
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactInfoSection(UserProfile vendor) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Contact Information',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildContactActions(vendor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactActions(UserProfile vendor) {
+    final hasPhone = vendor.phoneNumber?.isNotEmpty == true;
+    final hasInstagram = vendor.instagramHandle?.isNotEmpty == true;
+    final hasWebsite = vendor.website?.isNotEmpty == true;
+    
+    if (!hasPhone && !hasInstagram && !hasWebsite) {
+      return Text(
+        'No contact information available',
+        style: TextStyle(
+          color: Colors.grey.shade600,
+          fontSize: 12,
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        // Email action (always available)
+        _buildContactActionChip(
+          icon: Icons.email,
+          label: 'Email',
+          color: Colors.blue,
+          onTap: () => _contactService.launchEmail(
+            vendor.email,
+            subject: 'Partnership Opportunity - Farmers Market',
+            body: 'Hi ${vendor.displayTitle},\n\nI would like to discuss a potential partnership opportunity for our farmers market...',
+          ),
+        ),
+        
+        // Phone action
+        if (hasPhone)
+          _buildContactActionChip(
+            icon: Icons.phone,
+            label: VendorContactService.formatPhoneNumber(vendor.phoneNumber),
+            color: Colors.green,
+            onTap: () => _contactService.launchPhoneCall(vendor.phoneNumber),
+          ),
+        
+        // Instagram action
+        if (hasInstagram)
+          _buildContactActionChip(
+            icon: Icons.camera_alt,
+            label: VendorContactService.formatInstagramHandle(vendor.instagramHandle),
+            color: Colors.purple,
+            onTap: () => _contactService.launchInstagram(vendor.instagramHandle),
+          ),
+        
+        // Website action
+        if (hasWebsite)
+          _buildContactActionChip(
+            icon: Icons.web,
+            label: VendorContactService.formatWebsiteForDisplay(vendor.website),
+            color: Colors.teal,
+            onTap: () => _contactService.launchWebsite(vendor.website),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildContactActionChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );

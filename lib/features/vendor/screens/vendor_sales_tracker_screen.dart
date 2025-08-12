@@ -6,6 +6,9 @@ import 'dart:math';
 
 import '../models/vendor_sales_data.dart';
 import '../services/vendor_sales_service.dart';
+import '../services/vendor_market_relationship_service.dart';
+import '../../market/services/market_service.dart';
+import '../../market/models/market.dart';
 import '../../shared/services/real_time_analytics_service.dart';
 
 /// Vendor Sales Tracker Screen
@@ -53,6 +56,10 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   // Quick entry mode for busy vendors
   bool _quickEntryMode = false;
   
+  // Market selection state
+  List<Market> _approvedMarkets = [];
+  bool _loadingMarkets = false;
+  
   
   @override
   void initState() {
@@ -61,6 +68,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     _selectedDate = widget.selectedDate ?? DateTime.now();
     _selectedMarketId = widget.marketId;
     _commissionRateController.text = '5.0'; // Default 5% commission
+    _loadApprovedMarkets();
     _loadExistingSalesData();
     
     // Track screen view
@@ -315,16 +323,20 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   
   Widget _buildMarketSelector() {
     return Card(
-      child: ListTile(
-        leading: const Icon(Icons.location_on, color: Colors.green),
-        title: const Text('Market'),
-        subtitle: Text(_selectedMarketId ?? 'Select a market'),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          // TODO: Implement market selection dialog
-          _showError('Market selection coming soon!');
-        },
-      ),
+      child: _loadingMarkets
+          ? const ListTile(
+              leading: Icon(Icons.location_on, color: Colors.green),
+              title: Text('Market'),
+              subtitle: Text('Loading markets...'),
+              trailing: CircularProgressIndicator(),
+            )
+          : ListTile(
+              leading: const Icon(Icons.location_on, color: Colors.green),
+              title: const Text('Market'),
+              subtitle: Text(_getSelectedMarketName() ?? 'Select a market'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _approvedMarkets.isEmpty ? null : _showMarketSelectionDialog,
+            ),
     );
   }
   
@@ -562,5 +574,91 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     );
   }
   
+  // Market selection methods
   
+  Future<void> _loadApprovedMarkets() async {
+    setState(() => _loadingMarkets = true);
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+      
+      final marketIds = await VendorMarketRelationshipService
+          .getApprovedMarketsForVendor(userId);
+      
+      final markets = <Market>[];
+      for (final marketId in marketIds) {
+        final market = await MarketService.getMarket(marketId);
+        if (market != null) {
+          markets.add(market);
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _approvedMarkets = markets;
+          _loadingMarkets = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loadingMarkets = false);
+        _showError('Error loading markets: $e');
+      }
+    }
+  }
+
+  void _showMarketSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Market'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: _approvedMarkets.length + 1,
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return ListTile(
+                  leading: const Icon(Icons.clear),
+                  title: const Text('No specific market'),
+                  onTap: () {
+                    setState(() => _selectedMarketId = null);
+                    Navigator.pop(context);
+                    _loadExistingSalesData();
+                  },
+                );
+              }
+              
+              final market = _approvedMarkets[index - 1];
+              return ListTile(
+                leading: const Icon(Icons.location_on),
+                title: Text(market.name),
+                subtitle: Text('${market.city}, ${market.state}'),
+                onTap: () {
+                  setState(() => _selectedMarketId = market.id);
+                  Navigator.pop(context);
+                  _loadExistingSalesData();
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _getSelectedMarketName() {
+    if (_selectedMarketId == null) return null;
+    final market = _approvedMarkets
+        .where((m) => m.id == _selectedMarketId)
+        .firstOrNull;
+    return market?.name;
+  }
 }

@@ -11,6 +11,8 @@ import '../widgets/common/photo_upload_widget.dart';
 import '../services/places_service.dart';
 import '../services/photo_service.dart';
 import '../../market/services/market_service.dart';
+import '../services/user_profile_service.dart';
+import '../models/user_profile.dart';
 import 'dart:io';
 
 class CreatePopUpScreen extends StatefulWidget {
@@ -32,7 +34,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   final _vendorNameController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _instagramController = TextEditingController();
+  
+  final UserProfileService _userProfileService = UserProfileService();
+  UserProfile? _currentUserProfile;
   
   List<File> _selectedPhotos = [];
   
@@ -54,10 +58,25 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   void initState() {
     super.initState();
     _loadMarkets();
+    _loadCurrentUserProfile();
     // Defer form initialization until after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeForm();
     });
+  }
+
+  Future<void> _loadCurrentUserProfile() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      try {
+        _currentUserProfile = await _userProfileService.getUserProfile(currentUser.uid);
+        if (mounted) {
+          setState(() {});
+        }
+      } catch (e) {
+        debugPrint('Error loading user profile: $e');
+      }
+    }
   }
 
   void _initializeForm() {
@@ -74,7 +93,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       _vendorNameController.text = duplicateFrom.vendorName;
       _locationController.text = duplicateFrom.location;
       _descriptionController.text = duplicateFrom.description;
-      _instagramController.text = duplicateFrom.instagramHandle ?? '';
+      // Instagram handle will be auto-populated from user profile
       // Don't copy date/time for duplicates - let user set new ones
       
       // Initialize selected place if we have location data
@@ -100,7 +119,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       _vendorNameController.text = post.vendorName;
       _locationController.text = post.location;
       _descriptionController.text = post.description;
-      _instagramController.text = post.instagramHandle ?? '';
+      // Instagram handle will be auto-populated from user profile
       _selectedStartDateTime = post.popUpStartDateTime;
       _selectedEndDateTime = post.popUpEndDateTime;
       
@@ -213,7 +232,6 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     _vendorNameController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
-    _instagramController.dispose();
     super.dispose();
   }
 
@@ -392,26 +410,65 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           userType: 'vendor',
         ),
         const SizedBox(height: 16),
-        HiPopTextField(
-          controller: _instagramController,
-          labelText: 'Instagram Handle (Optional)',
-          hintText: 'username (without @)',
-          prefixIcon: const Icon(Icons.camera_alt),
-          validator: (value) {
-            if (value != null && value.isNotEmpty) {
-              // Remove @ if user added it
-              if (value.startsWith('@')) {
-                _instagramController.text = value.substring(1);
-              }
-              // Basic validation for Instagram username
-              if (!RegExp(r'^[a-zA-Z0-9._]{1,30}$').hasMatch(_instagramController.text)) {
-                return 'Please enter a valid Instagram username';
-              }
-            }
-            return null;
-          },
-        ),
+        _buildInstagramInfoWidget(),
       ],
+    );
+  }
+
+  Widget _buildInstagramInfoWidget() {
+    final instagramHandle = _currentUserProfile?.instagramHandle;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey.shade50,
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.camera_alt, color: Colors.grey),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Instagram Handle',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  instagramHandle?.isNotEmpty == true 
+                      ? '@$instagramHandle'
+                      : 'Not set in profile',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: instagramHandle?.isNotEmpty == true 
+                        ? Colors.black87 
+                        : Colors.grey,
+                  ),
+                ),
+                if (instagramHandle?.isEmpty != false)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Update your Instagram handle in your profile settings',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -899,9 +956,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           popUpStartDateTime: _selectedStartDateTime!,
           popUpEndDateTime: _selectedEndDateTime!,
           description: _descriptionController.text.trim(),
-          instagramHandle: _instagramController.text.trim().isEmpty 
-              ? null 
-              : _instagramController.text.trim(),
+          instagramHandle: _currentUserProfile?.instagramHandle,
           photoUrls: photoUrls,
           marketId: _selectedMarket?.id,
           updatedAt: now,
@@ -935,9 +990,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           popUpStartDateTime: _selectedStartDateTime!,
           popUpEndDateTime: _selectedEndDateTime!,
           description: _descriptionController.text.trim(),
-          instagramHandle: _instagramController.text.trim().isEmpty 
-              ? null 
-              : _instagramController.text.trim(),
+          instagramHandle: _currentUserProfile?.instagramHandle,
           marketId: _selectedMarket?.id,
           createdAt: now,
           updatedAt: now,

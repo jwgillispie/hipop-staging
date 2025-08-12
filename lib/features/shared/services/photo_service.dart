@@ -66,4 +66,40 @@ class PhotoService {
   static String getPostStoragePath(String postId) {
     return 'vendor_posts/$postId';
   }
+
+  /// Upload a single photo to a specific folder
+  static Future<String> uploadPhoto(
+    File photo,
+    String folder,
+    String userId, {
+    String? customFileName,
+  }) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filename = customFileName ?? '${folder}_${userId}_${timestamp}.jpg';
+      final ref = _storage.ref().child(folder).child(userId).child(filename);
+      
+      final uploadTask = ref.putFile(photo);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      debugPrint('✅ Photo uploaded: $filename to $folder');
+      return downloadUrl;
+    } catch (e) {
+      debugPrint('❌ Error uploading photo to $folder: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a photo by URL
+  static Future<void> deletePhoto(String photoUrl) async {
+    try {
+      final ref = _storage.refFromURL(photoUrl);
+      await ref.delete();
+      debugPrint('✅ Photo deleted: ${ref.name}');
+    } catch (e) {
+      debugPrint('❌ Error deleting photo: $e');
+      rethrow;
+    }
+  }
 }

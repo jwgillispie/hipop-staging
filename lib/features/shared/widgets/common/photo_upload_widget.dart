@@ -269,7 +269,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           width: double.infinity,
-          height: 80,
+          height: canAddMore ? 80 : 100, // Increase height for premium message
           decoration: BoxDecoration(
             border: Border.all(
               color: canAddMore ? Colors.blue.shade300 : Colors.grey.shade300,
@@ -284,29 +284,31 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       canAddMore ? Icons.add_photo_alternate : Icons.lock,
-                      size: 32,
+                      size: canAddMore ? 32 : 24, // Smaller icon for premium message
                       color: canAddMore ? Colors.blue[600] : Colors.grey[600],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: canAddMore ? 8 : 6),
                     Text(
                       canAddMore 
                           ? 'Add Photo' 
                           : 'Upgrade for unlimited photos',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: canAddMore ? 14 : 12,
                         color: canAddMore ? Colors.blue[600] : Colors.grey[600],
                         fontWeight: FontWeight.w500,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     if (!canAddMore) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         'Vendor Pro: \$29/month',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 10,
                           color: Colors.grey[500],
                         ),
                       ),

@@ -190,7 +190,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.go('/vendor/market-permissions'),
+                      onPressed: () => context.go('/vendor/market-connections'),
                       child: Text(
                         'Manage',
                         style: TextStyle(
@@ -229,7 +229,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.go('/vendor/market-permissions'),
+                      onPressed: () => context.go('/vendor/market-connections'),
                       child: Text(
                         'Browse',
                         style: TextStyle(
@@ -328,7 +328,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.go('/vendor/market-permissions');
+              context.go('/vendor/market-connections');
             },
             child: const Text('Browse Markets'),
           ),
@@ -381,7 +381,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                       if (_canAccessMarkets) {
                         context.go('/vendor/create-popup?type=market');
                       } else {
-                        context.go('/vendor/market-permissions');
+                        context.go('/vendor/market-connections');
                       }
                     },
                   ),

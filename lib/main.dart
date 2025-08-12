@@ -14,6 +14,7 @@ import 'blocs/auth/auth_state.dart';
 import 'blocs/favorites/favorites_bloc.dart';
 import 'core/routing/app_router.dart';
 import 'features/shared/services/remote_config_service.dart';
+import 'features/shared/services/real_time_analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +42,9 @@ Future<void> _initializeApp() async {
     
     // Initialize Remote Config in background - don't block app startup
     RemoteConfigService.instance.catchError((e) => null);
+    
+    // Initialize Analytics with consent
+    await _initializeAnalytics();
   } catch (e) {
     debugPrint('⚠️ Initialization warning: $e');
     // Continue with app startup even if some services fail
@@ -65,6 +69,18 @@ Future<void> _initializeFirebase() async {
       return;
     }
     rethrow;
+  }
+}
+
+Future<void> _initializeAnalytics() async {
+  try {
+    // Initialize analytics service and request consent
+    await RealTimeAnalyticsService.initialize();
+    await RealTimeAnalyticsService.requestTrackingConsent();
+    debugPrint('✅ Analytics initialized with consent');
+  } catch (e) {
+    debugPrint('⚠️ Analytics initialization failed: $e');
+    // Continue without analytics rather than crash the app
   }
 }
 

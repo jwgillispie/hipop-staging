@@ -115,7 +115,7 @@ class _VendorPremiumDemoScreenState extends State<VendorPremiumDemoScreen> with 
           children: [
             Icon(Icons.diamond, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Vendor Premium Features'),
+            Text('Vendor Pro Features'),
           ],
         ),
         backgroundColor: Colors.orange,

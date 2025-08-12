@@ -334,7 +334,7 @@ class SubscriptionService {
         };
       case 'vendor':
         return {
-          'price': 15.00,
+          'price': 29.00,
           'currency': 'USD',
           'interval': 'month',
           'features': [
@@ -403,9 +403,9 @@ class SubscriptionService {
         return [
           {
             'userType': 'vendor',
-            'name': 'Vendor Basic',
+            'name': 'Vendor Pro',
             'description': 'Essential business tools',
-            'price': 15.00,
+            'price': 29.00,
             'currency': 'USD',
             'interval': 'month',
             'features': [
