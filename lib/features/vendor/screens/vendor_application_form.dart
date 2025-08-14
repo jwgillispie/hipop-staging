@@ -8,6 +8,7 @@ import 'package:hipop/features/vendor/services/vendor_application_service.dart';
 import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/widgets/date_selection_calendar.dart';
+import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:go_router/go_router.dart';
 
 class VendorApplicationForm extends StatefulWidget {
@@ -37,11 +38,17 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
   
   // Date selection
   List<DateTime> _selectedDates = [];
+  
+  // Premium subscription tracking
+  bool _canApplyToMarket = true;
+  int _remainingApplications = 5; // Default free tier limit
+  bool _isCheckingLimits = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _checkApplicationLimits();
   }
 
   @override
@@ -101,7 +108,43 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
     }
   }
 
+  Future<void> _checkApplicationLimits() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+
+    setState(() {
+      _isCheckingLimits = true;
+    });
+
+    try {
+      final canApply = await SubscriptionService.canCreateMarketApplication(authState.user.uid);
+      final remaining = await SubscriptionService.getRemainingMarketApplications(authState.user.uid);
+      
+      if (mounted) {
+        setState(() {
+          _canApplyToMarket = canApply;
+          _remainingApplications = remaining;
+          _isCheckingLimits = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking application limits: $e');
+      if (mounted) {
+        setState(() {
+          _canApplyToMarket = true; // Default to allowing on error
+          _isCheckingLimits = false;
+        });
+      }
+    }
+  }
+
   Future<void> _submitApplication() async {
+    // Check if user can apply to markets
+    if (!_canApplyToMarket) {
+      _showUpgradeDialog();
+      return;
+    }
+
     // Check if at least one date is selected
     if (_selectedDates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -326,6 +369,10 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildMarketInfo(),
+              const SizedBox(height: 24),
+              if (!_canApplyToMarket) _buildUpgradeBanner(),
+              if (!_canApplyToMarket) const SizedBox(height: 24),
+              _buildApplicationLimitsBanner(),
               const SizedBox(height: 24),
               _buildProfilePreview(),
               const SizedBox(height: 24),
@@ -601,6 +648,402 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildUpgradeBanner() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.purple.shade600,
+            Colors.blue.shade600,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.shade200,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.yellow.shade300,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Upgrade to Apply to More Markets',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Pro for unlimited applications and advanced business tools.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                'Unlimited market applications',
+                'Advanced business analytics',
+                'Revenue optimization insights',
+                'Priority customer support',
+              ].map((benefit) => 
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.yellow.shade300,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          benefit,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _navigateToUpgrade(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.purple.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Upgrade to Vendor Pro',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () => _showUpgradeDetails(),
+                child: Text(
+                  'Learn More',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplicationLimitsBanner() {
+    if (_canApplyToMarket) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Colors.green.shade600,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _remainingApplications == -1 
+                    ? 'You have unlimited market applications with your Premium subscription'
+                    : 'You have $_remainingApplications market application${_remainingApplications == 1 ? '' : 's'} remaining this month',
+                style: TextStyle(
+                  color: Colors.green.shade700,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  void _navigateToUpgrade() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      context.push('/premium/upgrade?tier=vendor&userId=${authState.user.uid}');
+    }
+  }
+
+  void _showUpgradeDetails() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Vendor Pro Benefits'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Upgrade to unlock powerful vendor features:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 16),
+              ...[
+                'Unlimited market applications per month',
+                'Full vendor analytics dashboard',
+                'Product performance tracking',
+                'Revenue optimization recommendations',
+                'Customer acquisition analysis',
+                'Market expansion insights',
+                'Seasonal business planning tools',
+                'Priority customer support',
+              ].map((benefit) =>
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade600,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          benefit,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade600, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Starting at \$29/month. Cancel anytime. 30-day free trial available.',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToUpgrade();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade to Vendor Pro'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpgradeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.star,
+              color: Colors.purple.shade600,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Upgrade Required',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Pro for unlimited applications and powerful business tools.',
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Vendor Pro Benefits:',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...[
+                      'Unlimited market applications',
+                      'Advanced business analytics',
+                      'Revenue optimization insights',
+                      'Priority customer support',
+                    ].map((benefit) =>
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green.shade600,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                benefit,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade600, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Starting at \$29/month. Cancel anytime. 30-day free trial available.',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToUpgrade();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade to Vendor Pro'),
+          ),
+        ],
       ),
     );
   }

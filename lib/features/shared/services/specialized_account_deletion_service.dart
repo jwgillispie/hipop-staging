@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_event.dart';
 import 'user_data_deletion_service.dart';
+import '../../premium/services/stripe_service.dart';
+import '../../premium/services/subscription_service.dart';
 
 /// Specialized account deletion service for vendors and market organizers
 /// 
@@ -33,6 +34,7 @@ class SpecializedAccountDeletionService {
         '• Customer reviews and ratings',
         '• Revenue tracking and financial data',
         '• Product management and inventory data',
+        '• Any active premium subscriptions (will be cancelled)',
       ],
       confirmationTitle: 'Delete Vendor Account',
       confirmationMessage: 'This will permanently delete your vendor account and remove you from all markets.',
@@ -54,6 +56,7 @@ class SpecializedAccountDeletionService {
         '• Market analytics and performance data',
         '• Financial data and revenue tracking',
         '• Organizer dashboard and settings',
+        '• Any active premium subscriptions (will be cancelled)',
       ],
       confirmationTitle: 'Delete Organizer Account',
       confirmationMessage: 'This will permanently delete your organizer account and all associated markets.',
@@ -74,6 +77,7 @@ class SpecializedAccountDeletionService {
         '• Reviews and ratings you\'ve left',
         '• Personalized recommendations',
         '• Shopping preferences and settings',
+        '• Any active premium subscriptions (will be cancelled)',
       ],
       confirmationTitle: 'Delete Shopper Account',
       confirmationMessage: 'This will permanently delete your shopper account and preferences.',
@@ -253,7 +257,6 @@ class SpecializedAccountDeletionService {
     required String userType,
     required String progressTitle,
   }) async {
-    bool isDeleting = true;
     String deletionProgress = '';
 
     // Show progress dialog
@@ -309,6 +312,37 @@ class SpecializedAccountDeletionService {
 
       // Re-authenticate with Firebase
       await user.reauthenticateWithCredential(credentials);
+
+      // Cancel any active premium subscriptions first
+      try {
+        debugPrint('💳 Checking for premium subscriptions to cancel...');
+        final subscription = await SubscriptionService.getUserSubscription(user.uid);
+        
+        if (subscription != null && subscription.isPremium && subscription.isActive) {
+          debugPrint('🔄 Cancelling active premium subscription...');
+          
+          // Cancel subscription with immediate cancellation and account deletion reason
+          final cancelled = await StripeService.cancelSubscriptionEnhanced(
+            user.uid,
+            cancellationType: 'immediate',
+            feedback: 'Account deletion - User requested account closure',
+          );
+          
+          if (cancelled) {
+            debugPrint('✅ Premium subscription cancelled successfully');
+            deletionProgress = 'Cancelled premium subscription';
+          } else {
+            debugPrint('⚠️  Failed to cancel premium subscription - continuing with deletion');
+            deletionProgress = 'Warning: Subscription cancellation failed';
+          }
+        } else {
+          debugPrint('ℹ️  No active premium subscription found');
+        }
+      } catch (e) {
+        debugPrint('❌ Error handling subscription cancellation: $e');
+        deletionProgress = 'Warning: Subscription cleanup failed';
+        // Continue with deletion - subscription cancellation failure shouldn't block account deletion
+      }
 
       // Delete user data from Firestore using the comprehensive service
       try {

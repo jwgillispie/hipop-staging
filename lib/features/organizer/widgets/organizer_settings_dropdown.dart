@@ -9,6 +9,7 @@ import '../../auth/services/onboarding_service.dart';
 import '../../shared/services/specialized_account_deletion_service.dart';
 import '../../shared/models/user_feedback.dart';
 import '../../shared/services/user_feedback_service.dart';
+import '../../premium/screens/subscription_management_screen.dart';
 
 /// Market organizer-specific settings dropdown with specialized account deletion flow
 class OrganizerSettingsDropdown extends StatefulWidget {
@@ -217,6 +218,9 @@ class _OrganizerSettingsDropdownState extends State<OrganizerSettingsDropdown> {
       tooltip: 'Organizer Settings',
       onSelected: (String value) {
         switch (value) {
+          case 'subscription':
+            _navigateToSubscriptionManagement();
+            break;
           case 'change-password':
             _showChangePasswordDialog();
             break;
@@ -235,6 +239,17 @@ class _OrganizerSettingsDropdownState extends State<OrganizerSettingsDropdown> {
         }
       },
       itemBuilder: (BuildContext context) => [
+        const PopupMenuItem<String>(
+          value: 'subscription',
+          child: Row(
+            children: [
+              Icon(Icons.credit_card, color: Colors.purple),
+              SizedBox(width: 12),
+              Text('Manage Subscription'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
         const PopupMenuItem<String>(
           value: 'change-password',
           child: Row(
@@ -295,5 +310,20 @@ class _OrganizerSettingsDropdownState extends State<OrganizerSettingsDropdown> {
         ),
       ],
     );
+  }
+  
+  void _navigateToSubscriptionManagement() {
+    final authBloc = context.read<AuthBloc>();
+    final authState = authBloc.state;
+    
+    if (authState is Authenticated) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SubscriptionManagementScreen(
+            userId: authState.user.uid,
+          ),
+        ),
+      );
+    }
   }
 }

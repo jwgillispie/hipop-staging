@@ -15,6 +15,7 @@ import '../services/user_profile_service.dart';
 import '../models/user_profile.dart';
 import '../../vendor/services/vendor_product_service.dart';
 import '../../vendor/models/vendor_product_list.dart';
+import '../../premium/services/subscription_service.dart';
 import 'dart:io';
 
 class CreatePopUpScreen extends StatefulWidget {
@@ -60,6 +61,13 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   List<VendorProductList> _availableProductLists = [];
   List<VendorProductList> _selectedProductLists = [];
   bool _loadingProductLists = false;
+  
+  // Premium subscription tracking
+  bool _canCreatePost = true;
+  bool _isCheckingLimits = false;
+  int _remainingPosts = -1; // -1 means unlimited
+  bool _isNearLimit = false; // true when 1 away from limit
+  Map<String, dynamic>? _subscriptionInfo;
 
   @override
   void initState() {
@@ -67,6 +75,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     _loadMarkets();
     _loadCurrentUserProfile();
     _loadProductLists();
+    _checkSubscriptionLimits();
     // Defer form initialization until after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeForm();
@@ -108,6 +117,69 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       if (mounted) {
         setState(() {
           _loadingProductLists = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _checkSubscriptionLimits() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    setState(() {
+      _isCheckingLimits = true;
+    });
+
+    try {
+      final subscription = await SubscriptionService.getUserSubscription(currentUser.uid);
+      final userProfile = await _userProfileService.getUserProfile(currentUser.uid);
+      final userType = subscription?.userType ?? userProfile?.userType ?? 'vendor';
+      
+      if (userType == 'vendor') {
+        // For vendors, check popup creation limits
+        if (subscription?.isPremium == true) {
+          _remainingPosts = -1; // Unlimited for premium
+          _canCreatePost = true;
+          _isNearLimit = false;
+        } else {
+          // Free tier vendor - check popup_posts_per_month limit
+          final limit = subscription?.getLimit('popup_posts_per_month') ?? 3;
+          // Get current usage - for now we'll simulate this
+          // In a real implementation, you'd track actual usage
+          final currentUsage = 0; // TODO: Track actual popup post count this month
+          _remainingPosts = limit - currentUsage;
+          _canCreatePost = _remainingPosts > 0;
+          _isNearLimit = _remainingPosts == 1;
+        }
+      } else if (userType == 'market_organizer') {
+        // Check if organizer can create vendor posts
+        final remaining = await SubscriptionService.getRemainingVendorPosts(currentUser.uid);
+        _remainingPosts = remaining;
+        _canCreatePost = remaining > 0 || remaining == -1; // -1 means unlimited
+        _isNearLimit = remaining == 1;
+      } else {
+        _canCreatePost = true; // Default to allowing for other user types
+        _remainingPosts = -1;
+        _isNearLimit = false;
+      }
+
+      if (mounted) {
+        setState(() {
+          _subscriptionInfo = {
+            'subscription': subscription,
+            'userType': subscription?.userType ?? _currentUserProfile?.userType ?? 'vendor',
+            'isPremium': subscription?.isPremium ?? false,
+            'canCreate': _canCreatePost,
+          };
+          _isCheckingLimits = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking subscription limits: $e');
+      if (mounted) {
+        setState(() {
+          _canCreatePost = true; // Default to allowing on error
+          _isCheckingLimits = false;
         });
       }
     }
@@ -295,7 +367,12 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             _buildHeaderSection(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            if (!_canCreatePost) _buildUpgradeBanner(),
+            if (!_canCreatePost) const SizedBox(height: 16),
+            if (_isNearLimit && _canCreatePost) _buildWarningBanner(),
+            if (_isNearLimit && _canCreatePost) const SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildFormFields(),
             const SizedBox(height: 32),
             _buildActionButtons(),
@@ -343,6 +420,30 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           ),
           textAlign: TextAlign.center,
         ),
+        if (_remainingPosts > 0 && _remainingPosts != -1) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: _remainingPosts == 1 ? Colors.orange.shade100 : Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _remainingPosts == 1 ? Colors.orange.shade300 : Colors.blue.shade200,
+              ),
+            ),
+            child: Text(
+              _remainingPosts == 1 
+                ? '⚠️ Last popup this month' 
+                : '📊 $_remainingPosts popups remaining this month',
+              style: TextStyle(
+                color: _remainingPosts == 1 ? Colors.orange.shade700 : Colors.blue.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
         if (_popupType != 'independent') ...[
           const SizedBox(height: 8),
           Text(
@@ -946,6 +1047,419 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return months[month - 1];
   }
   
+  Widget _buildUpgradeBanner() {
+    final userType = _subscriptionInfo?['userType'] ?? 'vendor';
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.purple.shade600,
+            Colors.blue.shade600,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.shade200,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.yellow.shade300,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _getUpgradeTitle(userType),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _getUpgradeDescription(userType),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: _getUpgradeBenefits(userType).map((benefit) => 
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.yellow.shade300,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                benefit,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _navigateToUpgrade(userType),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.purple.shade700,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Upgrade to ${_getPremiumTierName(userType)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () => _showUpgradeDetails(userType),
+                child: Text(
+                  'Learn More',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWarningBanner() {
+    final userType = _subscriptionInfo?['userType'] ?? 'vendor';
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.orange.shade400,
+            Colors.amber.shade500,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.shade200,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber,
+            color: Colors.white,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _remainingPosts == 1 
+                    ? 'Only 1 popup left this month!'
+                    : 'Almost at your limit!',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  userType == 'vendor' 
+                    ? 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining. Upgrade to Vendor Pro for unlimited popups!'
+                    : 'You have $_remainingPosts vendor post${_remainingPosts == 1 ? '' : 's'} remaining this month.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: () => _navigateToUpgrade(userType),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Upgrade',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getUpgradeTitle(String userType) {
+    switch (userType) {
+      case 'market_organizer':
+        return 'Upgrade to Unlimited Vendor Posts';
+      default:
+        return 'Unlock Premium Features';
+    }
+  }
+
+  String _getUpgradeDescription(String userType) {
+    switch (userType) {
+      case 'market_organizer':
+        return 'You\'ve reached your monthly limit for vendor recruitment posts. Upgrade to Organizer Pro for unlimited posts and advanced vendor matching tools.';
+      default:
+        return 'Unlock unlimited popup creation and advanced features to grow your business faster.';
+    }
+  }
+
+  List<String> _getUpgradeBenefits(String userType) {
+    switch (userType) {
+      case 'market_organizer':
+        return [
+          'Unlimited vendor recruitment posts',
+          'Advanced vendor matching algorithms',
+          'Response management tools',
+          'Market performance analytics',
+        ];
+      case 'vendor':
+        return [
+          'Unlimited market applications',
+          'Advanced business analytics',
+          'Revenue optimization insights',
+          'Priority customer support',
+        ];
+      default:
+        return [
+          'Unlimited features',
+          'Advanced analytics',
+          'Priority support',
+          'Growth tools',
+        ];
+    }
+  }
+
+  String _getPremiumTierName(String userType) {
+    switch (userType) {
+      case 'market_organizer':
+        return 'Organizer Pro';
+      case 'vendor':
+        return 'Vendor Pro';
+      default:
+        return 'Premium';
+    }
+  }
+
+  void _navigateToUpgrade(String userType) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      String tier = userType == 'market_organizer' ? 'organizer' : 'vendor';
+      context.push('/premium/upgrade?tier=$tier&userId=${currentUser.uid}');
+    }
+  }
+
+  void _showUpgradeDetails(String userType) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${_getPremiumTierName(userType)} Benefits'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Upgrade to unlock powerful features:',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._getDetailedBenefits(userType).map((benefit) =>
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade600,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          benefit,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade600, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getPricingInfo(userType),
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToUpgrade(userType);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<String> _getDetailedBenefits(String userType) {
+    switch (userType) {
+      case 'market_organizer':
+        return [
+          'Unlimited "Looking for Vendors" posts per month',
+          'Advanced vendor recruitment algorithms',
+          'Comprehensive response management system',
+          'Market performance analytics and insights',
+          'Priority vendor matching and notifications',
+          'Post performance tracking and optimization',
+          'Vendor application insights and demographics',
+          'Priority customer support and success team',
+        ];
+      case 'vendor':
+        return [
+          'Unlimited market applications per month',
+          'Full vendor analytics dashboard',
+          'Product performance tracking',
+          'Revenue optimization recommendations',
+          'Customer acquisition analysis',
+          'Market expansion insights',
+          'Seasonal business planning tools',
+          'Priority customer support',
+        ];
+      default:
+        return [
+          'All premium features unlocked',
+          'Advanced analytics and insights',
+          'Priority customer support',
+          'Growth optimization tools',
+        ];
+    }
+  }
+
+  String _getPricingInfo(String userType) {
+    switch (userType) {
+      case 'market_organizer':
+        return 'Starting at \$69/month. Cancel anytime. 14-day free trial available.';
+      case 'vendor':
+        return 'Starting at \$29/month. Cancel anytime. 30-day free trial available.';
+      default:
+        return 'Affordable monthly plans. Cancel anytime.';
+    }
+  }
+
   Widget _buildMarketPicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1061,6 +1575,12 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
   Future<void> _savePost() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // Check if user can create posts before validation
+    if (!_canCreatePost) {
+      _showUpgradeDialog();
       return;
     }
 
@@ -1236,5 +1756,129 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showUpgradeDialog() {
+    final userType = _subscriptionInfo?['userType'] ?? 'vendor';
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.star,
+              color: Colors.purple.shade600,
+              size: 28,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _getUpgradeTitle(userType),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _getUpgradeDescription(userType),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_getPremiumTierName(userType)} Benefits:',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ..._getUpgradeBenefits(userType).map((benefit) =>
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green.shade600,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                benefit,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade600, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _getPricingInfo(userType),
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToUpgrade(userType);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Upgrade to ${_getPremiumTierName(userType)}'),
+          ),
+        ],
+      ),
+    );
   }
 }

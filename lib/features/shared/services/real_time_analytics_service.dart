@@ -127,7 +127,7 @@ class RealTimeAnalyticsService {
           'data': data,
           'timestamp': FieldValue.serverTimestamp(),
           'clientTimestamp': now.millisecondsSinceEpoch,
-          'platform': defaultTargetPlatform.toString(),
+          'platform': kIsWeb ? 'web' : defaultTargetPlatform.toString(),
           'appVersion': '1.0.0', // Should be read from package info
         };
         await _firestore.collection(_userEventsCollection).add(eventData);
@@ -141,7 +141,7 @@ class RealTimeAnalyticsService {
           'data': data,
           'timestamp': now.millisecondsSinceEpoch, // Use regular timestamp for offline storage
           'clientTimestamp': now.millisecondsSinceEpoch,
-          'platform': defaultTargetPlatform.toString(),
+          'platform': kIsWeb ? 'web' : defaultTargetPlatform.toString(),
           'appVersion': '1.0.0',
         };
         _offlineEventQueue.add(offlineEventData);
@@ -161,7 +161,7 @@ class RealTimeAnalyticsService {
           'data': data,
           'timestamp': DateTime.now().millisecondsSinceEpoch,
           'clientTimestamp': DateTime.now().millisecondsSinceEpoch,
-          'platform': defaultTargetPlatform.toString(),
+          'platform': kIsWeb ? 'web' : defaultTargetPlatform.toString(),
           'appVersion': '1.0.0',
         };
         _offlineEventQueue.add(eventData);

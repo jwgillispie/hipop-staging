@@ -27,6 +27,15 @@ interface VerifySessionData {
   sessionId: string;
 }
 
+interface CreatePaymentIntentData {
+  priceId: string;
+  customerEmail: string;
+  userId: string;
+  userType: string;
+  promoCode?: string;
+  environment: string;
+}
+
 interface CancelSubscriptionData {
   userId: string;
 }
@@ -56,6 +65,161 @@ interface UsageAlert {
   percentage: number;
   timestamp: FirebaseFirestore.FieldValue;
 }
+
+// 🔒 SECURE: Create payment intent for direct card payments
+export const createPaymentIntent = functions.https.onCall(
+  async (data: CreatePaymentIntentData, context) => {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be authenticated to create payment intent'
+      );
+    }
+
+    // Verify user is creating payment intent for themselves
+    if (context.auth.uid !== data.userId) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Can only create payment intent for authenticated user'
+      );
+    }
+
+    try {
+      functions.logger.info('💳 Creating payment intent for direct payment', {
+        userId: data.userId,
+        userType: data.userType,
+        priceId: data.priceId,
+        customerEmail: data.customerEmail,
+        environment: data.environment,
+      });
+
+      // Get or create Stripe customer
+      let customer: Stripe.Customer;
+      const existingCustomers = await stripe.customers.list({
+        email: data.customerEmail,
+        limit: 1,
+      });
+
+      if (existingCustomers.data.length > 0) {
+        customer = existingCustomers.data[0];
+        functions.logger.info('Found existing customer', { customerId: customer.id });
+      } else {
+        customer = await stripe.customers.create({
+          email: data.customerEmail,
+          metadata: {
+            userId: data.userId,
+            userType: data.userType,
+            environment: data.environment,
+          },
+        });
+        functions.logger.info('Created new customer', { customerId: customer.id });
+      }
+
+      // Get price from Stripe to determine amount
+      const price = await stripe.prices.retrieve(data.priceId);
+      if (!price.unit_amount) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Price does not have a unit amount'
+        );
+      }
+
+      let amount = price.unit_amount;
+      let discountedAmount = amount;
+
+      // Apply promo code if provided
+      if (data.promoCode) {
+        try {
+          const promotionCodes = await stripe.promotionCodes.list({
+            code: data.promoCode,
+            active: true,
+            limit: 1,
+          });
+
+          if (promotionCodes.data.length > 0) {
+            const promoCode = promotionCodes.data[0];
+            const coupon = promoCode.coupon;
+            
+            if (coupon.percent_off) {
+              discountedAmount = Math.round(amount * (1 - coupon.percent_off / 100));
+              functions.logger.info('Applied percentage discount', {
+                originalAmount: amount,
+                discountPercent: coupon.percent_off,
+                finalAmount: discountedAmount,
+              });
+            } else if (coupon.amount_off) {
+              discountedAmount = Math.max(0, amount - coupon.amount_off);
+              functions.logger.info('Applied fixed discount', {
+                originalAmount: amount,
+                discountAmount: coupon.amount_off,
+                finalAmount: discountedAmount,
+              });
+            }
+          } else {
+            functions.logger.warn('Invalid promo code provided', { promoCode: data.promoCode });
+            throw new functions.https.HttpsError(
+              'failed-precondition',
+              'Invalid promo code'
+            );
+          }
+        } catch (promoError) {
+          functions.logger.error('Error processing promo code', promoError);
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            'Unable to process promo code'
+          );
+        }
+      }
+
+      // Create payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: discountedAmount,
+        currency: price.currency,
+        customer: customer.id,
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          userId: data.userId,
+          userType: data.userType,
+          priceId: data.priceId,
+          environment: data.environment,
+          originalAmount: amount.toString(),
+          ...(data.promoCode && { promoCode: data.promoCode }),
+        },
+        description: `${data.userType} subscription - ${price.nickname || data.priceId}`,
+        setup_future_usage: 'off_session', // Save payment method for future use
+      });
+
+      functions.logger.info('✅ Payment intent created successfully', {
+        paymentIntentId: paymentIntent.id,
+        amount: discountedAmount,
+        currency: price.currency,
+        customerId: customer.id,
+      });
+
+      return {
+        client_secret: paymentIntent.client_secret,
+        payment_intent_id: paymentIntent.id,
+        customer_id: customer.id,
+        amount: discountedAmount,
+        currency: price.currency,
+      };
+    } catch (error) {
+      functions.logger.error('❌ Error creating payment intent', error);
+      
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      }
+      
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to create payment intent'
+      );
+    }
+  }
+);
 
 // 🔒 SECURE: Create checkout session server-side
 export const createCheckoutSession = functions.https.onCall(
@@ -302,6 +466,9 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice);
         break;
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        break;
       default:
         functions.logger.info('🔄 Unhandled webhook event type', {
           type: event.type,
@@ -462,6 +629,160 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   // TODO: Send notification to user about failed payment
 }
+
+// Handle successful payment intent (for direct card payments)
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
+  const { userId, userType, priceId } = paymentIntent.metadata || {};
+
+  if (!userId || !userType || !priceId) {
+    functions.logger.error('❌ Missing metadata in payment intent', {
+      paymentIntentId: paymentIntent.id,
+      metadata: paymentIntent.metadata,
+    });
+    return;
+  }
+
+  try {
+    functions.logger.info('🎉 Processing successful payment intent', {
+      paymentIntentId: paymentIntent.id,
+      userId,
+      userType,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+    });
+
+    // Create Stripe subscription for the user
+    const price = await stripe.prices.retrieve(priceId);
+    const subscription = await stripe.subscriptions.create({
+      customer: paymentIntent.customer as string,
+      items: [{ price: priceId }],
+      metadata: {
+        userId,
+        userType,
+        environment: paymentIntent.metadata.environment || 'staging',
+        paymentIntentId: paymentIntent.id,
+      },
+    });
+
+    functions.logger.info('✅ Subscription created from payment intent', {
+      subscriptionId: subscription.id,
+      paymentIntentId: paymentIntent.id,
+    });
+
+    // Update user subscription in Firestore
+    await admin.firestore().collection('user_subscriptions').add({
+      userId,
+      userType,
+      tier: getTierFromUserType(userType),
+      status: 'active',
+      stripeCustomerId: paymentIntent.customer,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId,
+      monthlyPrice: (price.unit_amount || 0) / 100,
+      paymentIntentId: paymentIntent.id,
+      subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      features: getDefaultFeaturesForTier(getTierFromUserType(userType)),
+      limits: getDefaultLimitsForTier(getTierFromUserType(userType)),
+    });
+
+    functions.logger.info('✅ User subscription created from payment intent', {
+      userId,
+      subscriptionId: subscription.id,
+      paymentIntentId: paymentIntent.id,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling payment intent success', {
+      paymentIntentId: paymentIntent.id,
+      error,
+    });
+  }
+}
+
+// 🔒 SECURE: Validate promo code
+export const validatePromoCode = functions.https.onCall(
+  async (data: { promoCode: string }, context) => {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be authenticated to validate promo code'
+      );
+    }
+
+    try {
+      functions.logger.info('🎟️ Validating promo code', {
+        promoCode: data.promoCode,
+        userId: context.auth.uid,
+      });
+
+      // Search for the promotion code in Stripe
+      const promotionCodes = await stripe.promotionCodes.list({
+        code: data.promoCode,
+        active: true,
+        limit: 1,
+      });
+
+      if (promotionCodes.data.length === 0) {
+        functions.logger.info('❌ Promo code not found or inactive', {
+          promoCode: data.promoCode,
+        });
+        
+        return {
+          valid: false,
+          error: 'Invalid promo code',
+        };
+      }
+
+      const promotionCode = promotionCodes.data[0];
+      const coupon = promotionCode.coupon;
+
+      // Check if coupon is expired
+      if (coupon.redeem_by && coupon.redeem_by < Math.floor(Date.now() / 1000)) {
+        return {
+          valid: false,
+          error: 'Promo code has expired',
+        };
+      }
+
+      // Check usage limits
+      if (coupon.max_redemptions && coupon.times_redeemed >= coupon.max_redemptions) {
+        return {
+          valid: false,
+          error: 'Promo code usage limit exceeded',
+        };
+      }
+
+      functions.logger.info('✅ Promo code validation successful', {
+        promoCode: data.promoCode,
+        couponId: coupon.id,
+        percentOff: coupon.percent_off,
+        amountOff: coupon.amount_off,
+      });
+
+      return {
+        valid: true,
+        discount_percent: coupon.percent_off,
+        discount_amount: coupon.amount_off ? coupon.amount_off / 100 : undefined, // Convert cents to dollars
+        description: coupon.name || `${coupon.percent_off || ''}% off`,
+        duration: coupon.duration,
+        max_redemptions: coupon.max_redemptions,
+        times_redeemed: coupon.times_redeemed,
+      };
+    } catch (error) {
+      functions.logger.error('❌ Error validating promo code', {
+        promoCode: data.promoCode,
+        error,
+      });
+
+      return {
+        valid: false,
+        error: 'Unable to validate promo code',
+      };
+    }
+  }
+);
 
 // 🔒 SECURE: Server-side feature access validation
 export const validateFeatureAccess = functions.https.onCall(
@@ -2289,6 +2610,9 @@ export const secureStripeWebhook = functions.https.onRequest(async (req, res) =>
         break;
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
         break;
       default:
         functions.logger.info('🔄 Unhandled webhook event type', {

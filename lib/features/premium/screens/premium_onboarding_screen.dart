@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../models/user_subscription.dart';
 import '../services/subscription_service.dart';
 import '../services/staging_test_service.dart';
+import '../services/payment_service.dart';
+import 'stripe_checkout_screen.dart';
+import '../widgets/stripe_payment_form.dart';
 
 /// Premium onboarding screen that guides users through tier selection and setup
 class PremiumOnboardingScreen extends StatefulWidget {
@@ -26,13 +29,29 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   int _currentPage = 0;
   SubscriptionTier? _selectedTier;
   Map<String, dynamic>? _selectedPlan;
+  SubscriptionPricing? _selectedPricing;
   bool _isProcessing = false;
   String? _errorMessage;
+  bool _useRealPayments = true; // ENABLED for real payments!
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _isProcessing = false; // Explicitly ensure processing state is false
+    debugPrint('🔄 PremiumOnboardingScreen initState - _isProcessing: $_isProcessing');
+    _checkPaymentMode();
+  }
+
+  void _checkPaymentMode() {
+    // Check if we should use real payments (production) or staging
+    final isStaging = StagingTestService.isStagingEnvironment;
+    setState(() {
+      _useRealPayments = !isStaging;
+      _isProcessing = false; // Ensure processing state is reset
+    });
+    debugPrint('💳 Payment mode: ${_useRealPayments ? 'REAL' : 'STAGING'}');
+    debugPrint('🔄 _checkPaymentMode - _isProcessing reset to: $_isProcessing');
   }
 
   @override
@@ -51,7 +70,25 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Use GoRouter navigation instead of Navigator.pop
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              // If we can't pop, navigate to a safe route based on user type
+              switch (widget.userType) {
+                case 'vendor':
+                  context.go('/vendor');
+                  break;
+                case 'market_organizer':
+                  context.go('/organizer');
+                  break;
+                default:
+                  context.go('/shopper');
+                  break;
+              }
+            }
+          },
         ),
         actions: [
           if (_currentPage > 0)
@@ -241,6 +278,12 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           onTap: () => setState(() {
             _selectedTier = tier;
             _selectedPlan = tierData;
+            // Load pricing when tier is selected
+            try {
+              _selectedPricing = PaymentService.getPricingForUserType(widget.userType);
+            } catch (e) {
+              debugPrint('❌ Error loading pricing for $tier: $e');
+            }
           }),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -618,11 +661,117 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   }
 
   Widget _buildPaymentPage() {
+    if (_selectedPlan == null || _selectedPricing == null) {
+      return const Center(
+        child: Text('Please select a plan first'),
+      );
+    }
+
+    // Always use real Stripe payment form
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Center(
+        child: Text('Please sign in to continue'),
+      );
+    }
+    
+    // Use the price ID from the selected pricing
+    String priceId = _selectedPricing?.priceId ?? '';
+    
+    // If no price ID from pricing, fall back to constructing it
+    if (priceId.isEmpty && _selectedTier != null) {
+      final isMonthly = _selectedPricing?.interval == 'month';
+      switch (_selectedTier) {
+        case SubscriptionTier.vendorPro:
+          priceId = isMonthly 
+            ? 'price_vendorPro_monthly' 
+            : 'price_vendorPro_annual';
+          break;
+        case SubscriptionTier.marketOrganizerPro:
+          priceId = isMonthly
+            ? 'price_marketOrganizerPro_monthly'
+            : 'price_marketOrganizerPro_annual';
+          break;
+        case SubscriptionTier.shopperPro:
+          priceId = isMonthly
+            ? 'price_shopperPro_monthly'
+            : 'price_shopperPro_annual';
+          break;
+        default:
+          priceId = '';
+      }
+    }
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: StripePaymentForm(
+        userId: currentUser.uid,
+        userEmail: currentUser.email ?? '',
+        userType: widget.userType,
+        priceId: priceId,
+        tier: _selectedPlan!['title'],
+        onSuccess: () {
+          debugPrint('✅ Payment success callback triggered');
+          try {
+            if (mounted) {
+              setState(() {
+                _currentPage = 4; // Go to success page
+                _isProcessing = false;
+                _errorMessage = null;
+              });
+              _pageController.animateToPage(
+                4,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          } catch (e) {
+            debugPrint('❌ Error in onSuccess callback: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('❌ Payment error received: $error');
+          if (mounted) {
+            setState(() {
+              _errorMessage = error;
+              _isProcessing = false;
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildStagingPaymentPage() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.science, color: Colors.orange.shade600),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'STAGING MODE: This is a test payment that will simulate subscription activation.',
+                    style: TextStyle(
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           Text(
             'Complete Your Subscription',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -727,17 +876,20 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             ],
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isProcessing ? null : _processSubscription,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isProcessing
+              child: Builder(
+                builder: (context) {
+                  debugPrint('🔄 Button build - _isProcessing: $_isProcessing');
+                  return ElevatedButton(
+                    onPressed: _isProcessing ? null : _processSubscription,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isProcessing
                     ? const SizedBox(
                         height: 20,
                         width: 20,
@@ -747,12 +899,16 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                         ),
                       )
                     : Text(
-                        'Subscribe Now - ${_selectedPlan!['price']}/month',
+                        _useRealPayments 
+                          ? 'Subscribe Now - ${_selectedPlan!['price']}/month'
+                          : 'Test Subscribe - ${_selectedPlan!['price']}/month',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                  );
+                }
               ),
             ),
             const SizedBox(height: 16),
@@ -905,10 +1061,20 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           curve: Curves.easeInOut,
         );
       case 1:
-        return _selectedTier != null ? () => _pageController.nextPage(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        ) : null;
+        return _selectedTier != null ? () {
+          // Load pricing information when moving to feature overview
+          if (_selectedTier != null) {
+            try {
+              _selectedPricing = PaymentService.getPricingForUserType(widget.userType);
+            } catch (e) {
+              debugPrint('❌ Error loading pricing: $e');
+            }
+          }
+          _pageController.nextPage(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        } : null;
       case 2:
         return () => _pageController.nextPage(
           duration: const Duration(milliseconds: 300),
@@ -955,12 +1121,35 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         throw Exception('User email is required for subscription');
       }
 
-      // For now, simulate successful payment processing
-      // In production, this would integrate with proper Stripe checkout
       debugPrint('Processing subscription for ${_selectedPlan!['title']}');
       
-      // Check if we're in staging environment
-      if (StagingTestService.isStagingEnvironment) {
+      // Check if we should use real payments
+      if (_useRealPayments) {
+        debugPrint('💳 Using REAL Stripe checkout');
+        
+        // Navigate to Stripe checkout screen for real payments
+        if (mounted) {
+          final result = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => StripeCheckoutScreen(
+                userId: widget.userId,
+                userType: widget.userType,
+                selectedTier: _selectedTier!,
+              ),
+            ),
+          );
+          
+          // If payment was successful, navigate to success
+          if (result == true && mounted) {
+            _pageController.animateToPage(
+              3, // Success page
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          }
+        }
+      } else {
         debugPrint('🧪 [STAGING] Using test payment flow');
         // Simulate payment processing delay for realistic UX
         await Future.delayed(const Duration(seconds: 2));
@@ -971,13 +1160,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           userType: widget.userType,
           specificTier: _selectedTier!,
         );
-      } else {
-        // TODO: Implement proper Stripe checkout flow for production
-        debugPrint('🚫 [PRODUCTION] Real payment flow not implemented yet');
-        throw Exception('Payment processing not available in production yet. Please contact support.');
       }
       
-      // Navigate to success page
+      // Navigate to success page and reset processing state
+      setState(() {
+        _isProcessing = false;
+      });
+      
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,

@@ -6,6 +6,7 @@ import '../services/enterprise_analytics_service.dart';
 import 'vendor_pro_dashboard.dart';
 import 'market_organizer_pro_dashboard.dart';
 import 'enterprise_dashboard.dart';
+import '../../organizer/screens/vendor_directory_screen.dart';
 // Additional imports for premium shopper features
 import '../../shared/services/search_history_service.dart';
 import '../../shopper/services/enhanced_search_service.dart';
@@ -3147,9 +3148,8 @@ class MarketOrganizerVendorsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Vendor Ranking & Management View - Coming Soon'),
-    );
+    // The VendorDirectoryScreen handles its own premium gating and UI
+    return const VendorDirectoryScreen();
   }
 }
 

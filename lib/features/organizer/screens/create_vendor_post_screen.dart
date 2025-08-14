@@ -24,6 +24,7 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
   final _commissionController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _applicationLinkController = TextEditingController();
 
   bool _isLoading = false;
   bool _isLoadingMarkets = true;
@@ -75,6 +76,7 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
     _commissionController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _applicationLinkController.dispose();
     super.dispose();
   }
 
@@ -187,6 +189,9 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
               : null,
           phone: _phoneController.text.trim().isNotEmpty
               ? _phoneController.text.trim()
+              : null,
+          formUrl: _applicationLinkController.text.trim().isNotEmpty
+              ? _applicationLinkController.text.trim()
               : null,
         ),
         status: PostStatus.active,
@@ -620,6 +625,7 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
               decoration: const InputDecoration(
                 labelText: 'Preferred Contact Method',
                 border: OutlineInputBorder(),
+                helperText: 'How vendors should contact you',
               ),
               items: ContactMethod.values.map((method) => DropdownMenuItem(
                 value: method,
@@ -628,6 +634,10 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
               onChanged: (value) {
                 if (value != null) {
                   setState(() => _preferredContact = value);
+                  // If form is selected, focus on application link
+                  if (value == ContactMethod.form) {
+                    FocusScope.of(context).requestFocus(FocusNode());
+                  }
                 }
               },
             ),
@@ -667,6 +677,67 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
                 }
                 return null;
               },
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Application Link - REQUIRED
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.link, color: Colors.amber[700], size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Application Link (Required)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber[900],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Provide a link where vendors can apply to your market. This could be a Google Form, TypeForm, or your market\'s application page.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  HiPopTextField(
+                    controller: _applicationLinkController,
+                    labelText: 'Application URL',
+                    hintText: 'https://forms.google.com/...',
+                    keyboardType: TextInputType.url,
+                    validator: (value) {
+                      // Always require application link for vendor posts
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Application link is required for vendor posts';
+                      }
+                      // Basic URL validation
+                      if (!value.trim().startsWith('http://') && 
+                          !value.trim().startsWith('https://')) {
+                        return 'Please enter a valid URL starting with http:// or https://';
+                      }
+                      // Extra validation if form is preferred method
+                      if (_preferredContact == ContactMethod.form && value.trim().isEmpty) {
+                        return 'Application link is required when form is the preferred contact method';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -820,8 +891,10 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
             const SizedBox(width: 8),
             TextButton(
               onPressed: () {
-                // Navigate to premium upgrade
-                // You can add navigation to premium screen here
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  context.push('/premium/upgrade?tier=organizer&userId=${user.uid}');
+                }
               },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.deepPurple,
@@ -911,7 +984,7 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'You\'ve reached your monthly limit of 1 vendor post. Upgrade to Organizer Pro for unlimited posts.',
+              'You\'ve reached your monthly limit of 1 vendor recruitment post. Upgrade to Organizer Pro for unlimited posts and powerful vendor matching tools.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
@@ -933,10 +1006,12 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
                   ),
                   const SizedBox(height: 8),
                   ...([
-                    'Unlimited vendor posts',
+                    'Unlimited vendor recruitment posts',
                     'Advanced analytics dashboard',
-                    'Priority vendor matching',
-                    'Response management tools',
+                    'Priority vendor matching algorithms',
+                    'Response management & tracking tools',
+                    'Market performance insights',
+                    'Vendor application analytics',
                   ]).map((benefit) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(

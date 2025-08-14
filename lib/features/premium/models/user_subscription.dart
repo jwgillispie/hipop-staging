@@ -230,11 +230,11 @@ class UserSubscription extends Equatable {
       case SubscriptionTier.free:
         return '';
       case SubscriptionTier.shopperPro:
-        return dotenv.env['STRIPE_PRICE_SHOPPER_PRO'] ?? '';
+        return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
       case SubscriptionTier.vendorPro:
-        return dotenv.env['STRIPE_PRICE_VENDOR_PRO'] ?? '';
+        return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
       case SubscriptionTier.marketOrganizerPro:
-        return dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PRO'] ?? '';
+        return dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '';
       case SubscriptionTier.enterprise:
         return dotenv.env['STRIPE_PRICE_ENTERPRISE'] ?? '';
     }
@@ -307,6 +307,7 @@ class UserSubscription extends Equatable {
           'product_lists': 1,
           'markets_managed': -1, // unlimited for vendors
           'vendor_posts_per_month': 0, // vendors can't create vendor posts in free tier
+          'popup_posts_per_month': 3, // vendors can create 3 popup posts per month in free tier
         };
       case 'market_organizer':
         return {

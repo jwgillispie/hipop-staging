@@ -36,10 +36,8 @@ Future<void> _initializeApp() async {
     // Initialize Firebase
     await _initializeFirebase();
     
-    // Initialize Stripe (skip on web for now)
-    if (!kIsWeb) {
-      await _initializeStripe();
-    }
+    // Initialize Stripe (now supports web too)
+    await _initializeStripe();
     
     // Initialize Remote Config in background - don't block app startup
     RemoteConfigService.instance.catchError((e) => null);
@@ -53,9 +51,23 @@ Future<void> _initializeApp() async {
 }
 
 Future<void> _initializeStripe() async {
-  final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
-  if (publishableKey != null && publishableKey.isNotEmpty) {
-    Stripe.publishableKey = publishableKey;
+  try {
+    final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
+    if (publishableKey != null && publishableKey.isNotEmpty) {
+      Stripe.publishableKey = publishableKey;
+      
+      // Set merchant identifier for Apple Pay (iOS only) - skip on web
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
+      }
+      
+      debugPrint('✅ Stripe initialized with publishable key');
+    } else {
+      debugPrint('⚠️ Stripe publishable key not found in environment');
+    }
+  } catch (e) {
+    debugPrint('❌ Failed to initialize Stripe: $e');
+    // Continue without Stripe rather than crash the app
   }
 }
 

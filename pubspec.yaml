@@ -101,6 +101,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   
+  # Testing dependencies
+  mockito: ^5.4.4
+  build_runner: ^2.4.11
+  
   # App icon generation
   flutter_launcher_icons: ^0.14.4
 

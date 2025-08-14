@@ -147,7 +147,7 @@ class StripeService {
       case 'shopper':
         return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
       case 'vendor':
-        return dotenv.env['STRIPE_PRICE_VENDOR_PRO'] ?? '';
+        return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
       case 'market_organizer':
         return dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '';
       default:
@@ -266,6 +266,172 @@ class StripeService {
       return success;
     } catch (e) {
       debugPrint('❌ Error cancelling subscription: $e');
+      return false;
+    }
+  }
+  
+  /// Enhanced subscription cancellation with options
+  /// 🔒 SECURITY: All cancellation options handled server-side
+  static Future<bool> cancelSubscriptionEnhanced(
+    String userId, {
+    required String cancellationType, // 'immediate' or 'end_of_period'
+    String? feedback,
+  }) async {
+    try {
+      debugPrint('🔒 Enhanced subscription cancellation via Cloud Function');
+      debugPrint('👤 User ID: $userId');
+      debugPrint('🔄 Cancellation type: $cancellationType');
+      debugPrint('📝 Feedback provided: ${feedback?.isNotEmpty == true ? 'Yes' : 'No'}');
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('cancelSubscriptionEnhanced');
+      final result = await callable.call({
+        'userId': userId,
+        'cancellationType': cancellationType,
+        'feedback': feedback ?? '',
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      
+      final success = result.data['success'] as bool? ?? false;
+      final message = result.data['message'] as String? ?? '';
+      
+      debugPrint(success 
+        ? '✅ Enhanced subscription cancellation successful: $message' 
+        : '❌ Enhanced subscription cancellation failed: $message');
+      
+      return success;
+    } catch (e) {
+      debugPrint('❌ Error in enhanced subscription cancellation: $e');
+      return false;
+    }
+  }
+  
+  /// Create payment method update session
+  /// 🔒 SECURITY: Payment method updates handled server-side
+  static Future<String?> createPaymentMethodUpdateSession(String stripeCustomerId) async {
+    try {
+      debugPrint('🔒 Creating payment method update session via Cloud Function');
+      debugPrint('🏢 Customer ID: $stripeCustomerId');
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('createPaymentMethodUpdateSession');
+      final result = await callable.call({
+        'customerId': stripeCustomerId,
+        'returnUrl': kIsWeb 
+            ? '${Uri.base.origin}/#/subscription/payment-updated'
+            : 'hipop://subscription/payment-updated',
+      });
+      
+      final updateUrl = result.data['url'] as String?;
+      debugPrint(updateUrl != null 
+        ? '✅ Payment method update session created: $updateUrl' 
+        : '❌ Failed to create payment method update session');
+      
+      return updateUrl;
+    } catch (e) {
+      debugPrint('❌ Error creating payment method update session: $e');
+      return null;
+    }
+  }
+  
+  /// Launch payment method update URL
+  static Future<void> launchPaymentMethodUpdate(String updateUrl) async {
+    try {
+      debugPrint('🌐 Launching payment method update URL: $updateUrl');
+      await _launchUrl(updateUrl);
+    } catch (e) {
+      debugPrint('❌ Error launching payment method update: $e');
+      rethrow;
+    }
+  }
+  
+  /// Get billing history for user
+  /// 🔒 SECURITY: Billing data accessed server-side only
+  static Future<List<Map<String, dynamic>>?> getBillingHistory(String userId) async {
+    try {
+      debugPrint('🔒 Fetching billing history via Cloud Function');
+      debugPrint('👤 User ID: $userId');
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('getBillingHistory');
+      final result = await callable.call({
+        'userId': userId,
+      });
+      
+      final invoices = result.data['invoices'] as List<dynamic>?;
+      if (invoices != null) {
+        final billingHistory = invoices
+          .map((invoice) => Map<String, dynamic>.from(invoice as Map))
+          .toList();
+        
+        debugPrint('✅ Retrieved ${billingHistory.length} billing records');
+        return billingHistory;
+      }
+      
+      debugPrint('❌ No billing history found');
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error fetching billing history: $e');
+      return null;
+    }
+  }
+  
+  /// Get latest invoice PDF URL
+  /// 🔒 SECURITY: Invoice access controlled server-side
+  static Future<String?> getLatestInvoicePdf(String userId) async {
+    try {
+      debugPrint('🔒 Getting latest invoice PDF via Cloud Function');
+      debugPrint('👤 User ID: $userId');
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('getLatestInvoicePdf');
+      final result = await callable.call({
+        'userId': userId,
+      });
+      
+      final pdfUrl = result.data['invoicePdfUrl'] as String?;
+      debugPrint(pdfUrl != null 
+        ? '✅ Latest invoice PDF URL retrieved' 
+        : '❌ No invoice PDF available');
+      
+      return pdfUrl;
+    } catch (e) {
+      debugPrint('❌ Error getting latest invoice PDF: $e');
+      return null;
+    }
+  }
+  
+  /// Download invoice by opening URL
+  static Future<void> downloadInvoice(String invoiceUrl) async {
+    try {
+      debugPrint('📥 Downloading invoice: $invoiceUrl');
+      await _launchUrl(invoiceUrl);
+    } catch (e) {
+      debugPrint('❌ Error downloading invoice: $e');
+      rethrow;
+    }
+  }
+  
+  /// Pause subscription for specified duration
+  /// 🔒 SECURITY: Subscription pausing handled server-side
+  static Future<bool> pauseSubscription(String userId, int daysCount) async {
+    try {
+      debugPrint('🔒 Pausing subscription via Cloud Function');
+      debugPrint('👤 User ID: $userId');
+      debugPrint('⏸️ Pause duration: $daysCount days');
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('pauseSubscription');
+      final result = await callable.call({
+        'userId': userId,
+        'pauseDurationDays': daysCount,
+      });
+      
+      final success = result.data['success'] as bool? ?? false;
+      final message = result.data['message'] as String? ?? '';
+      
+      debugPrint(success 
+        ? '✅ Subscription paused successfully: $message' 
+        : '❌ Failed to pause subscription: $message');
+      
+      return success;
+    } catch (e) {
+      debugPrint('❌ Error pausing subscription: $e');
       return false;
     }
   }
