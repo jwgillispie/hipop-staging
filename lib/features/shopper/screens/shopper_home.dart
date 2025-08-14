@@ -109,6 +109,17 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     });
   }
 
+  Future<List<VendorPost>> _applyProductChipFilter(List<VendorPost> posts) async {
+    if (_selectedProductChips.isEmpty) {
+      return posts;
+    }
+
+    return await _productChipFilterService.filterVendorPostsByChips(
+      posts: posts,
+      selectedChips: _selectedProductChips,
+    );
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -288,6 +299,158 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildProductChipFilter() {
+    // Only show for vendors filter or all filter
+    if (_selectedFilter != FeedFilter.vendors && _selectedFilter != FeedFilter.all) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.local_grocery_store,
+                  color: Colors.green[700],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Filter by Products',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                if (_selectedProductChips.isNotEmpty)
+                  TextButton(
+                    onPressed: _clearProductChips,
+                    child: Text(
+                      'Clear',
+                      style: TextStyle(
+                        color: Colors.orange[700],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _searchLocation.isEmpty
+                  ? 'Select products you\'re looking for from vendors everywhere'
+                  : 'Select products you\'re looking for from vendors in $_selectedCity',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (_isLoadingChips)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_availableProductChips.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _searchLocation.isEmpty
+                      ? 'No vendor products available yet'
+                      : 'No vendor products available in this location',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _availableProductChips.map((chip) {
+                  final isSelected = _selectedProductChips.contains(chip);
+                  return FilterChip(
+                    label: Text(
+                      chip,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected ? Colors.white : Colors.grey[700],
+                      ),
+                    ),
+                    selected: isSelected,
+                    onSelected: (selected) => _toggleProductChip(chip),
+                    backgroundColor: Colors.grey[100],
+                    selectedColor: Colors.green[600],
+                    checkmarkColor: Colors.white,
+                    side: BorderSide(
+                      color: isSelected ? Colors.green[600]! : Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  );
+                }).toList(),
+              ),
+            if (_selectedProductChips.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.filter_list,
+                          color: Colors.green[700],
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Filtering by ${_selectedProductChips.length} product${_selectedProductChips.length == 1 ? '' : 's'}:',
+                          style: TextStyle(
+                            color: Colors.green[700],
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _selectedProductChips.join(', '),
+                      style: TextStyle(
+                        color: Colors.green[600],
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +560,8 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 24),
                 _buildFilterSlider(),
+                const SizedBox(height: 16),
+                _buildProductChipFilter(),
                 const SizedBox(height: 24),
                 // Location search - main feature
                 Text(
@@ -550,32 +715,48 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
         }
 
         final allPosts = snapshot.data ?? [];
-        final posts = _filterCurrentAndFuturePosts(allPosts);
+        final currentAndFuturePosts = _filterCurrentAndFuturePosts(allPosts);
 
-        if (posts.isEmpty) {
-          return _buildNoResultsMessage();
-        }
+        return FutureBuilder<List<VendorPost>>(
+          future: _applyProductChipFilter(currentAndFuturePosts),
+          builder: (context, chipFilterSnapshot) {
+            if (chipFilterSnapshot.connectionState == ConnectionState.waiting) {
+              return const LoadingWidget(message: 'Applying product filters...');
+            }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${posts.length} found',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return _buildVendorPostCard(post);
-              },
-            ),
-          ],
+            final posts = chipFilterSnapshot.data ?? currentAndFuturePosts;
+
+            if (posts.isEmpty) {
+              return _buildNoResultsMessage();
+            }
+
+            String countText = '${posts.length} found';
+            if (_selectedProductChips.isNotEmpty) {
+              countText += ' with selected products';
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  countText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    final post = posts[index];
+                    return _buildVendorPostCard(post);
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -658,47 +839,64 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
 
                 final markets = marketSnapshot.data ?? [];
                 final allPosts = vendorSnapshot.data ?? [];
-                final posts = _filterCurrentAndFuturePosts(allPosts);
+                final currentAndFuturePosts = _filterCurrentAndFuturePosts(allPosts);
                 final allEvents = eventSnapshot.data ?? [];
                 final events = EventService.filterCurrentAndUpcomingEvents(allEvents);
                 
-                // Sort markets by next operating date (earliest first)
-                final sortedMarkets = List<Market>.from(markets);
-                sortedMarkets.sort((a, b) {
-                  final aNext = a.nextOperatingDate;
-                  final bNext = b.nextOperatingDate;
-                  
-                  // Markets without operating dates go to the end
-                  if (aNext == null && bNext == null) return 0;
-                  if (aNext == null) return 1;
-                  if (bNext == null) return -1;
-                  
-                  return aNext.compareTo(bNext);
-                });
-                
-                final totalCount = sortedMarkets.length + posts.length + events.length;
+                // Apply product chip filtering to vendor posts
+                return FutureBuilder<List<VendorPost>>(
+                  future: _applyProductChipFilter(currentAndFuturePosts),
+                  builder: (context, chipFilterSnapshot) {
+                    if (chipFilterSnapshot.connectionState == ConnectionState.waiting) {
+                      return const LoadingWidget(message: 'Applying product filters...');
+                    }
 
-                if (totalCount == 0) {
-                  return _buildNoResultsMessage();
-                }
+                    final posts = chipFilterSnapshot.data ?? currentAndFuturePosts;
+                    
+                    // Sort markets by next operating date (earliest first)
+                    final sortedMarkets = List<Market>.from(markets);
+                    sortedMarkets.sort((a, b) {
+                      final aNext = a.nextOperatingDate;
+                      final bNext = b.nextOperatingDate;
+                      
+                      // Markets without operating dates go to the end
+                      if (aNext == null && bNext == null) return 0;
+                      if (aNext == null) return 1;
+                      if (bNext == null) return -1;
+                      
+                      return aNext.compareTo(bNext);
+                    });
+                    
+                    final totalCount = sortedMarkets.length + posts.length + events.length;
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$totalCount found (${sortedMarkets.length} markets, ${posts.length} vendor pop-ups, ${events.length} events)',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Show markets first, sorted by earliest date
-                    ...sortedMarkets.map((market) => _buildMarketCard(market)),
-                    // Then show events, sorted by start date
-                    ...events.map((event) => _buildEventCard(event)),
-                    // Then show vendor posts
-                    ...posts.map((post) => _buildVendorPostCard(post)),
-                  ],
+                    if (totalCount == 0) {
+                      return _buildNoResultsMessage();
+                    }
+
+                    String countText = '$totalCount found (${sortedMarkets.length} markets, ${posts.length} vendor pop-ups, ${events.length} events)';
+                    if (_selectedProductChips.isNotEmpty) {
+                      countText += ' - vendors filtered by products';
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          countText,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Show markets first, sorted by earliest date
+                        ...sortedMarkets.map((market) => _buildMarketCard(market)),
+                        // Then show events, sorted by start date
+                        ...events.map((event) => _buildEventCard(event)),
+                        // Then show vendor posts (filtered by chips)
+                        ...posts.map((post) => _buildVendorPostCard(post)),
+                      ],
+                    );
+                  },
                 );
               },
             );

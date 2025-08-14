@@ -2,21 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../../shared/models/user_profile.dart';
 import '../../shared/services/user_profile_service.dart';
-import '../../../repositories/vendor_posts_repository.dart';
 import '../../vendor/models/vendor_post.dart';
 
 /// Service for managing product chip filtering in the shopper experience
 class ProductChipFilterService {
   final UserProfileService _userProfileService;
-  final VendorPostsRepository _vendorPostsRepository;
   final FirebaseFirestore _firestore;
 
   ProductChipFilterService({
     UserProfileService? userProfileService,
-    VendorPostsRepository? vendorPostsRepository,
     FirebaseFirestore? firestore,
   }) : _userProfileService = userProfileService ?? UserProfileService(),
-        _vendorPostsRepository = vendorPostsRepository ?? VendorPostsRepository(),
         _firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Get unique product chips from vendor profiles in a specific location
