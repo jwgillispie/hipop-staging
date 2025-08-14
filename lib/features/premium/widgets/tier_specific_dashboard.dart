@@ -313,7 +313,7 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
       {
         'tier': SubscriptionTier.vendorPro,
         'title': 'Vendor Pro',
-        'price': '\$19.99/month',
+        'price': '\$29.00/month',
         'description': 'Full vendor analytics, unlimited markets, sales tracking',
         'color': Colors.green,
         'features': [
@@ -328,7 +328,7 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
       {
         'tier': SubscriptionTier.marketOrganizerPro,
         'title': 'Market Organizer Pro',
-        'price': '\$49.99/month',
+        'price': '\$69.00/month',
         'description': 'Multi-market management, vendor analytics, reporting',
         'color': Colors.blue,
         'features': [

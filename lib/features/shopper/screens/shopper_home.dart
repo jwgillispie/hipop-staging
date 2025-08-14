@@ -20,12 +20,10 @@ import 'package:hipop/core/constants/place_utils.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/models/event.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
-import 'package:hipop/features/premium/widgets/premium_feed_enhancements.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
-import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
+import 'package:hipop/features/shopper/services/product_chip_filter_service.dart';
 
 enum FeedFilter { markets, vendors, events, all }
 
@@ -41,17 +39,20 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   PlaceDetails? _selectedSearchPlace;
   String _selectedCity = '';
   FeedFilter _selectedFilter = FeedFilter.all;
+  List<String> _selectedProductChips = [];
+  List<String> _availableProductChips = [];
+  bool _isLoadingChips = false;
   late VendorPostsRepository _vendorPostsRepository;
-  bool _hasPremiumAccess = false;
-  bool _isCheckingPremium = true;
+  late ProductChipFilterService _productChipFilterService;
 
   @override
   void initState() {
     super.initState();
     _vendorPostsRepository = VendorPostsRepository();
+    _productChipFilterService = ProductChipFilterService();
     WidgetsBinding.instance.addObserver(this);
-    _checkPremiumAccess();
     _checkOnboardingStatus();
+    _loadAvailableChips();
   }
 
   Future<void> _checkOnboardingStatus() async {
@@ -62,62 +63,60 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _loadAvailableChips() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoadingChips = true;
+    });
+
+    try {
+      final chips = await _productChipFilterService.getAvailableProductChips(
+        city: _selectedCity,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _availableProductChips = chips;
+          // Remove any selected chips that are no longer available
+          _selectedProductChips.removeWhere((chip) => !chips.contains(chip));
+          _isLoadingChips = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading available chips: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingChips = false;
+        });
+      }
+    }
+  }
+
+  void _toggleProductChip(String chip) {
+    setState(() {
+      if (_selectedProductChips.contains(chip)) {
+        _selectedProductChips.remove(chip);
+      } else {
+        _selectedProductChips.add(chip);
+      }
+    });
+  }
+
+  void _clearProductChips() {
+    setState(() {
+      _selectedProductChips.clear();
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Refresh premium status when app becomes active
-      // This catches users returning from Stripe payment
-      _checkPremiumAccess();
-    }
-  }
 
-  Future<void> _checkPremiumAccess() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      // Check both UserProfile isPremium flag AND subscription service
-      // This ensures we catch users who were upgraded via Stripe but UI hasn't refreshed
-      final futures = await Future.wait([
-        SubscriptionService.hasFeature(authState.user.uid, 'vendor_following_system'),
-        _checkUserProfilePremiumStatus(authState.user.uid),
-      ]);
-      
-      final hasFeatureAccess = futures[0];
-      final hasProfilePremium = futures[1];
-      
-      // User is premium if either check returns true
-      final hasPremiumAccess = hasFeatureAccess || hasProfilePremium;
-      
-      if (mounted) {
-        setState(() {
-          _hasPremiumAccess = hasPremiumAccess;
-          _isCheckingPremium = false;
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _isCheckingPremium = false;
-        });
-      }
-    }
-  }
   
-  Future<bool> _checkUserProfilePremiumStatus(String userId) async {
-    try {
-      // Import UserProfileService if not already imported
-      final userProfileService = UserProfileService();
-      return await userProfileService.hasPremiumAccess(userId);
-    } catch (e) {
-      debugPrint('Error checking user profile premium status: $e');
-      return false;
-    }
-  }
 
   void _clearSearch() {
     setState(() {
@@ -125,6 +124,9 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       _selectedSearchPlace = null;
       _selectedCity = '';
     });
+    
+    // Reload chips for all locations
+    _loadAvailableChips();
   }
   
   void _performPlaceSearch(PlaceDetails? placeDetails) {
@@ -140,6 +142,9 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       // Extract city from place details for market search using better logic
       _selectedCity = PlaceUtils.extractCityFromPlace(placeDetails);
     });
+    
+    // Reload available chips for the new location
+    _loadAvailableChips();
   }
   
 
@@ -393,9 +398,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 const SizedBox(height: 24),
                 _buildFilterSlider(),
                 const SizedBox(height: 24),
-                // Premium Features Integration
-                const PremiumFeedEnhancements(),
-                const SizedBox(height: 24),
                 // Location search - main feature
                 Text(
                   _getSearchHeaderText(),
@@ -471,7 +473,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
               ],
             ),
           ),
-          // Premium features are now seamlessly integrated into the main UI
         );
       },
     );

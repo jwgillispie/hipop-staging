@@ -4,29 +4,30 @@ import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/blocs/favorites/favorites_bloc.dart';
-import 'package:hipop/core/constants/place_utils.dart';
-import 'package:hipop/features/market/models/market.dart';
-import 'package:hipop/features/market/services/market_service.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
-import 'package:hipop/features/premium/widgets/premium_feed_enhancements.dart';
-import 'package:hipop/features/premium/widgets/premium_search_widget.dart';
-import 'package:hipop/features/shared/models/event.dart';
-import 'package:hipop/features/shared/services/event_service.dart';
 import 'package:hipop/features/shared/services/places_service.dart';
-import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/shared/widgets/common/settings_dropdown.dart';
+import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
+import 'package:hipop/features/shared/widgets/share_button.dart';
+import 'package:hipop/features/shared/widgets/common/vendor_items_widget.dart';
 import 'package:hipop/features/shared/widgets/common/simple_places_widget.dart';
-import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
+import 'package:hipop/features/market/services/market_service.dart';
+import 'package:hipop/features/shared/services/url_launcher_service.dart';
+import 'package:hipop/features/market/models/market.dart';
+import 'package:hipop/repositories/vendor_posts_repository.dart';
+import 'package:hipop/features/shared/services/event_service.dart';
+import 'package:hipop/core/constants/place_utils.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
+import 'package:hipop/features/shared/models/event.dart';
+import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
-import 'package:hipop/repositories/vendor_posts_repository.dart' show VendorPostsRepository;
-
+import 'package:hipop/features/auth/services/onboarding_service.dart';
+import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
 
 enum FeedFilter { markets, vendors, events, all }
 
-/// Production-ready shopper home screen with integrated premium features
-/// instead of demo screens and test buttons
+/// Production-ready shopper home screen with location-based discovery
+/// Focuses on core market and vendor discovery functionality
 class ShopperHome extends StatefulWidget {
   const ShopperHome({super.key});
 
@@ -34,42 +35,33 @@ class ShopperHome extends StatefulWidget {
   State<ShopperHome> createState() => _ShopperHomeState();
 }
 
-class _ShopperHomeState extends State<ShopperHome> {
+class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   String _searchLocation = '';
   PlaceDetails? _selectedSearchPlace;
   String _selectedCity = '';
   FeedFilter _selectedFilter = FeedFilter.all;
   late VendorPostsRepository _vendorPostsRepository;
-  bool _hasPremiumAccess = false;
-  bool _isCheckingPremium = true;
 
   @override
   void initState() {
     super.initState();
     _vendorPostsRepository = VendorPostsRepository();
-    _checkPremiumAccess();
+    WidgetsBinding.instance.addObserver(this);
+    _checkOnboardingStatus();
   }
 
-  Future<void> _checkPremiumAccess() async {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is Authenticated) {
-      final hasAccess = await SubscriptionService.hasFeature(
-        authState.user.uid,
-        'vendor_following_system',
-      );
-      if (mounted) {
-        setState(() {
-          _hasPremiumAccess = hasAccess;
-          _isCheckingPremium = false;
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _isCheckingPremium = false;
-        });
-      }
+  Future<void> _checkOnboardingStatus() async {
+    final shouldShowOnboarding = await OnboardingService.shouldShowShopperOnboarding();
+    if (shouldShowOnboarding && mounted) {
+      // Navigate to onboarding screen
+      context.go('/onboarding');
     }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   void _clearSearch() {
@@ -94,6 +86,7 @@ class _ShopperHomeState extends State<ShopperHome> {
       _selectedCity = PlaceUtils.extractCityFromPlace(placeDetails);
     });
   }
+  
 
   String _getSearchHeaderText() {
     switch (_selectedFilter) {
@@ -203,9 +196,9 @@ class _ShopperHomeState extends State<ShopperHome> {
       },
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? color : Colors.grey.shade300,
@@ -213,7 +206,6 @@ class _ShopperHomeState extends State<ShopperHome> {
           ),
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
@@ -224,9 +216,9 @@ class _ShopperHomeState extends State<ShopperHome> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? color : Colors.grey.shade700,
+                color: isSelected ? color : Colors.grey.shade600,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
               textAlign: TextAlign.center,
             ),
@@ -236,13 +228,14 @@ class _ShopperHomeState extends State<ShopperHome> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! Authenticated) {
           return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: LoadingWidget(message: 'Signing you in...'),
           );
         }
 
@@ -306,8 +299,6 @@ class _ShopperHomeState extends State<ShopperHome> {
               children: [
                 // Debug Account Switcher
                 const DebugAccountSwitcher(),
-                
-                // Welcome Card
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -344,74 +335,57 @@ class _ShopperHomeState extends State<ShopperHome> {
                     ),
                   ),
                 ),
-                
                 const SizedBox(height: 24),
-                
-                // Filter Options
                 _buildFilterSlider(),
-                
                 const SizedBox(height: 24),
-                
-                // Premium Features Integration - replaces demo buttons
-                const PremiumFeedEnhancements(),
-                
-                const SizedBox(height: 24),
-                
-                // Premium Search Widget - replaces simple search
-                PremiumSearchWidget(
-                  onSearchResults: (results) {
-                    // Handle search results in the main feed
-                    debugPrint('Premium search returned ${results.length} results');
-                  },
-                  initialLocation: _selectedCity,
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Traditional location search fallback
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getSearchHeaderText(),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SimplePlacesWidget(
-                          initialLocation: _searchLocation,
-                          onLocationSelected: _performPlaceSearch,
-                        ),
-                        if (_searchLocation.isNotEmpty || _selectedSearchPlace != null) ...[
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _clearSearch,
-                                  icon: const Icon(Icons.clear, size: 16),
-                                  label: const Text('Show All'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Colors.orange,
-                                    side: const BorderSide(color: Colors.orange),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
+                // Location search - main feature
+                Text(
+                  _getSearchHeaderText(),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                
+                const SizedBox(height: 16),
+                SimplePlacesWidget(
+                  initialLocation: _searchLocation,
+                  onLocationSelected: _performPlaceSearch,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'or browse all',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey[300])),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_searchLocation.isNotEmpty || _selectedSearchPlace != null) ...[ 
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _clearSearch,
+                          icon: const Icon(Icons.clear, size: 16),
+                          label: const Text('Show All'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange,
+                            side: const BorderSide(color: Colors.orange),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 24),
-                
-                // Results Section
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -434,10 +408,7 @@ class _ShopperHomeState extends State<ShopperHome> {
                     ],
                   ],
                 ),
-                
                 const SizedBox(height: 16),
-                
-                // Content Stream
                 _buildContentStream(),
               ],
             ),
@@ -619,7 +590,10 @@ class _ShopperHomeState extends State<ShopperHome> {
                 }
 
                 if (marketSnapshot.hasError || vendorSnapshot.hasError || eventSnapshot.hasError) {
-                  return _buildErrorMessage('Error loading content', 'Please try again later');
+                  return _buildErrorMessage(
+                    'Error loading content', 
+                    '${marketSnapshot.error ?? ''} ${vendorSnapshot.error ?? ''} ${eventSnapshot.error ?? ''}'.trim()
+                  );
                 }
 
                 final markets = marketSnapshot.data ?? [];
@@ -627,10 +601,24 @@ class _ShopperHomeState extends State<ShopperHome> {
                 final posts = _filterCurrentAndFuturePosts(allPosts);
                 final allEvents = eventSnapshot.data ?? [];
                 final events = EventService.filterCurrentAndUpcomingEvents(allEvents);
+                
+                // Sort markets by next operating date (earliest first)
+                final sortedMarkets = List<Market>.from(markets);
+                sortedMarkets.sort((a, b) {
+                  final aNext = a.nextOperatingDate;
+                  final bNext = b.nextOperatingDate;
+                  
+                  // Markets without operating dates go to the end
+                  if (aNext == null && bNext == null) return 0;
+                  if (aNext == null) return 1;
+                  if (bNext == null) return -1;
+                  
+                  return aNext.compareTo(bNext);
+                });
+                
+                final totalCount = sortedMarkets.length + posts.length + events.length;
 
-                final totalResults = markets.length + posts.length + events.length;
-
-                if (totalResults == 0) {
+                if (totalCount == 0) {
                   return _buildNoResultsMessage();
                 }
 
@@ -638,35 +626,18 @@ class _ShopperHomeState extends State<ShopperHome> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$totalResults found (${markets.length} markets, ${posts.length} vendors, ${events.length} events)',
+                      '$totalCount found (${sortedMarkets.length} markets, ${posts.length} vendor pop-ups, ${events.length} events)',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey[600],
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
-                    // Markets Section
-                    if (markets.isNotEmpty) ...[
-                      _buildSectionHeader('Markets (${markets.length})', Icons.store_mall_directory, Colors.green),
-                      ...markets.take(3).map((market) => _buildMarketCard(market)),
-                      if (markets.length > 3) _buildViewMoreCard('markets', markets.length - 3),
-                      const SizedBox(height: 16),
-                    ],
-                    
-                    // Vendor Posts Section  
-                    if (posts.isNotEmpty) ...[
-                      _buildSectionHeader('Vendor Pop-ups (${posts.length})', Icons.store, Colors.blue),
-                      ...posts.take(3).map((post) => _buildVendorPostCard(post)),
-                      if (posts.length > 3) _buildViewMoreCard('vendors', posts.length - 3),
-                      const SizedBox(height: 16),
-                    ],
-                    
-                    // Events Section
-                    if (events.isNotEmpty) ...[
-                      _buildSectionHeader('Events (${events.length})', Icons.event, Colors.purple),
-                      ...events.take(3).map((event) => _buildEventCard(event)),
-                      if (events.length > 3) _buildViewMoreCard('events', events.length - 3),
-                    ],
+                    // Show markets first, sorted by earliest date
+                    ...sortedMarkets.map((market) => _buildMarketCard(market)),
+                    // Then show events, sorted by start date
+                    ...events.map((event) => _buildEventCard(event)),
+                    // Then show vendor posts
+                    ...posts.map((post) => _buildVendorPostCard(post)),
                   ],
                 );
               },
@@ -677,174 +648,55 @@ class _ShopperHomeState extends State<ShopperHome> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+  Widget _buildErrorMessage(String title, String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
+          Icon(Icons.error, size: 64, color: Colors.red[300]),
+          const SizedBox(height: 16),
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.grey[600],
             ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildViewMoreCard(String type, int remainingCount) {
-    return Card(
-      child: InkWell(
-        onTap: () {
-          // Switch to specific filter
-          setState(() {
-            switch (type) {
-              case 'markets':
-                _selectedFilter = FeedFilter.markets;
-                break;
-              case 'vendors':
-                _selectedFilter = FeedFilter.vendors;
-                break;
-              case 'events':
-                _selectedFilter = FeedFilter.events;
-                break;
-            }
-          });
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'View $remainingCount more $type',
-                style: TextStyle(
-                  color: Colors.orange[700],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward,
-                color: Colors.orange[700],
-                size: 16,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMarketCard(Market market) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () => context.pushNamed('marketDetail', extra: market),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.green.shade100,
-                    child: Icon(Icons.store_mall_directory, color: Colors.green.shade700),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          market.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        if (market.description?.isNotEmpty == true) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            market.description!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  FavoriteButton(
-                    itemId: market.id,
-                    type: FavoriteType.market,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.location_on, color: Colors.grey[600], size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '${market.address}, ${market.city}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (market.operatingDays.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.schedule, color: Colors.grey[600], size: 16),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        market.operatingDays.entries.map((e) => '${e.key}: ${e.value}').join(', '),
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildVendorPostCard(VendorPost post) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      elevation: 2,
       child: InkWell(
-        onTap: () => context.pushNamed('vendorPostDetail', extra: post),
+        onTap: () => _handleVendorPostTap(post),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.blue.shade100,
-                    child: Icon(Icons.store, color: Colors.blue.shade700),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.store,
+                      color: Colors.blue,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -854,72 +706,144 @@ class _ShopperHomeState extends State<ShopperHome> {
                         Text(
                           post.vendorName,
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (post.description.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            post.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Pop-up • ${_formatPostDateTime(post.popUpStartDateTime)}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
-                  Column(
+                  Row(
                     children: [
+                      ShareButton(
+                        onGetShareContent: () async {
+                          return _buildVendorPostShareContent(post);
+                        },
+                        style: ShareButtonStyle.icon,
+                        size: ShareButtonSize.small,
+                      ),
+                      const SizedBox(width: 8),
+                      VendorFollowButton(
+                        vendorId: post.vendorId,
+                        vendorName: post.vendorName,
+                        isCompact: true,
+                      ),
+                      const SizedBox(width: 8),
                       FavoriteButton(
                         itemId: post.id,
                         type: FavoriteType.post,
+                        size: 20,
                       ),
-                      if (_hasPremiumAccess) ...[
-                        const SizedBox(height: 8),
-                        VendorFollowButton(
-                          vendorId: post.vendorId,
-                          vendorName: post.vendorName,
-                          isCompact: true,
-                        ),
-                      ],
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.location_on, color: Colors.grey[600], size: 16),
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Colors.grey[500],
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
-                      post.location,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
+                    child: InkWell(
+                      onTap: () => _launchMaps(post.location),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          post.location,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.schedule, color: Colors.grey[600], size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${post.popUpStartDateTime.month}/${post.popUpStartDateTime.day}/${post.popUpStartDateTime.year} - ${post.popUpEndDateTime.month}/${post.popUpEndDateTime.day}/${post.popUpEndDateTime.year}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
+              const SizedBox(height: 8),
+              Text(
+                post.description,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              // Show Instagram handle if available
+              if (post.instagramHandle != null && post.instagramHandle!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _launchInstagram(post.instagramHandle!),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '@${post.instagramHandle!}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ],
+              // Show vendor items if available
+              FutureBuilder<List<String>>(
+                future: _getVendorItemsForMarket(post.vendorId, post.marketId),
+                builder: (context, snapshot) {
+                  final items = snapshot.data ?? [];
+                  if (items.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.local_grocery_store,
+                              size: 14,
+                              color: Colors.green[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Available items:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        VendorItemsWidget.compact(items: items),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
               ),
             ],
           ),
@@ -928,27 +852,112 @@ class _ShopperHomeState extends State<ShopperHome> {
     );
   }
 
+  String _formatPostDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final postDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    
+    String dateStr;
+    if (postDate == today) {
+      dateStr = 'Today';
+    } else if (postDate == today.add(const Duration(days: 1))) {
+      dateStr = 'Tomorrow';
+    } else if (postDate.isBefore(today.add(const Duration(days: 7)))) {
+      // Within a week - show day name
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      dateStr = days[dateTime.weekday - 1];
+    } else {
+      dateStr = '${dateTime.month}/${dateTime.day}';
+    }
+    
+    final hour = dateTime.hour == 0 ? 12 : dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    
+    return '$dateStr at $hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  void _handleVendorPostTap(VendorPost post) {
+    context.pushNamed('vendorPostDetail', extra: post);
+  }
+
+  List<VendorPost> _filterCurrentAndFuturePosts(List<VendorPost> posts) {
+    final now = DateTime.now();
+    return posts.where((post) => post.popUpEndDateTime.isAfter(now)).toList();
+  }
+
+  String _buildVendorPostShareContent(VendorPost post) {
+    final buffer = StringBuffer();
+    
+    buffer.writeln('🎪 Pop-up Event Alert!');
+    buffer.writeln();
+    buffer.writeln('🛒 ${post.vendorName}');
+    
+    if (post.description.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln(post.description);
+    }
+    
+    buffer.writeln();
+    buffer.writeln('📅 ${_formatPostDateTime(post.popUpStartDateTime)} - ${_formatTime(post.popUpEndDateTime)}');
+    
+    if (post.locationName != null && post.locationName!.isNotEmpty) {
+      buffer.writeln('📍 ${post.locationName}');
+    }
+    
+    if (post.instagramHandle != null && post.instagramHandle!.isNotEmpty) {
+      buffer.writeln('📱 @${post.instagramHandle}');
+    }
+    
+    buffer.writeln();
+    buffer.writeln('Don\'t miss out on fresh local products!');
+    buffer.writeln('Shared via HiPop 🍎');
+    
+    return buffer.toString();
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour == 0 ? 12 : dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  Future<List<String>> _getVendorItemsForMarket(String vendorId, String? marketId) async {
+    if (marketId == null) return [];
+    
+    try {
+      final vendorItems = await VendorMarketItemsService.getVendorMarketItems(vendorId, marketId);
+      return vendorItems?.itemList ?? [];
+    } catch (e) {
+      debugPrint('Error fetching vendor items: $e');
+      return [];
+    }
+  }
+
   Widget _buildEventCard(Event event) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      elevation: 2,
       child: InkWell(
-        onTap: () {
-          context.goNamed(
-            'eventDetail',
-            pathParameters: {'eventId': event.id},
-            extra: event, // Pass the event object for immediate display while loading fresh data
-          );
-        },
+        onTap: () => _handleEventTap(event),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.purple.shade100,
-                    child: Icon(Icons.event, color: Colors.purple.shade700),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.event,
+                      color: Colors.purple,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -958,61 +967,217 @@ class _ShopperHomeState extends State<ShopperHome> {
                         Text(
                           event.name,
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (event.description.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            event.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Event • ${event.formattedDateTime}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
                   FavoriteButton(
                     itemId: event.id,
                     type: FavoriteType.event,
+                    size: 20,
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.location_on, color: Colors.grey[600], size: 16),
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Colors.grey[500],
+                  ),
                   const SizedBox(width: 4),
                   Expanded(
-                    child: Text(
-                      event.location,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12,
+                    child: InkWell(
+                      onTap: () => _launchMaps(event.location),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          event.location,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
+              Text(
+                event.description,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (event.tags.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: event.tags.take(3).map((tag) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.purple[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleEventTap(Event event) {
+    context.goNamed(
+      'eventDetail',
+      pathParameters: {'eventId': event.id},
+      extra: event, // Pass the event object for immediate display while loading fresh data
+    );
+  }
+  
+  Widget _buildMarketCard(Market market) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      elevation: 2,
+      child: InkWell(
+        onTap: () => _handleMarketTap(market),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  Icon(Icons.schedule, color: Colors.grey[600], size: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.store_mall_directory,
+                      color: Colors.green,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          market.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Market • ${market.operatingDays.length} days/week',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      ShareButton(
+                        onGetShareContent: () async {
+                          return _buildMarketShareContent(market);
+                        },
+                        style: ShareButtonStyle.icon,
+                        size: ShareButtonSize.small,
+                      ),
+                      const SizedBox(width: 8),
+                      VendorFollowButton(
+                        vendorId: market.id,
+                        vendorName: market.name,
+                        isCompact: true,
+                      ),
+                      const SizedBox(width: 8),
+                      FavoriteButton(
+                        itemId: market.id,
+                        type: FavoriteType.market,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 16,
+                    color: Colors.grey[500],
+                  ),
                   const SizedBox(width: 4),
-                  Text(
-                    '${event.startDateTime.month}/${event.startDateTime.day}/${event.startDateTime.year} - ${event.endDateTime.month}/${event.endDateTime.day}/${event.endDateTime.year}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _launchMaps(market.address),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          market.address,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
+              if (market.description != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  market.description!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
@@ -1029,134 +1194,144 @@ class _ShopperHomeState extends State<ShopperHome> {
     switch (_selectedFilter) {
       case FeedFilter.markets:
         icon = Icons.store_mall_directory;
-        title = 'No Markets Found';
+        title = 'No markets found';
         subtitle = _searchLocation.isEmpty
-            ? 'There are no active markets at the moment.'
-            : 'No markets found in $_searchLocation.';
+            ? 'Markets will appear here as they join'
+            : 'No markets found in $_searchLocation\n\nTry searching for:\n• "Atlanta" or "ATL" for Atlanta area\n• "Decatur" or "DEC" for Decatur area\n• Other Georgia cities';
         buttonText = 'Show All Markets';
         break;
       case FeedFilter.vendors:
         icon = Icons.store;
-        title = 'No Vendor Pop-ups Found';
+        title = 'No vendor pop-ups found';
         subtitle = _searchLocation.isEmpty
-            ? 'There are no active vendor pop-ups at the moment.'
-            : 'No vendor pop-ups found in $_searchLocation.';
+            ? 'Vendor pop-ups will appear here as they are created'
+            : 'No vendor pop-ups found in $_searchLocation\n\nTry searching for nearby areas or check back later for new pop-ups';
         buttonText = 'Show All Vendors';
         break;
       case FeedFilter.events:
         icon = Icons.event;
-        title = 'No Events Found';
+        title = 'No events found';
         subtitle = _searchLocation.isEmpty
-            ? 'There are no upcoming events at the moment.'
-            : 'No events found in $_searchLocation.';
+            ? 'Events will appear here as they are created'
+            : 'No events found in $_searchLocation\n\nTry searching for nearby areas or check back later for new events';
         buttonText = 'Show All Events';
         break;
       case FeedFilter.all:
-        icon = Icons.search_off;
-        title = 'No Results Found';
+        icon = Icons.explore;
+        title = 'No markets, vendors, or events found';
         subtitle = _searchLocation.isEmpty
-            ? 'There are no active markets, vendors, or events at the moment.'
-            : 'Nothing found in $_searchLocation. Try a broader search.';
-        buttonText = 'Show Everything';
+            ? 'Markets, vendor pop-ups, and events will appear here as they join'
+            : 'No markets, vendor pop-ups, or events found in $_searchLocation\n\nTry searching for nearby areas or check back later';
+        buttonText = 'Show All';
         break;
     }
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: Colors.grey[400],
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.grey[600],
             ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[700],
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[500],
             ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (_searchLocation.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              OutlinedButton(
-                onPressed: _clearSearch,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange),
-                ),
-                child: Text(buttonText),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorMessage(String title, String message) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.red[700],
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(
-                color: Colors.red[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
+            textAlign: TextAlign.center,
+          ),
+          if (_searchLocation.isNotEmpty) ...[
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                if (mounted) {
-                  setState(() {
-                    // Trigger rebuild to retry
-                  });
-                }
-              },
-              child: const Text('Retry'),
+              onPressed: _clearSearch,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(buttonText),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  List<VendorPost> _filterCurrentAndFuturePosts(List<VendorPost> posts) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+  void _handleMarketTap(Market market) {
+    context.pushNamed('marketDetail', extra: market);
+  }
+  
+  Future<void> _launchMaps(String address) async {
+    try {
+      await UrlLauncherService.launchMaps(address);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open maps: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchInstagram(String handle) async {
+    try {
+      await UrlLauncherService.launchInstagram(handle);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open Instagram: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  String _buildMarketShareContent(Market market) {
+    final buffer = StringBuffer();
     
-    return posts.where((post) {
-      final postEndDate = DateTime(post.popUpEndDateTime.year, post.popUpEndDateTime.month, post.popUpEndDateTime.day);
-      return postEndDate.isAtSameMomentAs(today) || postEndDate.isAfter(today);
-    }).toList();
+    buffer.writeln('🏪 Market Discovery!');
+    buffer.writeln();
+    buffer.writeln('📍 ${market.name}');
+    if (market.description != null && market.description!.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln(market.description);
+    }
+    buffer.writeln();
+    buffer.writeln('📍 Location: ${market.address}');
+    buffer.writeln();
+    
+    // Add schedule information if available
+    if (market.operatingDays.isNotEmpty) {
+      buffer.writeln('🗓️ Operating Schedule:');
+      market.operatingDays.entries.take(3).forEach((entry) {
+        final dayKey = entry.key.toUpperCase();
+        buffer.writeln('• $dayKey: ${entry.value}');
+      });
+      buffer.writeln();
+    }
+    
+    buffer.writeln('🛒 Visit this amazing local market!');
+    buffer.writeln();
+    
+    buffer.writeln('Discovered on HiPop - Find local markets & pop-ups');
+    buffer.writeln('Download: https://hipopapp.com');
+    buffer.writeln();
+    buffer.writeln('#FarmersMarket #LocalMarket #SupportLocal #HiPop');
+    
+    return buffer.toString();
   }
 }

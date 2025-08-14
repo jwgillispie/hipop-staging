@@ -7,6 +7,7 @@ import '../services/organizer_vendor_post_service.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/hipop_text_field.dart';
 import '../../market/models/market.dart';
+import '../../premium/services/subscription_service.dart';
 
 class CreateVendorPostScreen extends StatefulWidget {
   const CreateVendorPostScreen({super.key});
@@ -27,6 +28,7 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
   bool _isLoading = false;
   bool _isLoadingMarkets = true;
   List<Market> _markets = [];
+  int _remainingPosts = 0;
   String? _selectedMarketId;
   List<String> _selectedCategories = [];
   ExperienceLevel _selectedExperience = ExperienceLevel.beginner;
@@ -50,6 +52,19 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
     super.initState();
     _loadOrganizerMarkets();
     _loadUserContactInfo();
+    _loadRemainingPosts();
+  }
+
+  Future<void> _loadRemainingPosts() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final remaining = await SubscriptionService.getRemainingVendorPosts(user.uid);
+        setState(() => _remainingPosts = remaining);
+      } catch (e) {
+        debugPrint('Error loading remaining posts: $e');
+      }
+    }
   }
 
   @override
@@ -130,6 +145,16 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
       return;
     }
 
+    // Check post limits first
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final canCreate = await SubscriptionService.canCreateVendorPost(user.uid);
+      if (!canCreate) {
+        await _showPostLimitDialog();
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -177,6 +202,13 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
       );
 
       await OrganizerVendorPostService.createVendorPost(post);
+
+      // Increment post count
+      try {
+        await SubscriptionService.incrementPostCount(user.uid);
+      } catch (e) {
+        debugPrint('Error incrementing post count: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -245,11 +277,18 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: _isLoadingMarkets
-          ? const LoadingWidget(message: 'Loading your markets...')
-          : _markets.isEmpty
-              ? _buildNoMarketsState()
-              : Form(
+      body: Column(
+        children: [
+          // Remaining Posts Banner
+          if (_remainingPosts >= -1) _buildRemainingPostsBanner(),
+          
+          // Main Content
+          Expanded(
+            child: _isLoadingMarkets
+                ? const LoadingWidget(message: 'Loading your markets...')
+                : _markets.isEmpty
+                    ? _buildNoMarketsState()
+                    : Form(
                   key: _formKey,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
@@ -273,6 +312,9 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
                     ),
                   ),
                 ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -730,6 +772,72 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
     );
   }
 
+  Widget _buildRemainingPostsBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _remainingPosts > 0 || _remainingPosts == -1 
+            ? Colors.green.shade50 
+            : Colors.red.shade50,
+        border: Border(
+          bottom: BorderSide(
+            color: _remainingPosts > 0 || _remainingPosts == -1 
+                ? Colors.green.shade200 
+                : Colors.red.shade200,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _remainingPosts > 0 || _remainingPosts == -1 
+                ? Icons.check_circle_outline 
+                : Icons.warning_amber_rounded,
+            color: _remainingPosts > 0 || _remainingPosts == -1 
+                ? Colors.green.shade700 
+                : Colors.red.shade700,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _remainingPosts == -1 
+                  ? 'Unlimited posts available with your Premium subscription'
+                  : _remainingPosts > 0
+                      ? 'You have $_remainingPosts vendor post${_remainingPosts == 1 ? '' : 's'} remaining this month'
+                      : 'Post limit reached. Upgrade to Premium for unlimited posts.',
+              style: TextStyle(
+                color: _remainingPosts > 0 || _remainingPosts == -1 
+                    ? Colors.green.shade700 
+                    : Colors.red.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (_remainingPosts == 0) ...[
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {
+                // Navigate to premium upgrade
+                // You can add navigation to premium screen here
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.deepPurple,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   String _formatCategoryName(String category) {
     return category.split('_').map((word) => 
       word[0].toUpperCase() + word.substring(1)
@@ -780,5 +888,88 @@ class _CreateVendorPostScreenState extends State<CreateVendorPostScreen> {
       default:
         return urgency;
     }
+  }
+
+  Future<void> _showPostLimitDialog() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final remaining = await SubscriptionService.getRemainingVendorPosts(user.uid);
+    
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.deepPurple[700]),
+            const SizedBox(width: 8),
+            const Text('Post Limit Reached'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You\'ve reached your monthly limit of 1 vendor post. Upgrade to Organizer Pro for unlimited posts.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.deepPurple.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Organizer Pro Benefits:',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...([
+                    'Unlimited vendor posts',
+                    'Advanced analytics dashboard',
+                    'Priority vendor matching',
+                    'Response management tools',
+                  ]).map((benefit) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check, size: 16, color: Colors.green[600]),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(benefit)),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go('/premium/upgrade?tier=organizer&userId=${user.uid}');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade to Pro'),
+          ),
+        ],
+      ),
+    );
   }
 }

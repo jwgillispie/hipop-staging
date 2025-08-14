@@ -6,7 +6,6 @@ import '../../../blocs/subscription/subscription_state.dart';
 import '../../../blocs/subscription/subscription_event.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
-import 'vendor_premium_dashboard_components.dart';
 
 /// FeatureGateWidget - Advanced subscription-based access control with animations
 /// 
@@ -326,10 +325,6 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
   }
 
   Widget _buildDefaultAccessDenied(SubscriptionState subscriptionState) {
-    final subscription = subscriptionState is SubscriptionLoaded 
-        ? subscriptionState.subscription 
-        : null;
-    
     // Check if it's a usage limit issue vs feature access issue
     final isUsageLimitIssue = _hasAccess && !_isWithinLimit;
     
@@ -669,6 +664,14 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
         return 'Bulk Messaging';
       case 'enhanced_search':
         return 'Enhanced Search';
+      case 'vendor_post_creation':
+        return 'Vendor Post Creation';
+      case 'unlimited_vendor_posts':
+        return 'Unlimited Vendor Posts';
+      case 'vendor_post_analytics':
+        return 'Vendor Post Analytics';
+      case 'advanced_response_management':
+        return 'Response Management';
       default:
         return featureName.replaceAll('_', ' ').split(' ')
             .map((word) => word[0].toUpperCase() + word.substring(1))
@@ -705,6 +708,34 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
           'Multi-market management',
           'Cross-market analytics',
           'Bulk market operations',
+        ];
+      case 'vendor_post_creation':
+        return [
+          'Create vendor recruitment posts',
+          'Target specific vendor types',
+          'Custom application requirements',
+          'Priority vendor matching',
+        ];
+      case 'unlimited_vendor_posts':
+        return [
+          'Unlimited vendor posts per month',
+          'Advanced post analytics',
+          'Priority response management',
+          'Enhanced vendor discovery',
+        ];
+      case 'vendor_post_analytics':
+        return [
+          'Track post performance',
+          'Response rate analytics',
+          'Vendor engagement insights',
+          'Optimization recommendations',
+        ];
+      case 'advanced_response_management':
+        return [
+          'Bulk response management',
+          'Auto-screening capabilities',
+          'Response quality scoring',
+          'Integrated communication tools',
         ];
       default:
         return [

@@ -176,6 +176,8 @@ class StripeService {
           'name': 'Vendor Pro',
           'description': 'Advanced analytics, market discovery, and multi-market management',
           'features': [
+            'Unlimited market applications',
+            'Access to organizer vendor posts',
             'Advanced analytics dashboard',
             'Master product lists & inventory tracking',
             'Multi-market management tools',
@@ -188,14 +190,17 @@ class StripeService {
         };
       case 'market_organizer':
         return {
-          'price': 39.00,
+          'price': 69.00,  // Updated pricing
           'name': 'Market Organizer Premium',
-          'description': 'Complete market management and analytics suite',
+          'description': 'Complete market management, vendor recruitment and analytics suite',
           'features': [
+            'Unlimited vendor posts',
             'Vendor performance analytics',
             'Smart recruitment tools',
             'Financial analytics',
             'Unlimited events',
+            'Response management',
+            'Advanced reporting',
           ],
         };
       default:

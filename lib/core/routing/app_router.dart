@@ -62,6 +62,7 @@ import '../../features/shared/screens/ceo_verification_dashboard_screen.dart';
 import '../../features/premium/screens/premium_onboarding_screen.dart';
 import '../../features/premium/screens/subscription_success_screen.dart';
 import '../../features/premium/screens/subscription_cancel_screen.dart';
+import '../../features/premium/screens/subscription_management_screen.dart';
 import '../../features/premium/widgets/tier_specific_dashboard.dart';
 import '../../features/shared/services/user_profile_service.dart';
 import '../../features/premium/services/subscription_service.dart';
@@ -377,7 +378,10 @@ class AppRouter {
             GoRoute(
               path: 'premium-dashboard',
               name: 'organizerPremiumDashboard',
-              builder: (context, state) => const OrganizerPremiumDashboard(),
+              builder: (context, state) {
+                // Allow all organizers to access - the screen itself handles upgrade vs premium content
+                return const OrganizerPremiumDashboard();
+              },
             ),
             GoRoute(
               path: 'vendor-discovery',
@@ -601,6 +605,16 @@ class AppRouter {
           },
         ),
         
+        // Subscription management route
+        GoRoute(
+          path: '/subscription-management/:userId',
+          name: 'subscriptionManagement',
+          builder: (context, state) {
+            final userId = state.pathParameters['userId'] ?? '';
+            return SubscriptionManagementScreen(userId: userId);
+          },
+        ),
+        
         // Premium upgrade route (handles upgrade flow)
         GoRoute(
           path: '/premium/upgrade',
@@ -636,9 +650,21 @@ class AppRouter {
               );
             }
             
+            // Map tier to actual user type
+            String userType = 'shopper'; // default
+            if (targetTier == 'marketOrganizerPro') {
+              userType = 'market_organizer';
+            } else if (targetTier == 'vendorPro') {
+              userType = 'vendor';
+            } else if (targetTier == 'shopperPro') {
+              userType = 'shopper';
+            }
+            
+            debugPrint('🔄 Mapped tier "$targetTier" to userType "$userType"');
+            
             return PremiumOnboardingScreen(
               userId: effectiveUserId,
-              userType: targetTier ?? 'shopper',
+              userType: userType,
             );
           },
         ),
@@ -859,6 +885,41 @@ class AppRouter {
         return userType == 'market_organizer'; // Enterprise is for market organizers
       case SubscriptionTier.free:
         return true; // Free tier is available to all user types
+    }
+  }
+
+  /// Validate organizer premium access for route protection
+  static Future<bool> _validateOrganizerPremiumAccess(BuildContext context) async {
+    final authBloc = context.read<AuthBloc>();
+    final authState = authBloc.state;
+    
+    if (authState is! Authenticated) {
+      debugPrint('🚨 Unauthenticated user attempted to access organizer premium dashboard');
+      return false;
+    }
+    
+    // Verify user type is market_organizer
+    if (authState.userType != 'market_organizer') {
+      debugPrint('🚨 Non-organizer user (${authState.userType}) attempted to access organizer premium dashboard');
+      return false;
+    }
+    
+    try {
+      final hasAccess = await SubscriptionService.hasFeature(
+        authState.user.uid, 
+        'vendor_post_creation'
+      );
+      
+      if (!hasAccess) {
+        debugPrint('🚨 Non-premium organizer attempted to access premium dashboard: ${authState.user.uid}');
+      } else {
+        debugPrint('✅ Premium organizer access validated: ${authState.user.uid}');
+      }
+      
+      return hasAccess;
+    } catch (e) {
+      debugPrint('❌ Error validating organizer premium access: $e');
+      return false; // Deny access on error
     }
   }
 

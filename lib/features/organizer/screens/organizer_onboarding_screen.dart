@@ -314,7 +314,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           ),
           const SizedBox(height: 40),
           Text(
-            'Vendor Applications',
+            'Vendor Connections',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.green.shade800,
@@ -323,7 +323,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Manage vendor applications with ease. Share application links and review applications in one place.',
+            'Manage vendor connections with ease. Share application links and review connections in one place.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.green.shade700,
             ),

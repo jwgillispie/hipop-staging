@@ -36,28 +36,33 @@ class SubscriptionService {
     // Validate input
     final userIdValidation = PremiumValidationService.validateUserId(userId);
     if (!userIdValidation.isValid) {
-      throw userIdValidation.toError();
+      debugPrint('⚠️ Invalid userId in getUserSubscription: $userId');
+      return null; // Return null instead of throwing for invalid user IDs
     }
     
-    return await PremiumErrorHandler.executeWithErrorHandling(
-      operationName: 'getUserSubscription',
-      operation: () async {
-        final snapshot = await _subscriptionsCollection
-            .where('userId', isEqualTo: userIdValidation.value)
-            .limit(1)
-            .get();
-        
-        if (snapshot.docs.isNotEmpty) {
-          return UserSubscription.fromFirestore(snapshot.docs.first);
-        }
-        return null;
-      },
-      context: {
-        'user_id': userId,
-        'operation_type': 'read',
-      },
-      requiresNetwork: true,
-    );
+    try {
+      final snapshot = await _subscriptionsCollection
+          .where('userId', isEqualTo: userIdValidation.value)
+          .limit(1)
+          .get();
+      
+      if (snapshot.docs.isNotEmpty) {
+        return UserSubscription.fromFirestore(snapshot.docs.first);
+      }
+      return null;
+    } catch (e) {
+      // Log the error but don't throw - return null to gracefully handle missing subscriptions
+      debugPrint('⚠️ Error getting subscription for user $userId: $e');
+      _debugLogger.logError(
+        operation: 'getUserSubscription',
+        message: 'Failed to fetch subscription, user will default to free tier',
+        context: {
+          'user_id': userId,
+          'error': e.toString(),
+        },
+      );
+      return null;
+    }
   }
 
   /// Create free subscription for new user with comprehensive validation
@@ -318,46 +323,46 @@ class SubscriptionService {
       return false;
     }
     
-    return await PremiumErrorHandler.executeWithErrorHandling(
-      operationName: 'hasFeature',
-      operation: () async {
-        final subscription = await getUserSubscription(userIdValidation.value);
-        if (subscription == null) {
-          _debugLogger.logDebug(
-            operation: 'hasFeature',
-            message: 'No subscription found, creating free subscription',
-            context: {'user_id': userId, 'feature_name': featureName},
-          );
-          
-          // Create free subscription if none exists
-          final userProfile = await _firestore.collection('users').doc(userIdValidation.value).get();
-          final userType = userProfile.data()?['userType'] ?? 'shopper';
-          await createFreeSubscription(userIdValidation.value, userType);
-          return false; // Free tier doesn't have premium features
-        }
-        
-        final hasAccess = subscription.hasFeature(featureValidation.value);
-        
+    try {
+      // Call getUserSubscription without additional error wrapping to avoid double-wrapping
+      final subscription = await getUserSubscription(userIdValidation.value);
+      if (subscription == null) {
         _debugLogger.logDebug(
           operation: 'hasFeature',
-          message: 'Feature access check completed',
-          context: {
-            'user_id': userId,
-            'feature_name': featureName,
-            'has_access': hasAccess,
-            'user_tier': subscription.tier.name,
-          },
+          message: 'No subscription found, defaulting to free tier',
+          context: {'user_id': userId, 'feature_name': featureName},
         );
+        return false; // Free tier doesn't have premium features by default
+      }
+      
+      final hasAccess = subscription.hasFeature(featureValidation.value);
         
-        return hasAccess;
-      },
-      context: {
-        'user_id': userId,
-        'feature_name': featureName,
-        'operation_type': 'feature_check',
-      },
-      requiresNetwork: true,
-    );
+      _debugLogger.logDebug(
+        operation: 'hasFeature',
+        message: 'Feature access check completed',
+        context: {
+          'user_id': userId,
+          'feature_name': featureName,
+          'has_access': hasAccess,
+          'user_tier': subscription.tier.name,
+        },
+      );
+      
+      return hasAccess;
+    } catch (e) {
+      // Log error but don't throw - gracefully degrade to free tier
+      _debugLogger.logError(
+        operation: 'hasFeature',
+        message: 'Error checking feature access, defaulting to free tier',
+        context: {
+          'user_id': userId,
+          'feature_name': featureName,
+          'error': e.toString(),
+        },
+      );
+      debugPrint('⚠️ Error in hasFeature for $userId/$featureName: $e');
+      return false; // Default to no access on error
+    }
   }
 
   /// Check if user is within usage limit
@@ -579,14 +584,16 @@ class SubscriptionService {
     switch (userType) {
       case 'market_organizer':
         return {
-          'price': 39.00,
+          'price': 69.00,  // Updated pricing
           'currency': 'USD',
           'interval': 'month',
           'features': [
+            'Unlimited vendor posts',
             'Analytics Dashboard',
             'Push Notifications',
             'Smart Recruitment',
             'Unlimited Events',
+            'Response Management',
           ],
         };
       case 'vendor':
@@ -595,10 +602,12 @@ class SubscriptionService {
           'currency': 'USD',
           'interval': 'month',
           'features': [
+            'Unlimited market applications',
             'Advanced Analytics',
             'Master Product Lists',
             'Push Notifications',
             'Multi-Market Management',
+            'Organizer Post Access',
           ],
         };
       case 'shopper':
@@ -707,46 +716,21 @@ class SubscriptionService {
         return [
           {
             'userType': 'market_organizer',
-            'name': 'Organizer Basic',
-            'description': 'Essential market management',
-            'price': 39.00,
+            'name': 'Organizer Pro',
+            'description': 'Complete market management and vendor recruitment',
+            'price': 69.00,  // Updated pricing
             'currency': 'USD',
             'interval': 'month',
             'features': [
+              'Unlimited vendor posts',
               'Analytics Dashboard',
               'Push Notifications',
               'Smart Recruitment',
               'Unlimited Events',
-            ],
-          },
-          {
-            'userType': 'market_organizer',
-            'name': 'Organizer Pro',
-            'description': 'Advanced market operations',
-            'price': 79.00,
-            'currency': 'USD',
-            'interval': 'month',
-            'features': [
-              'Everything in Basic',
+              'Response Management',
               'Market Intelligence',
               'Advanced Reporting',
               'Revenue Optimization',
-              'Multi-market Management',
-            ],
-          },
-          {
-            'userType': 'market_organizer',
-            'name': 'Organizer Enterprise',
-            'description': 'Multi-market enterprise solution',
-            'price': 199.00,
-            'currency': 'USD',
-            'interval': 'month',
-            'features': [
-              'Everything in Pro',
-              'Custom Branding',
-              'API Access',
-              'Dedicated Account Manager',
-              'Enterprise Integrations',
             ],
           },
         ];
@@ -919,5 +903,183 @@ class SubscriptionService {
     }
     
     return [];
+  }
+
+  /// Check if user can create a vendor post (new method for post limits)
+  static Future<bool> canCreateVendorPost(String userId) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        // Create free subscription if none exists
+        final userProfile = await _firestore.collection('users').doc(userId).get();
+        final userType = userProfile.data()?['userType'] ?? 'shopper';
+        final newSubscription = await createFreeSubscription(userId, userType);
+        return newSubscription.canCreateVendorPost();
+      }
+
+      return subscription.canCreateVendorPost();
+    } catch (e) {
+      debugPrint('Error checking vendor post creation ability: $e');
+      return false;
+    }
+  }
+
+  /// Check if user can create a market application
+  static Future<bool> canCreateMarketApplication(String userId) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        // Create free subscription if none exists
+        final userProfile = await _firestore.collection('users').doc(userId).get();
+        final userType = userProfile.data()?['userType'] ?? 'shopper';
+        final newSubscription = await createFreeSubscription(userId, userType);
+        return newSubscription.canCreateMarketApplication();
+      }
+
+      return subscription.canCreateMarketApplication();
+    } catch (e) {
+      debugPrint('Error checking market application creation ability: $e');
+      return false;
+    }
+  }
+
+  /// Get remaining market applications for this month
+  static Future<int> getRemainingMarketApplications(String userId) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        // Return free tier limit
+        return 5; // Free tier has 5 applications for vendors
+      }
+
+      return subscription.getRemainingMarketApplications();
+    } catch (e) {
+      debugPrint('Error getting remaining market applications: $e');
+      return 0;
+    }
+  }
+
+  /// Get remaining vendor posts for this month
+  static Future<int> getRemainingVendorPosts(String userId) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        // Return free tier limit
+        return 0; // Free tier has 0 vendor posts for vendors, 1 for organizers
+      }
+
+      return subscription.getRemainingVendorPosts();
+    } catch (e) {
+      debugPrint('Error getting remaining vendor posts: $e');
+      return 0;
+    }
+  }
+
+  /// Increment user's monthly post count (call when a vendor post is created)
+  static Future<UserSubscription> incrementPostCount(String userId) async {
+    try {
+      final currentSubscription = await getUserSubscription(userId);
+      if (currentSubscription == null) {
+        throw Exception('No subscription found for user.');
+      }
+
+      final updatedSubscription = currentSubscription.incrementPostCount();
+
+      await _subscriptionsCollection
+          .doc(currentSubscription.id)
+          .update(updatedSubscription.toFirestore());
+      
+      debugPrint('✅ Post count incremented for user: $userId (new count: ${updatedSubscription.effectiveMonthlyPostCount})');
+      return updatedSubscription;
+    } catch (e) {
+      debugPrint('❌ Error incrementing post count: $e');
+      throw Exception('Failed to increment post count: $e');
+    }
+  }
+
+  /// Increment user's monthly application count (call when a market application is created)
+  static Future<UserSubscription> incrementApplicationCount(String userId) async {
+    try {
+      final currentSubscription = await getUserSubscription(userId);
+      if (currentSubscription == null) {
+        throw Exception('No subscription found for user.');
+      }
+
+      final updatedSubscription = currentSubscription.incrementApplicationCount();
+
+      await _subscriptionsCollection
+          .doc(currentSubscription.id)
+          .update(updatedSubscription.toFirestore());
+      
+      debugPrint('✅ Application count incremented for user: $userId (new count: ${updatedSubscription.effectiveMonthlyApplicationCount})');
+      return updatedSubscription;
+    } catch (e) {
+      debugPrint('❌ Error incrementing application count: $e');
+      throw Exception('Failed to increment application count: $e');
+    }
+  }
+
+  /// Reset monthly counters for all users (background job)
+  static Future<void> resetAllMonthlyCounters() async {
+    try {
+      final snapshot = await _subscriptionsCollection.get();
+      final batch = _firestore.batch();
+      int updateCount = 0;
+
+      for (final doc in snapshot.docs) {
+        try {
+          final subscription = UserSubscription.fromFirestore(doc);
+          if (subscription.needsMonthlyReset) {
+            final resetSubscription = subscription.resetMonthlyCounters();
+            batch.update(doc.reference, resetSubscription.toFirestore());
+            updateCount++;
+          }
+        } catch (e) {
+          debugPrint('Error processing subscription ${doc.id}: $e');
+        }
+      }
+
+      if (updateCount > 0) {
+        await batch.commit();
+        debugPrint('✅ Reset monthly counters for $updateCount subscriptions');
+      } else {
+        debugPrint('ℹ️ No subscriptions needed monthly reset');
+      }
+    } catch (e) {
+      debugPrint('❌ Error resetting monthly counters: $e');
+      throw Exception('Failed to reset monthly counters: $e');
+    }
+  }
+
+  /// Get post usage summary for a user
+  static Future<Map<String, dynamic>> getPostUsageSummary(String userId) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        return {
+          'monthly_posts_used': 0,
+          'monthly_posts_limit': 0,
+          'remaining_posts': 0,
+          'is_premium': false,
+          'reset_date': null,
+        };
+      }
+
+      final limit = subscription.getLimit('vendor_posts_per_month');
+      final used = subscription.effectiveMonthlyPostCount;
+      final remaining = subscription.getRemainingVendorPosts();
+
+      return {
+        'monthly_posts_used': used,
+        'monthly_posts_limit': limit == -1 ? 'unlimited' : limit,
+        'remaining_posts': remaining == -1 ? 'unlimited' : remaining,
+        'is_premium': subscription.isPremium,
+        'reset_date': subscription.lastResetDate,
+        'needs_reset': subscription.needsMonthlyReset,
+      };
+    } catch (e) {
+      debugPrint('Error getting post usage summary: $e');
+      return {};
+    }
   }
 }

@@ -266,13 +266,13 @@ class VendorPremiumDashboardComponents {
     List<String>? features,
   }) {
     final defaultFeatures = features ?? [
-      'Advanced analytics dashboard',
-      'Master product lists & inventory tracking', 
-      'Multi-market management tools',
+      'Unlimited market applications',
+      'Enhanced analytics & application tracking', 
+      'Access to organizer recruitment posts',
+      'Post performance metrics & insights',
       'Market discovery & vendor matching',
-      'Revenue tracking & financial insights',
-      'Customer demographics & behavior analysis',
-      'Location performance comparison',
+      'Enhanced profile features',
+      'Location performance insights',
       'Priority customer support',
     ];
 

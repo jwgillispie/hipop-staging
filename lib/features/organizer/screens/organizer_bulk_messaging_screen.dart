@@ -137,7 +137,7 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
             Text('• Response rate monitoring'),
             SizedBox(height: 16),
             Text(
-              'Upgrade to Market Organizer Pro for \$99/month to access these powerful communication tools.',
+              'Upgrade to Market Organizer Pro for \$69/month to access these powerful communication tools.',
               style: TextStyle(color: Colors.grey),
             ),
           ],

@@ -156,7 +156,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vendor Applications'),
+        title: const Text('Vendor Connections'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
@@ -472,7 +472,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Vendor applications will appear here when submitted.',
+                  'Vendor connections will appear here when submitted.',
                   style: TextStyle(color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),

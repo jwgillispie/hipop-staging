@@ -20,6 +20,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
   bool _hasPremiumAccess = false;
   String? _error;
   String _selectedFilter = 'all';
+  int _remainingPosts = 0;
 
   final List<String> _filterOptions = ['all', 'active', 'paused', 'closed', 'expired'];
 
@@ -57,6 +58,10 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
       }
 
       setState(() => _hasPremiumAccess = true);
+      
+      // Load remaining posts count
+      final remaining = await SubscriptionService.getRemainingVendorPosts(user.uid);
+      setState(() => _remainingPosts = remaining);
       
       // Load posts
       await _loadPosts();
@@ -189,7 +194,40 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Vendor Posts'),
+            const Expanded(child: Text('Vendor Posts')),
+            if (_remainingPosts >= -1) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _remainingPosts > 0 ? Colors.green.shade100 : Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _remainingPosts > 0 ? Colors.green.shade300 : Colors.red.shade300,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.post_add,
+                      size: 14,
+                      color: _remainingPosts > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _remainingPosts == -1 
+                          ? 'Unlimited' 
+                          : '$_remainingPosts left',
+                      style: TextStyle(
+                        color: _remainingPosts > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         backgroundColor: Colors.deepPurple,
@@ -344,7 +382,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                     Icon(Icons.diamond),
                     const SizedBox(width: 8),
                     const Text(
-                      'Upgrade to Organizer Pro - \$99/month',
+                      'Upgrade to Organizer Pro - \$69/month',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

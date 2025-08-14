@@ -415,7 +415,7 @@ class _OrganizerVendorDiscoveryScreenState extends State<OrganizerVendorDiscover
                   Icon(Icons.diamond),
                   const SizedBox(width: 8),
                   const Text(
-                    'Upgrade to Market Organizer Pro - \$99/month',
+                    'Upgrade to Market Organizer Pro - \$69/month',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

@@ -610,7 +610,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                 const SizedBox(height: 16),
                 if (_summary!.vendorApplicationsByStatus.isNotEmpty)
                   _buildStatusBreakdown(
-                    'Vendor Applications',
+                    'Vendor Connections',
                     _summary!.vendorApplicationsByStatus,
                   ),
               ],
@@ -1598,7 +1598,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             ),
             const SizedBox(height: 16),
             const Text(
-              'Upgrade to Market Organizer Premium (\$39/month) to unlock:',
+              'Upgrade to Organizer Pro (\$69/month) to unlock:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),

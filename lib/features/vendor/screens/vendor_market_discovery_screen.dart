@@ -27,6 +27,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
   bool _hasPremiumAccess = false;
   bool _isLoadingMore = false;
   String? _error;
+  int _remainingApplications = 0;
   
   List<MarketDiscoveryResult> _discoveryResults = [];
   List<OrganizerVendorPostResult> _vendorPostResults = [];
@@ -89,6 +90,10 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       }
 
       setState(() => _hasPremiumAccess = true);
+      
+      // Load remaining applications count
+      final remaining = await SubscriptionService.getRemainingMarketApplications(user.uid);
+      setState(() => _remainingApplications = remaining);
       
       // Load initial results (without location for now)
       await _performDiscovery();
@@ -177,6 +182,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
+      // Check application limits first
+      final canApply = await SubscriptionService.canCreateMarketApplication(user.uid);
+      if (!canApply) {
+        await _showApplicationLimitDialog();
+        return;
+      }
+
       // Show application flow dialog instead of navigating away
       await _showApplicationDialog(market);
       
@@ -246,6 +258,20 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               Navigator.pop(context);
               // Save market to user's interested markets
               await _saveMarketInterest(market);
+              
+              // Increment application count
+              final user = FirebaseAuth.instance.currentUser;
+              if (user != null) {
+                try {
+                  await SubscriptionService.incrementApplicationCount(user.uid);
+                  // Update remaining applications count
+                  final remaining = await SubscriptionService.getRemainingMarketApplications(user.uid);
+                  setState(() => _remainingApplications = remaining);
+                } catch (e) {
+                  debugPrint('Error incrementing application count: $e');
+                }
+              }
+              
               // Show success message for application
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -302,7 +328,40 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Market Discovery'),
+            const Expanded(child: Text('Market Discovery')),
+            if (_remainingApplications >= -1) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _remainingApplications > 0 ? Colors.green.shade100 : Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _remainingApplications > 0 ? Colors.green.shade300 : Colors.red.shade300,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.send,
+                      size: 14,
+                      color: _remainingApplications > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _remainingApplications == -1 
+                          ? 'Unlimited' 
+                          : '$_remainingApplications left',
+                      style: TextStyle(
+                        color: _remainingApplications > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         backgroundColor: Colors.orange,
@@ -1588,6 +1647,89 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
         );
       }
     }
+  }
+
+  Future<void> _showApplicationLimitDialog() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final remaining = await SubscriptionService.getRemainingMarketApplications(user.uid);
+    
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange[700]),
+            const SizedBox(width: 8),
+            const Text('Application Limit Reached'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Pro for unlimited applications.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Vendor Pro Benefits:',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...([
+                    'Unlimited market applications',
+                    'Priority in discovery feeds',
+                    'Advanced analytics',
+                    'Master product lists',
+                  ]).map((benefit) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check, size: 16, color: Colors.green[600]),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(benefit)),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go('/premium/upgrade?tier=vendor&userId=${user.uid}');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade to Pro'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _trackVendorPostInteraction(String action, String postId) async {

@@ -116,24 +116,35 @@ class RealTimeAnalyticsService {
       final currentUserId = userId ?? _getCurrentUserId();
       final sessionId = _currentSessionId ?? await _getOrCreateSessionId();
       
-      final eventData = {
-        'userId': currentUserId,
-        'sessionId': sessionId,
-        'eventType': eventType,
-        'data': data,
-        'timestamp': FieldValue.serverTimestamp(),
-        'clientTimestamp': DateTime.now().millisecondsSinceEpoch,
-        'platform': defaultTargetPlatform.toString(),
-        'appVersion': '1.0.0', // Should be read from package info
-      };
+      final now = DateTime.now();
       
       // Try to send immediately if online
       if (await _isOnline()) {
+        final eventData = {
+          'userId': currentUserId,
+          'sessionId': sessionId,
+          'eventType': eventType,
+          'data': data,
+          'timestamp': FieldValue.serverTimestamp(),
+          'clientTimestamp': now.millisecondsSinceEpoch,
+          'platform': defaultTargetPlatform.toString(),
+          'appVersion': '1.0.0', // Should be read from package info
+        };
         await _firestore.collection(_userEventsCollection).add(eventData);
         debugPrint('Event tracked: $eventType');
       } else {
-        // Queue for offline sync
-        _offlineEventQueue.add(eventData);
+        // Create serializable data for offline storage (no FieldValue objects)
+        final offlineEventData = {
+          'userId': currentUserId,
+          'sessionId': sessionId,
+          'eventType': eventType,
+          'data': data,
+          'timestamp': now.millisecondsSinceEpoch, // Use regular timestamp for offline storage
+          'clientTimestamp': now.millisecondsSinceEpoch,
+          'platform': defaultTargetPlatform.toString(),
+          'appVersion': '1.0.0',
+        };
+        _offlineEventQueue.add(offlineEventData);
         await _saveOfflineEvents();
         debugPrint('Event queued for offline sync: $eventType');
       }

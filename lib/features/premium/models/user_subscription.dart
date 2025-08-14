@@ -36,6 +36,9 @@ class UserSubscription extends Equatable {
   final Map<String, dynamic> features;
   final Map<String, dynamic> limits;
   final Map<String, dynamic> metadata;
+  final int monthlyPostCount;
+  final int monthlyApplicationCount;
+  final DateTime? lastResetDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -57,6 +60,9 @@ class UserSubscription extends Equatable {
     this.features = const {},
     this.limits = const {},
     this.metadata = const {},
+    this.monthlyPostCount = 0,
+    this.monthlyApplicationCount = 0,
+    this.lastResetDate,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -88,6 +94,9 @@ class UserSubscription extends Equatable {
       features: Map<String, dynamic>.from(data['features'] ?? {}),
       limits: Map<String, dynamic>.from(data['limits'] ?? {}),
       metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
+      monthlyPostCount: data['monthlyPostCount']?.toInt() ?? 0,
+      monthlyApplicationCount: data['monthlyApplicationCount']?.toInt() ?? 0,
+      lastResetDate: (data['lastResetDate'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
@@ -115,6 +124,10 @@ class UserSubscription extends Equatable {
       'features': features,
       'limits': limits,
       'metadata': metadata,
+      'monthlyPostCount': monthlyPostCount,
+      'monthlyApplicationCount': monthlyApplicationCount,
+      'lastResetDate': lastResetDate != null 
+          ? Timestamp.fromDate(lastResetDate!) : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
     };
@@ -138,6 +151,9 @@ class UserSubscription extends Equatable {
     Map<String, dynamic>? features,
     Map<String, dynamic>? limits,
     Map<String, dynamic>? metadata,
+    int? monthlyPostCount,
+    int? monthlyApplicationCount,
+    DateTime? lastResetDate,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -159,6 +175,9 @@ class UserSubscription extends Equatable {
       features: features ?? this.features,
       limits: limits ?? this.limits,
       metadata: metadata ?? this.metadata,
+      monthlyPostCount: monthlyPostCount ?? this.monthlyPostCount,
+      monthlyApplicationCount: monthlyApplicationCount ?? this.monthlyApplicationCount,
+      lastResetDate: lastResetDate ?? this.lastResetDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -198,7 +217,7 @@ class UserSubscription extends Equatable {
       case SubscriptionTier.vendorPro:
         return 29.00; // $29.00/month
       case SubscriptionTier.marketOrganizerPro:
-        return 99.00; // $99.00/month
+        return 69.00; // $69.00/month
       case SubscriptionTier.enterprise:
         return 199.99; // $199.99/month
       default:
@@ -225,7 +244,7 @@ class UserSubscription extends Equatable {
     if (isFree) {
       return _getFreeFeatures(userType).contains(featureName);
     }
-    return features.containsKey(featureName) ? features[featureName] == true : true;
+    return features.containsKey(featureName) ? features[featureName] == true : false;
   }
 
   int getLimit(String limitName) {
@@ -264,6 +283,7 @@ class UserSubscription extends Equatable {
           'vendor_communication',
           'basic_event_management',
           'application_review',
+          'vendor_post_creation', // 1 post per month allowed for free
         ];
       case 'shopper':
         return [
@@ -286,13 +306,14 @@ class UserSubscription extends Equatable {
           'global_products': 3,
           'product_lists': 1,
           'markets_managed': -1, // unlimited for vendors
+          'vendor_posts_per_month': 0, // vendors can't create vendor posts in free tier
         };
       case 'market_organizer':
         return {
           'markets_managed': -1, // unlimited
           'events_per_month': 10,
           'vendor_communications_per_day': 50,
-          'vendor_posts_per_month': 2,
+          'vendor_posts_per_month': 1, // organizers can create 1 vendor post per month in free tier
           'post_responses_viewable': 5,
           'post_analytics_days': 30,
         };
@@ -434,6 +455,9 @@ class UserSubscription extends Equatable {
       metadata: {},
       createdAt: now,
       updatedAt: now,
+      monthlyPostCount: 0,
+      monthlyApplicationCount: 0,
+      lastResetDate: now,
     );
   }
 
@@ -517,10 +541,125 @@ class UserSubscription extends Equatable {
         metadata,
         createdAt,
         updatedAt,
+        monthlyPostCount,
+        monthlyApplicationCount,
+        lastResetDate,
       ];
+
+  /// Check if monthly post count needs to be reset
+  bool get needsMonthlyReset {
+    if (lastResetDate == null) return true;
+    final now = DateTime.now();
+    final lastReset = lastResetDate!;
+    
+    // Reset if it's been more than a month or if we're in a new month
+    return now.year > lastReset.year ||
+           (now.year == lastReset.year && now.month > lastReset.month);
+  }
+
+  /// Get effective monthly post count (resets if needed)
+  int get effectiveMonthlyPostCount {
+    return needsMonthlyReset ? 0 : monthlyPostCount;
+  }
+
+  /// Get effective monthly application count (resets if needed)
+  int get effectiveMonthlyApplicationCount {
+    return needsMonthlyReset ? 0 : monthlyApplicationCount;
+  }
+
+  /// Check if user can create a new vendor post
+  bool canCreateVendorPost() {
+    // Premium users have unlimited posts
+    if (isPremium) return true;
+    
+    final limit = getLimit('vendor_posts_per_month');
+    if (limit == -1) return true; // unlimited
+    
+    return effectiveMonthlyPostCount < limit;
+  }
+
+  /// Check remaining vendor posts for this month
+  int getRemainingVendorPosts() {
+    if (isPremium) return -1; // unlimited
+    
+    final limit = getLimit('vendor_posts_per_month');
+    if (limit == -1) return -1; // unlimited
+    
+    final remaining = limit - effectiveMonthlyPostCount;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  /// Check if user can create a market application
+  bool canCreateMarketApplication() {
+    // Premium users have unlimited applications
+    if (isPremium) return true;
+    
+    final limit = getLimit('market_applications_per_month');
+    if (limit == -1) return true; // unlimited
+    
+    return effectiveMonthlyApplicationCount < limit;
+  }
+
+  /// Get remaining market applications for this month
+  int getRemainingMarketApplications() {
+    if (isPremium) return -1; // unlimited
+    
+    final limit = getLimit('market_applications_per_month');
+    if (limit == -1) return -1; // unlimited
+    
+    final remaining = limit - effectiveMonthlyApplicationCount;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  /// Create a copy with incremented post count
+  UserSubscription incrementPostCount() {
+    final now = DateTime.now();
+    
+    if (needsMonthlyReset) {
+      return copyWith(
+        monthlyPostCount: 1,
+        lastResetDate: DateTime(now.year, now.month, 1),
+        updatedAt: now,
+      );
+    } else {
+      return copyWith(
+        monthlyPostCount: monthlyPostCount + 1,
+        updatedAt: now,
+      );
+    }
+  }
+
+  /// Create a copy with incremented application count
+  UserSubscription incrementApplicationCount() {
+    final now = DateTime.now();
+    
+    if (needsMonthlyReset) {
+      return copyWith(
+        monthlyApplicationCount: 1,
+        lastResetDate: DateTime(now.year, now.month, 1),
+        updatedAt: now,
+      );
+    } else {
+      return copyWith(
+        monthlyApplicationCount: monthlyApplicationCount + 1,
+        updatedAt: now,
+      );
+    }
+  }
+
+  /// Reset monthly counters (called at the beginning of each month)
+  UserSubscription resetMonthlyCounters() {
+    final now = DateTime.now();
+    return copyWith(
+      monthlyPostCount: 0,
+      monthlyApplicationCount: 0,
+      lastResetDate: DateTime(now.year, now.month, 1),
+      updatedAt: now,
+    );
+  }
 
   @override
   String toString() {
-    return 'UserSubscription(id: $id, userId: $userId, userType: $userType, tier: ${tier.name}, status: ${status.name})';
+    return 'UserSubscription(id: $id, userId: $userId, userType: $userType, tier: ${tier.name}, status: ${status.name}, monthlyPosts: $effectiveMonthlyPostCount, monthlyApplications: $effectiveMonthlyApplicationCount)';
   }
 }

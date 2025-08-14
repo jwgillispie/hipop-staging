@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import '../models/user_subscription.dart';
 import '../services/subscription_service.dart';
+import '../services/staging_test_service.dart';
 
 /// Premium onboarding screen that guides users through tier selection and setup
 class PremiumOnboardingScreen extends StatefulWidget {
@@ -123,7 +126,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           ),
           const SizedBox(height: 32),
           Text(
-            'Ready to Supercharge Your Business?',
+            _getWelcomeTitle(),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
@@ -131,7 +134,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed in the farmers market ecosystem.',
+            _getWelcomeDescription(),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: Colors.grey.shade600,
@@ -386,7 +389,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           {
             'tier': SubscriptionTier.vendorPro,
             'title': 'Vendor Pro',
-            'price': '\$19.99',
+            'price': '\$29.00',
             'description': 'Perfect for growing food vendors and artisans',
             'recommended': true,
             'features': [
@@ -422,18 +425,18 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           {
             'tier': SubscriptionTier.marketOrganizerPro,
             'title': 'Market Organizer Pro',
-            'price': '\$49.99',
+            'price': '\$69.00',
             'description': 'Comprehensive tools for market management',
             'recommended': true,
             'features': [
-              'Multi-market management dashboard',
-              'Vendor performance analytics',
-              'Financial forecasting tools',
-              'Automated vendor recruitment',
-              'Market intelligence reports',
-              'Budget planning and tracking',
-              'Vendor ranking system',
-              'Advanced reporting suite',
+              'Unlimited "Looking for Vendors" posts',
+              'Advanced vendor recruitment tools',
+              'Vendor response management system',
+              'Market performance analytics',
+              'Smart vendor matching algorithms',
+              'Post performance tracking',
+              'Vendor application insights',
+              'Priority customer support',
             ],
           },
           {
@@ -458,7 +461,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           {
             'tier': SubscriptionTier.vendorPro,
             'title': 'Vendor Pro',
-            'price': '\$19.99',
+            'price': '\$29.00',
             'description': 'Great for individual vendors',
             'features': [
               'Advanced analytics',
@@ -806,7 +809,21 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => Navigator.pushReplacementNamed(context, '/premium/dashboard'),
+              onPressed: () {
+                // Navigate to appropriate premium dashboard based on user type
+                switch (widget.userType) {
+                  case 'market_organizer':
+                    context.go('/organizer/premium-dashboard');
+                    break;
+                  case 'vendor':
+                    context.go('/vendor/premium-dashboard');
+                    break;
+                  default:
+                    // Fallback to main dashboard
+                    _navigateToUserDashboard();
+                    break;
+                }
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -900,7 +917,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       case 3:
         return null; // Payment page has its own button
       case 4:
-        return () => Navigator.pop(context);
+        return () => _navigateToUserDashboard();
       default:
         return null;
     }
@@ -917,7 +934,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       case 3:
         return 'Processing...';
       case 4:
-        return 'Done';
+        return 'Go to Dashboard';
       default:
         return 'Next';
     }
@@ -942,12 +959,23 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       // In production, this would integrate with proper Stripe checkout
       debugPrint('Processing subscription for ${_selectedPlan!['title']}');
       
-      // Simulate payment processing delay
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // For staging, directly upgrade the user
-      // TODO: Implement proper Stripe checkout flow
-      await SubscriptionService.upgradeToTier(widget.userId, _selectedTier!);
+      // Check if we're in staging environment
+      if (StagingTestService.isStagingEnvironment) {
+        debugPrint('🧪 [STAGING] Using test payment flow');
+        // Simulate payment processing delay for realistic UX
+        await Future.delayed(const Duration(seconds: 2));
+        
+        // Use staging test service for controlled testing
+        await StagingTestService.simulatePremiumUpgrade(
+          userId: widget.userId,
+          userType: widget.userType,
+          specificTier: _selectedTier!,
+        );
+      } else {
+        // TODO: Implement proper Stripe checkout flow for production
+        debugPrint('🚫 [PRODUCTION] Real payment flow not implemented yet');
+        throw Exception('Payment processing not available in production yet. Please contact support.');
+      }
       
       // Navigate to success page
       _pageController.nextPage(
@@ -960,6 +988,51 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         _errorMessage = 'Payment failed: ${e.toString()}';
         _isProcessing = false;
       });
+    }
+  }
+
+  String _getWelcomeTitle() {
+    switch (widget.userType) {
+      case 'market_organizer':
+        return 'Ready to Transform Your Market Management?';
+      case 'vendor':
+        return 'Ready to Supercharge Your Vendor Business?';
+      default:
+        return 'Ready to Supercharge Your Business?';
+    }
+  }
+
+  String _getWelcomeDescription() {
+    switch (widget.userType) {
+      case 'market_organizer':
+        return 'Unlock powerful vendor recruitment tools, market analytics, and advanced features designed to help you build thriving farmers markets.';
+      case 'vendor':
+        return 'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed as a vendor in farmers markets.';
+      default:
+        return 'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed in the farmers market ecosystem.';
+    }
+  }
+
+  void _navigateToUserDashboard() {
+    // Navigate back to the main dashboard front screen
+    // Use GoRouter to properly navigate and clear the entire navigation stack
+    switch (widget.userType) {
+      case 'market_organizer':
+        // Take them back to the organizer dashboard front screen
+        context.go('/organizer');
+        break;
+      case 'vendor':
+        // Take them back to the vendor dashboard front screen
+        context.go('/vendor');
+        break;
+      case 'shopper':
+        // Take them back to the shopper home screen
+        context.go('/shopper');
+        break;
+      default:
+        // Fallback - go to the auth landing page
+        context.go('/auth');
+        break;
     }
   }
 }

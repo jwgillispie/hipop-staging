@@ -190,7 +190,7 @@ class StagingTestService {
       case SubscriptionTier.vendorPro:
         return 29.00;
       case SubscriptionTier.marketOrganizerPro:
-        return 39.00;
+        return 69.00;
       case SubscriptionTier.enterprise:
         return 199.99;
     }

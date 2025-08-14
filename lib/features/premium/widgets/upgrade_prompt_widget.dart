@@ -286,7 +286,7 @@ class UpgradePromptWidget extends StatelessWidget {
       case 'market_organizer':
         return {
           'title': 'Market Organizer Pro',
-          'price': '\$49.99',
+          'price': '\$69.00',
           'tier': SubscriptionTier.marketOrganizerPro,
         };
       default:
