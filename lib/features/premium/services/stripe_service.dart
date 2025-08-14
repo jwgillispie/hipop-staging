@@ -19,6 +19,7 @@ class StripeService {
     required String priceId,
     required String customerEmail,
     required Map<String, String> metadata,
+    String? couponCode,
   }) async {
     try {
       debugPrint('🔒 Creating secure checkout session via Cloud Function');
@@ -28,7 +29,7 @@ class StripeService {
       
       // Call secure Cloud Function instead of direct Stripe API
       final callable = FirebaseFunctions.instance.httpsCallable('createCheckoutSession');
-      final result = await callable.call({
+      final requestData = {
         'priceId': priceId,
         'customerEmail': customerEmail,
         'userId': metadata['user_id'],
@@ -40,7 +41,15 @@ class StripeService {
             ? '${Uri.base.origin}/#/subscription/cancel'
             : 'hipop://subscription/cancel',
         'environment': dotenv.env['ENVIRONMENT'] ?? 'staging',
-      });
+      };
+      
+      // Add coupon code if provided
+      if (couponCode != null && couponCode.isNotEmpty) {
+        requestData['couponCode'] = couponCode;
+        debugPrint('🎟️ Including coupon code: $couponCode');
+      }
+      
+      final result = await callable.call(requestData);
 
       final checkoutUrl = result.data['url'] as String?;
       if (checkoutUrl == null || checkoutUrl.isEmpty) {
@@ -75,6 +84,7 @@ class StripeService {
     required String userType,
     required String userId,
     required String userEmail,
+    String? couponCode,
   }) async {
     try {
       debugPrint('');
@@ -98,6 +108,9 @@ class StripeService {
 
       // Create checkout session
       debugPrint('🔄 Creating Stripe checkout session...');
+      if (couponCode != null && couponCode.isNotEmpty) {
+        debugPrint('🎟️ With coupon code: $couponCode');
+      }
       final checkoutUrl = await createCheckoutSession(
         priceId: priceId,
         customerEmail: userEmail,
@@ -105,6 +118,7 @@ class StripeService {
           'user_id': userId,
           'user_type': userType,
         },
+        couponCode: couponCode,
       );
 
       debugPrint('✅ Checkout URL created: $checkoutUrl');

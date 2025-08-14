@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 
-class OrganizerOnboardingScreen extends StatefulWidget {
-  const OrganizerOnboardingScreen({super.key});
+class VendorOnboardingScreen extends StatefulWidget {
+  const VendorOnboardingScreen({super.key});
 
   @override
-  State<OrganizerOnboardingScreen> createState() => _OrganizerOnboardingScreenState();
+  State<VendorOnboardingScreen> createState() => _VendorOnboardingScreenState();
 }
 
-class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
+class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 6;
@@ -45,16 +45,16 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
   }
 
   void _completeOnboarding() async {
-    await OnboardingService.markOrganizerOnboardingComplete();
+    await OnboardingService.markVendorOnboardingComplete();
     if (mounted) {
-      context.go('/organizer');
+      context.go('/vendor');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green.shade50,
+      backgroundColor: Colors.orange.shade50,
       body: SafeArea(
         child: Column(
           children: [
@@ -66,8 +66,8 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   Expanded(
                     child: LinearProgressIndicator(
                       value: (_currentPage + 1) / _totalPages,
-                      backgroundColor: Colors.green.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade600),
+                      backgroundColor: Colors.orange.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -75,7 +75,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                     onPressed: _skipOnboarding,
                     child: Text(
                       'Skip',
-                      style: TextStyle(color: Colors.green.shade700),
+                      style: TextStyle(color: Colors.orange.shade700),
                     ),
                   ),
                 ],
@@ -93,10 +93,10 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 },
                 children: [
                   _buildWelcomePage(),
-                  _buildMarketManagementPage(),
-                  _buildVendorApplicationsPage(),
+                  _buildPopupCreationPage(),
+                  _buildMarketApplicationsPage(),
+                  _buildProductManagementPage(),
                   _buildAnalyticsPage(),
-                  _buildCalendarPage(),
                   _buildGetStartedPage(),
                 ],
               ),
@@ -112,8 +112,8 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                       child: OutlinedButton(
                         onPressed: _previousPage,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.green.shade700,
-                          side: BorderSide(color: Colors.green.shade300),
+                          foregroundColor: Colors.orange.shade700,
+                          side: BorderSide(color: Colors.orange.shade300),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: const Text('Previous'),
@@ -124,7 +124,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
+                        backgroundColor: Colors.orange.shade600,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -149,13 +149,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: Colors.orange.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.storefront,
               size: 80,
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
           ),
           const SizedBox(height: 40),
@@ -163,25 +163,25 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'Welcome to HiPop!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: Colors.orange.shade800,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 16),
           Text(
-            'You\'re now a Market Organizer! Let us show you how to manage your farmers market with ease.',
+            'You\'re now a Vendor! Let us show you how to grow your business and connect with customers at local markets.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
           Container(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.shade200),
+              border: Border.all(color: Colors.orange.shade200),
             ),
             child: Column(
               children: [
@@ -195,16 +195,16 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   'What you\'ll learn:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
+                    color: Colors.orange.shade800,
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  '• How to create and manage your market\n'
-                  '• Processing vendor applications\n'
-                  '• Viewing analytics and insights\n'
-                  '• Using the market calendar\n'
-                  '• Getting started with your first market',
+                  '• Creating and managing popup events\n'
+                  '• Applying to farmers markets\n'
+                  '• Managing your product listings\n'
+                  '• Tracking sales and analytics\n'
+                  '• Growing your vendor business',
                   style: TextStyle(fontSize: 14),
                 ),
               ],
@@ -215,7 +215,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
     );
   }
 
-  Widget _buildMarketManagementPage() {
+  Widget _buildPopupCreationPage() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -224,29 +224,29 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.teal.shade100,
+              color: Colors.blue.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.storefront,
+              Icons.event,
               size: 70,
-              color: Colors.teal.shade700,
+              color: Colors.blue.shade700,
             ),
           ),
           const SizedBox(height: 40),
           Text(
-            'Market Management',
+            'Create Popup Events',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: Colors.orange.shade800,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Create and manage your farmers markets with detailed information, operating schedules, and location data.',
+            'Share your popup events with the community. Let customers know when and where to find you.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
             textAlign: TextAlign.center,
           ),
@@ -258,7 +258,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: Colors.orange.shade100,
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -267,24 +267,61 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             child: Column(
               children: [
                 _buildFeatureItem(
-                  Icons.add_location,
-                  'Add Market Details',
-                  'Name, address, and description',
-                  Colors.blue,
+                  Icons.location_on,
+                  'Set Your Location',
+                  'Add precise location details for customers',
+                  Colors.red,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.schedule,
-                  'Set Operating Hours',
-                  'Days and times your market is open',
-                  Colors.orange,
+                  'Schedule Your Time',
+                  'Set date, time, and duration',
+                  Colors.blue,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.visibility,
-                  'Make It Public',
-                  'Shoppers can discover your market',
+                  Icons.description,
+                  'Describe Your Offerings',
+                  'Tell customers what to expect',
                   Colors.green,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.star, color: Colors.amber.shade600, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Free: 3 popup posts',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        'Pro: Unlimited popup posts',
+                        style: TextStyle(
+                          color: Colors.amber.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -294,7 +331,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
     );
   }
 
-  Widget _buildVendorApplicationsPage() {
+  Widget _buildMarketApplicationsPage() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -303,29 +340,29 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.orange.shade100,
+              color: Colors.green.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.assignment_turned_in,
+              Icons.assignment,
               size: 70,
-              color: Colors.orange.shade700,
+              color: Colors.green.shade700,
             ),
           ),
           const SizedBox(height: 40),
           Text(
-            'Vendor Connections',
+            'Apply to Markets',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: Colors.orange.shade800,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Manage vendor connections with ease. Share application links and review connections in one place.',
+            'Find and apply to farmers markets in your area. Get accepted to regular market slots for consistent business.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
             textAlign: TextAlign.center,
           ),
@@ -337,7 +374,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: Colors.orange.shade100,
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -346,29 +383,29 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             child: Column(
               children: [
                 _buildFeatureItem(
-                  Icons.share,
-                  'Share Application Links',
-                  'Send vendors a direct link to apply',
+                  Icons.search,
+                  'Discover Markets',
+                  'Browse available farmers markets',
                   Colors.blue,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.rate_review,
-                  'Review Applications',
-                  'Approve, reject, or waitlist vendors',
+                  Icons.send,
+                  'Submit Applications',
+                  'Apply with your vendor profile',
                   Colors.purple,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.notifications,
-                  'Get Notified',
-                  'Receive new applications instantly',
+                  'Track Status',
+                  'Get notified about application updates',
                   Colors.green,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -382,7 +419,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Tip: The application form collects all vendor info automatically - no paper forms needed!',
+                    'Tip: Complete your vendor profile to increase acceptance rates!',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.blue.shade700,
@@ -391,6 +428,149 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductManagementPage() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.inventory,
+              size: 70,
+              color: Colors.purple.shade700,
+            ),
+          ),
+          const SizedBox(height: 40),
+          Text(
+            'Manage Products',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange.shade800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Showcase your products to customers. Add photos, descriptions, and pricing to attract buyers.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.orange.shade700,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 40),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.shade100,
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildFeatureItem(
+                  Icons.add_photo_alternate,
+                  'Add Product Photos',
+                  'Showcase your items with images',
+                  Colors.pink,
+                ),
+                const Divider(),
+                _buildFeatureItem(
+                  Icons.description,
+                  'Product Descriptions',
+                  'Detailed info and pricing',
+                  Colors.blue,
+                ),
+                const Divider(),
+                _buildFeatureItem(
+                  Icons.category,
+                  'Organize by Category',
+                  'Group similar products together',
+                  Colors.green,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Free',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '3 products',
+                        style: TextStyle(
+                          color: Colors.orange.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Vendor Pro',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        'Unlimited products',
+                        style: TextStyle(
+                          color: Colors.green.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -406,29 +586,29 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: Colors.teal.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.analytics,
               size: 70,
-              color: Colors.green.shade700,
+              color: Colors.teal.shade700,
             ),
           ),
           const SizedBox(height: 40),
           Text(
-            'Analytics Dashboard',
+            'Track Your Success',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: Colors.orange.shade800,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'Track your market\'s performance with analytics. Upgrade to Market Organizer Pro (\$69/month) for advanced insights, vendor directory, and unlimited features.',
+            'Monitor your business performance with detailed analytics on sales, customer engagement, and market applications.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
             textAlign: TextAlign.center,
           ),
@@ -440,7 +620,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: Colors.orange.shade100,
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -450,206 +630,47 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               children: [
                 _buildFeatureItem(
                   Icons.trending_up,
-                  'Vendor Metrics',
-                  'Active, pending, and approved vendors',
-                  Colors.blue,
-                ),
-                const Divider(),
-                _buildFeatureItem(
-                  Icons.download,
-                  'Export Data',
-                  'Download reports for offline analysis',
-                  Colors.purple,
-                ),
-                const Divider(),
-                _buildFeatureItem(
-                  Icons.workspace_premium,
-                  'Vendor Directory (Pro)',
-                  'Search & filter all vendors with premium',
-                  Colors.amber,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 40),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '24',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                      Text(
-                        'Active Vendors',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '12',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade700,
-                        ),
-                      ),
-                      Text(
-                        'Pending Apps',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.teal.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.calendar_today,
-              size: 70,
-              color: Colors.teal.shade700,
-            ),
-          ),
-          const SizedBox(height: 40),
-          Text(
-            'Market Calendar',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Visualize your market schedules and operating days in an easy-to-read calendar format.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.green.shade100,
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                _buildFeatureItem(
-                  Icons.event,
-                  'Operating Schedule',
-                  'See all your market operating days',
-                  Colors.blue,
-                ),
-                const Divider(),
-                _buildFeatureItem(
-                  Icons.schedule,
-                  'Real-time Status',
-                  'Know which markets are open now',
+                  'Sales Tracking',
+                  'Monitor revenue and transactions',
                   Colors.green,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.calendar_view_month,
-                  'Monthly View',
-                  'Plan ahead with calendar overview',
+                  Icons.people,
+                  'Customer Insights',
+                  'See who\'s engaging with your business',
+                  Colors.blue,
+                ),
+                const Divider(),
+                _buildFeatureItem(
+                  Icons.assessment,
+                  'Market Performance',
+                  'Track application success rates',
                   Colors.purple,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.purple.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: Colors.purple.shade200),
             ),
-            child: Column(
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
+                Icon(Icons.workspace_premium, color: Colors.purple.shade600, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Vendor Pro includes advanced analytics dashboard with detailed insights',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.purple.shade700,
                     ),
-                    const SizedBox(width: 8),
-                    const Expanded(child: Text('Market Operating', style: TextStyle(fontSize: 12))),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
-                        color: Colors.orange,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(child: Text('Selected Day', style: TextStyle(fontSize: 12))),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -668,29 +689,29 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: Colors.orange.shade100,
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.rocket_launch,
               size: 80,
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
           ),
           const SizedBox(height: 40),
           Text(
-            'You\'re All Set!',
+            'You\'re Ready to Sell!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: Colors.orange.shade800,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            'You now know how to manage your farmers market with HiPop. Let\'s create your first market!',
+            'You now know how to grow your vendor business with HiPop. Let\'s set up your first popup event!',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: Colors.orange.shade700,
             ),
             textAlign: TextAlign.center,
           ),
@@ -702,7 +723,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: Colors.orange.shade100,
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -712,7 +733,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               children: [
                 Icon(
                   Icons.checklist,
-                  color: Colors.green.shade600,
+                  color: Colors.orange.shade600,
                   size: 32,
                 ),
                 const SizedBox(height: 16),
@@ -720,38 +741,37 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   'Quick Start Checklist',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
+                    color: Colors.orange.shade800,
                     fontSize: 16,
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildChecklistItem('Create your first market'),
-                _buildChecklistItem('Set operating hours and location'),
-                _buildChecklistItem('Share the vendor application link'),
-                _buildChecklistItem('Review and approve applications'),
-                _buildChecklistItem('Monitor analytics and growth'),
-                _buildChecklistItem('Consider Pro for vendor directory access'),
+                _buildChecklistItem('Complete your vendor profile'),
+                _buildChecklistItem('Add your product listings'),
+                _buildChecklistItem('Create your first popup event'),
+                _buildChecklistItem('Apply to local farmers markets'),
+                _buildChecklistItem('Track your success with analytics'),
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: Colors.green.shade200),
             ),
             child: Row(
               children: [
-                Icon(Icons.support_agent, color: Colors.blue.shade600, size: 20),
+                Icon(Icons.tips_and_updates, color: Colors.green.shade600, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Need help? You can always replay this onboarding from the settings menu.',
+                    'Consider upgrading to Vendor Pro for unlimited posts and advanced analytics!',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue.shade700,
+                      color: Colors.green.shade700,
                     ),
                   ),
                 ),
@@ -811,7 +831,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Icon(
             Icons.check_circle_outline,
             size: 16,
-            color: Colors.green.shade600,
+            color: Colors.orange.shade600,
           ),
           const SizedBox(width: 8),
           Expanded(

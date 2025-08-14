@@ -19,25 +19,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.storefront,
       title: 'Discover Pop-ups',
       subtitle: 'Find amazing local vendors and unique pop-up events near you',
-      description: 'Browse food trucks, local artists, and small businesses in your area.',
+      description: 'Browse food trucks, local artists, and small businesses in your area. Search by location and distance.',
     ),
     OnboardingPage(
       icon: Icons.location_on,
       title: 'Location-Based Search',
       subtitle: 'Search by location and set your preferred radius',
-      description: 'Use our smart location search to find pop-ups within your desired distance.',
-    ),
-    OnboardingPage(
-      icon: Icons.schedule,
-      title: 'Real-Time Updates',
-      subtitle: 'See what\'s happening now and what\'s coming up',
-      description: 'Stay updated with live pop-up events and never miss your favorites.',
+      description: 'Use our smart location search to find pop-ups within your desired distance. Real-time updates keep you informed.',
     ),
     OnboardingPage(
       icon: Icons.favorite,
       title: 'Save Your Favorites',
       subtitle: 'Bookmark vendors and events you love',
-      description: 'Keep track of your favorite vendors and get notified about their events.',
+      description: 'Free: Follow 10 vendors. Upgrade to Premium for unlimited follows and advanced search filters.',
+    ),
+    OnboardingPage(
+      icon: Icons.schedule,
+      title: 'Never Miss Out',
+      subtitle: 'Get notifications about your favorite vendors',
+      description: 'Stay updated with pop-up events and market schedules. Premium users get priority notifications.',
+    ),
+    OnboardingPage(
+      icon: Icons.workspace_premium,
+      title: 'Unlock Premium',
+      subtitle: 'Enhanced discovery for just \$4/month',
+      description: 'Unlimited vendor follows, advanced filters, personalized recommendations, and vendor appearance predictions.',
     ),
   ];
 
@@ -146,6 +152,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
+                  // Special handling for premium page
+                  if (index == _pages.length - 1) {
+                    return _buildPremiumPageContent(_pages[index]);
+                  }
                   return _buildPageContent(_pages[index]);
                 },
               ),
@@ -214,6 +224,113 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               height: 1.5,
             ),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumPageContent(OnboardingPage page) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Premium icon with gradient
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.purple.shade400, Colors.blue.shade400],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              page.icon,
+              size: 60,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 48),
+          // Title
+          Text(
+            page.title,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          // Subtitle
+          Text(
+            page.subtitle,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.purple[700],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          // Description
+          Text(
+            page.description,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          // Premium features list
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.purple.shade200),
+            ),
+            child: Column(
+              children: [
+                _buildPremiumFeature(Icons.people, 'Unlimited vendor follows'),
+                _buildPremiumFeature(Icons.search, 'Advanced search filters'),
+                _buildPremiumFeature(Icons.recommend, 'Personalized recommendations'),
+                _buildPremiumFeature(Icons.schedule, 'Vendor appearance predictions'),
+                _buildPremiumFeature(Icons.priority_high, 'Priority notifications'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumFeature(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: Colors.purple.shade600,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.purple.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),

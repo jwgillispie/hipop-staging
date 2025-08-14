@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class OnboardingService {
   static const String _organizerOnboardingKey = 'organizer_onboarding_completed';
   static const String _shopperOnboardingKey = 'shopper_onboarding_completed';
+  static const String _vendorOnboardingKey = 'vendor_onboarding_completed';
   static const String _shopperFirstTimeSignupKey = 'shopper_first_time_signup';
 
   /// Check if market organizer onboarding has been completed
@@ -62,11 +63,30 @@ class OnboardingService {
     await prefs.remove(_shopperFirstTimeSignupKey);
   }
 
+  /// Check if vendor onboarding has been completed
+  static Future<bool> isVendorOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_vendorOnboardingKey) ?? false;
+  }
+
+  /// Mark vendor onboarding as completed
+  static Future<void> markVendorOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_vendorOnboardingKey, true);
+  }
+
+  /// Reset vendor onboarding (for testing or re-showing)
+  static Future<void> resetVendorOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_vendorOnboardingKey);
+  }
+
   /// Reset all onboarding states
   static Future<void> resetAllOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_organizerOnboardingKey);
     await prefs.remove(_shopperOnboardingKey);
+    await prefs.remove(_vendorOnboardingKey);
     await prefs.remove(_shopperFirstTimeSignupKey);
   }
 }

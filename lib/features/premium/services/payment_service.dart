@@ -1,13 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_subscription.dart';
 
-// Web-safe platform detection
-bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-bool get _isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+// Web-safe platform detection - completely avoid Platform class on web
+bool get isWebPlatform => kIsWeb;
+
+// For mobile platforms, we'll disable platform-specific features
+// to avoid any Platform detection issues
+bool get isIOSPlatform => false; // Always false to avoid Platform detection errors
+
+bool get isAndroidPlatform => false; // Always false to avoid Platform detection errors
 
 /// Enhanced payment service that handles in-app Stripe payments with CardField
 class PaymentService {
@@ -26,31 +30,68 @@ class PaymentService {
         return;
       }
 
-      final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
-      if (publishableKey == null || publishableKey.isEmpty) {
-        throw Exception('Stripe publishable key not found in environment');
-      }
-
-      Stripe.publishableKey = publishableKey;
-      
-      // Set merchant identifier for Apple Pay (iOS only) - skip on web
-      if (_isIOS) {
-        try {
-          Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
-          debugPrint('🍎 Set merchant identifier for iOS');
-        } catch (e) {
-          debugPrint('⚠️ Could not set merchant identifier: $e');
-          // Continue without merchant identifier - not critical
-        }
+      // Use platform-specific initialization
+      if (isWebPlatform) {
+        await _initializeForWeb();
       } else {
-        debugPrint('🌐 ${kIsWeb ? 'Web' : 'Non-iOS'} platform detected - skipping merchant identifier');
+        await _initializeForMobile();
       }
 
       _isInitialized = true;
       debugPrint('✅ PaymentService initialized with Stripe');
     } catch (e) {
       debugPrint('❌ Failed to initialize PaymentService: $e');
+      
+      // Try web fallback initialization if primary method fails
+      if (!isWebPlatform && !_isInitialized) {
+        try {
+          debugPrint('🔄 Attempting web fallback initialization...');
+          await _initializeForWeb();
+          _isInitialized = true;
+          debugPrint('✅ PaymentService initialized with web fallback');
+          return;
+        } catch (fallbackError) {
+          debugPrint('❌ Web fallback initialization also failed: $fallbackError');
+        }
+      }
+      
       rethrow;
+    }
+  }
+
+  /// Initialize Stripe for web platform
+  static Future<void> _initializeForWeb() async {
+    final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
+    if (publishableKey == null || publishableKey.isEmpty) {
+      throw Exception('Stripe publishable key not found in environment');
+    }
+
+    Stripe.publishableKey = publishableKey;
+    debugPrint('🌐 Web platform initialization complete - merchant identifier not required');
+  }
+
+  /// Initialize Stripe for mobile platforms (iOS/Android)
+  static Future<void> _initializeForMobile() async {
+    final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
+    if (publishableKey == null || publishableKey.isEmpty) {
+      throw Exception('Stripe publishable key not found in environment');
+    }
+
+    Stripe.publishableKey = publishableKey;
+    
+    // Set merchant identifier for Apple Pay (iOS only)
+    if (isIOSPlatform) {
+      try {
+        Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
+        debugPrint('🍎 Set merchant identifier for iOS');
+      } catch (e) {
+        debugPrint('⚠️ Could not set merchant identifier: $e');
+        // Continue without merchant identifier - not critical
+      }
+    } else if (isAndroidPlatform) {
+      debugPrint('🤖 Android platform initialization complete');
+    } else {
+      debugPrint('📱 Mobile platform initialization complete');
     }
   }
 

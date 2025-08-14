@@ -404,7 +404,7 @@ class RealTimeAnalyticsService {
         'startTime': Timestamp.fromDate(_sessionStartTime!),
         'endTime': FieldValue.serverTimestamp(),
         'duration': duration,
-        'platform': defaultTargetPlatform.toString(),
+        'platform': kIsWeb ? 'web' : defaultTargetPlatform.toString(),
       });
     } catch (e) {
       debugPrint('Error saving session summary: $e');

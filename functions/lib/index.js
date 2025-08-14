@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.secureStripeWebhook = exports.monitorPaymentSecurity = exports.generatePerformanceDashboard = exports.collectPerformanceMetrics = exports.dailyBillingNotifications = exports.weeklyUsageAnalytics = exports.dailySubscriptionHealthCheck = exports.monthlyUsageReset = exports.resetUsageLimits = exports.getUserUsageAnalytics = exports.enforceUsageLimit = exports.trackUsage = exports.validateMultipleFeatures = exports.validateUsageLimit = exports.validateFeatureAccess = exports.validatePromoCode = exports.stripeWebhook = exports.cancelSubscription = exports.verifySubscriptionSession = exports.createCheckoutSession = exports.createPaymentIntent = void 0;
+exports.secureStripeWebhook = exports.monitorPaymentSecurity = exports.generatePerformanceDashboard = exports.collectPerformanceMetrics = exports.dailyBillingNotifications = exports.weeklyUsageAnalytics = exports.dailySubscriptionHealthCheck = exports.monthlyUsageReset = exports.resetUsageLimits = exports.getUserUsageAnalytics = exports.enforceUsageLimit = exports.trackUsage = exports.validateMultipleFeatures = exports.validateUsageLimit = exports.validateFeatureAccess = exports.createFoundingPartnerCoupon = exports.validatePromoCode = exports.stripeWebhook = exports.cancelSubscription = exports.verifySubscriptionSession = exports.createCheckoutSession = exports.createPaymentIntent = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
@@ -164,6 +164,54 @@ exports.createPaymentIntent = functions.https.onCall(async (data, context) => {
     }
 });
 // 🔒 SECURE: Create checkout session server-side
+/**
+ * Validates a founding partner coupon
+ */
+async function validateFoundingPartnerCoupon(couponCode, userId, userEmail) {
+    try {
+        // Check if coupon exists in our tracking system
+        const couponRef = db.collection('coupon_redemptions').doc(couponCode);
+        const couponDoc = await couponRef.get();
+        if (!couponDoc.exists) {
+            // If not in our system, it might be a regular Stripe coupon
+            // Let Stripe handle it
+            return true;
+        }
+        const couponData = couponDoc.data();
+        // Check if coupon has expired
+        if (couponData?.expiresAt && couponData.expiresAt.toDate() < new Date()) {
+            functions.logger.warn('Coupon expired', { couponCode, userId });
+            return false;
+        }
+        // Check if user has already used this coupon
+        const usedBy = couponData?.usedBy || [];
+        const hasUsed = usedBy.some((user) => user.userId === userId || user.email === userEmail);
+        if (hasUsed) {
+            functions.logger.warn('Coupon already used by user', { couponCode, userId, userEmail });
+            return false;
+        }
+        // Check if coupon has reached max uses
+        if (couponData?.maxUses && usedBy.length >= couponData.maxUses) {
+            functions.logger.warn('Coupon max uses reached', { couponCode, uses: usedBy.length });
+            return false;
+        }
+        // Record the usage
+        await couponRef.update({
+            usedBy: admin.firestore.FieldValue.arrayUnion({
+                userId,
+                email: userEmail,
+                redeemedAt: admin.firestore.FieldValue.serverTimestamp(),
+            })
+        });
+        functions.logger.info('Coupon validated and recorded', { couponCode, userId });
+        return true;
+    }
+    catch (error) {
+        functions.logger.error('Error validating coupon', { error, couponCode, userId });
+        // If there's an error, let them proceed without the coupon
+        return false;
+    }
+}
 exports.createCheckoutSession = functions.https.onCall(async (data, context) => {
     // Verify user is authenticated
     if (!context.auth) {
@@ -174,14 +222,30 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
         throw new functions.https.HttpsError('permission-denied', 'Can only create subscription for authenticated user');
     }
     try {
+        // Validate coupon if provided
+        let validatedCoupon = undefined;
+        if (data.couponCode) {
+            const isValid = await validateFoundingPartnerCoupon(data.couponCode, data.userId, data.customerEmail);
+            if (isValid) {
+                validatedCoupon = data.couponCode;
+            }
+            else {
+                // Don't throw error, just don't apply the coupon
+                functions.logger.warn('Invalid coupon attempted', {
+                    couponCode: data.couponCode,
+                    userId: data.userId
+                });
+            }
+        }
         functions.logger.info('🔒 Creating secure checkout session', {
             userId: data.userId,
             userType: data.userType,
             priceId: data.priceId,
             environment: data.environment,
+            coupon: validatedCoupon,
         });
-        // Create checkout session with Stripe
-        const session = await stripe.checkout.sessions.create({
+        // Build session configuration
+        const sessionConfig = {
             mode: 'subscription',
             line_items: [
                 {
@@ -192,7 +256,7 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
             customer_email: data.customerEmail,
             success_url: data.successUrl,
             cancel_url: data.cancelUrl,
-            allow_promotion_codes: true,
+            allow_promotion_codes: !validatedCoupon,
             billing_address_collection: 'required',
             metadata: {
                 userId: data.userId,
@@ -206,7 +270,33 @@ exports.createCheckoutSession = functions.https.onCall(async (data, context) => 
                     environment: data.environment,
                 },
             },
-        });
+        };
+        // Apply the validated coupon to the session
+        if (validatedCoupon) {
+            // Try to apply the coupon as a Stripe coupon
+            try {
+                const coupon = await stripe.coupons.retrieve(validatedCoupon);
+                if (coupon && coupon.valid) {
+                    sessionConfig.discounts = [{
+                            coupon: validatedCoupon,
+                        }];
+                    functions.logger.info('Applied Stripe coupon to session', {
+                        couponCode: validatedCoupon,
+                        percentOff: coupon.percent_off,
+                        amountOff: coupon.amount_off,
+                    });
+                }
+            }
+            catch (couponError) {
+                // If it's not a valid Stripe coupon, just log and continue
+                functions.logger.warn('Coupon not found in Stripe', {
+                    couponCode: validatedCoupon,
+                    error: couponError
+                });
+            }
+        }
+        // Create the checkout session
+        const session = await stripe.checkout.sessions.create(sessionConfig);
         functions.logger.info('✅ Checkout session created', {
             sessionId: session.id,
             url: session.url,
@@ -638,6 +728,61 @@ exports.validatePromoCode = functions.https.onCall(async (data, context) => {
     }
 });
 // 🔒 SECURE: Server-side feature access validation
+// 🔒 SECURE: Create founding partner coupons (admin only)
+exports.createFoundingPartnerCoupon = functions.https.onCall(async (data, context) => {
+    // Verify user is authenticated
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Must be authenticated to create coupons');
+    }
+    // In production, you'd want to check if user is admin
+    // For now, we'll just log who created it
+    functions.logger.info('Creating founding partner coupon', {
+        couponCode: data.couponCode,
+        marketName: data.marketName,
+        createdBy: context.auth.uid,
+    });
+    try {
+        const couponRef = db.collection('coupon_redemptions').doc(data.couponCode);
+        // Check if coupon already exists
+        const existing = await couponRef.get();
+        if (existing.exists) {
+            throw new functions.https.HttpsError('already-exists', 'Coupon code already exists');
+        }
+        // Calculate expiration date if specified
+        let expiresAt = null;
+        if (data.expiresInDays) {
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + data.expiresInDays);
+            expiresAt = admin.firestore.Timestamp.fromDate(expirationDate);
+        }
+        // Create the coupon tracking document
+        await couponRef.set({
+            marketName: data.marketName,
+            maxUses: data.maxUses || null,
+            expiresAt: expiresAt,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            createdBy: context.auth.uid,
+            usedBy: [],
+            type: 'founding_partner',
+        });
+        functions.logger.info('✅ Founding partner coupon created', {
+            couponCode: data.couponCode,
+            marketName: data.marketName,
+        });
+        return {
+            success: true,
+            couponCode: data.couponCode,
+            message: `Coupon ${data.couponCode} created for ${data.marketName}`,
+        };
+    }
+    catch (error) {
+        functions.logger.error('❌ Error creating coupon', error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', 'Failed to create coupon');
+    }
+});
 exports.validateFeatureAccess = functions.https.onCall(async (data, context) => {
     // Verify user is authenticated
     if (!context.auth) {

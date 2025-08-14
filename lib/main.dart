@@ -57,8 +57,16 @@ Future<void> _initializeStripe() async {
       Stripe.publishableKey = publishableKey;
       
       // Set merchant identifier for Apple Pay (iOS only) - skip on web
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-        Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
+      if (!kIsWeb) {
+        try {
+          // Use conditional platform check to avoid web errors
+          if (defaultTargetPlatform == TargetPlatform.iOS) {
+            Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
+          }
+        } catch (e) {
+          debugPrint('⚠️ Could not set merchant identifier: $e');
+          // Continue without merchant identifier - not critical for web
+        }
       }
       
       debugPrint('✅ Stripe initialized with publishable key');
