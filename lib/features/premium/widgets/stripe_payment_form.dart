@@ -250,10 +250,11 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
         ),
         const SizedBox(height: 24),
         
-        // Coupon code input field
-        _buildCouponField(),
-        
-        const SizedBox(height: 16),
+        // Coupon code input field - only show on mobile
+        if (!kIsWeb) ...[
+          _buildCouponField(),
+          const SizedBox(height: 16),
+        ],
         
         // Card input field - web-safe implementation
         _buildCardInputField(),

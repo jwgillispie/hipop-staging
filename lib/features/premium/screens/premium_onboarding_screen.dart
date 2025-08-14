@@ -436,13 +436,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'description': 'Perfect for growing food vendors and artisans',
             'recommended': true,
             'features': [
-              'Full vendor analytics dashboard',
-              'Unlimited market participation',
-              'Customer acquisition analysis',
-              'Profit optimization insights',
+              'Advanced vendor analytics dashboard',
+              'Unlimited market application posts',
+              'Customer acquisition cost analysis',
+              'Profit optimization strategies',
               'Market expansion recommendations',
-              'Seasonal business planning',
-              'Weather correlation data',
+              'Seasonal trends and planning tools',
+              'Performance correlation insights',
               'Priority customer support',
             ],
           },
@@ -453,13 +453,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'description': 'For large vendor operations and multi-market presence',
             'features': [
               'Everything in Vendor Pro',
-              'White-label analytics platform',
-              'Custom API access',
-              'Advanced data integrations',
+              'Enterprise analytics dashboard',
+              'Custom API access and integrations',
+              'Advanced reporting capabilities',
               'Dedicated account manager',
-              'Custom reporting and branding',
+              'Multi-location management tools',
+              'Custom branding options',
               'Enterprise-grade SLA',
-              'Multi-location management',
             ],
           },
         ];
@@ -473,10 +473,10 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'recommended': true,
             'features': [
               'Unlimited "Looking for Vendors" posts',
-              'Advanced vendor recruitment tools',
-              'Vendor response management system',
+              'Vendor directory and discovery tools',
+              'Vendor invitation and contact system',
               'Market performance analytics',
-              'Smart vendor matching algorithms',
+              'Vendor response management system',
               'Post performance tracking',
               'Vendor application insights',
               'Priority customer support',
@@ -489,13 +489,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'description': 'For market management companies and large operations',
             'features': [
               'Everything in Market Organizer Pro',
-              'White-label platform',
-              'Custom API access',
-              'Advanced integrations',
+              'Enterprise analytics platform',
+              'Custom API access and integrations',
+              'Advanced reporting capabilities',
               'Dedicated account manager',
-              'Custom branding and reports',
-              'Enterprise SLA',
-              'Multi-tenant management',
+              'Multi-market management tools',
+              'Custom branding options',
+              'Enterprise-grade SLA',
             ],
           },
         ];
@@ -641,22 +641,57 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   }
 
   String _getFeatureDescription(String feature) {
-    // Simplified feature descriptions
-    if (feature.toLowerCase().contains('analytics')) {
-      return 'Comprehensive data insights to understand your business performance';
+    // Specific feature descriptions based on actual implementation
+    final lower = feature.toLowerCase();
+    
+    // Vendor features
+    if (lower.contains('customer acquisition cost')) {
+      return 'Track and optimize your cost per customer with detailed CAC analysis';
     }
-    if (feature.toLowerCase().contains('optimization')) {
-      return 'AI-powered recommendations to increase your revenue and efficiency';
+    if (lower.contains('profit optimization')) {
+      return 'Data-driven strategies to maximize your profit margins and efficiency';
     }
-    if (feature.toLowerCase().contains('support')) {
-      return 'Get help from our expert team when you need it most';
+    if (lower.contains('market expansion')) {
+      return 'AI-powered recommendations for new markets based on your performance';
     }
-    if (feature.toLowerCase().contains('api')) {
+    if (lower.contains('seasonal trends')) {
+      return 'Plan your inventory and marketing around seasonal demand patterns';
+    }
+    
+    // Market organizer features
+    if (lower.contains('vendor directory')) {
+      return 'Search and discover vendors with advanced filtering and analytics';
+    }
+    if (lower.contains('vendor invitation')) {
+      return 'Send invitations directly to vendors for your market events';
+    }
+    if (lower.contains('unlimited') && lower.contains('posts')) {
+      return 'Create as many vendor recruitment posts as needed';
+    }
+    if (lower.contains('vendor response')) {
+      return 'Manage and track responses to your vendor recruitment posts';
+    }
+    
+    // General features
+    if (lower.contains('analytics') || lower.contains('dashboard')) {
+      return 'Comprehensive insights into your performance and growth opportunities';
+    }
+    if (lower.contains('support') && lower.contains('priority')) {
+      return 'Get priority help from our support team when you need it';
+    }
+    if (lower.contains('api')) {
       return 'Connect your data with other tools and build custom integrations';
     }
-    if (feature.toLowerCase().contains('white-label')) {
-      return 'Customize the platform with your own branding and colors';
+    if (lower.contains('enterprise') && lower.contains('sla')) {
+      return 'Guaranteed uptime and response times for business-critical operations';
     }
+    if (lower.contains('multi-location') || lower.contains('multi-market')) {
+      return 'Manage multiple locations or markets from a single dashboard';
+    }
+    if (lower.contains('branding') || lower.contains('custom')) {
+      return 'Customize the platform appearance and reports with your branding';
+    }
+    
     return 'Advanced feature to help grow your business';
   }
 

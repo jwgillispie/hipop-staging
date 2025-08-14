@@ -19,7 +19,7 @@ class SubscriptionCancelScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.go('/'),
+          onPressed: () => context.go('/auth'),
         ),
       ),
       body: SingleChildScrollView(
@@ -120,7 +120,7 @@ class SubscriptionCancelScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => context.go('/'),
+                onPressed: () => context.go('/auth'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
