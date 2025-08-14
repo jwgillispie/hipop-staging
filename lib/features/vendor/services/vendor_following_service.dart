@@ -22,6 +22,9 @@ class VendorFollowingService {
       final favoritesRepo = FavoritesRepository(); 
       await favoritesRepo.addFavoriteVendor(vendorId);
 
+      // Track analytics for vendor (always - helps with free user data too)
+      await _trackVendorAnalytics(vendorId, 'favorite', shopperId);
+
       // Premium users also get cloud sync for notifications & recommendations
       if (isPremium) {
         final followDoc = {
@@ -56,6 +59,9 @@ class VendorFollowingService {
       // Always remove from local favorites
       final favoritesRepo = FavoritesRepository();
       await favoritesRepo.removeFavoriteVendor(vendorId);
+
+      // Track analytics for unfavorite
+      await _trackVendorAnalytics(vendorId, 'unfavorite', shopperId);
 
       // Premium users also remove from cloud
       if (isPremium) {
@@ -266,5 +272,46 @@ class VendorFollowingService {
       debugPrint('❌ Error getting recommendations: $e');
       return [];
     }
+  }
+
+  /// Track vendor analytics for favorites/views
+  static Future<void> _trackVendorAnalytics(String vendorId, String action, String userId) async {
+    try {
+      final analyticsDoc = {
+        'vendorId': vendorId,
+        'action': action, // 'favorite', 'view', 'unfavorite'
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'date': DateTime.now().toIso8601String().split('T')[0], // YYYY-MM-DD for daily aggregation
+      };
+
+      // Add to analytics collection
+      await _firestore.collection('analytics').add(analyticsDoc);
+
+      // Update vendor's daily analytics summary
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final dailyStatsDoc = _firestore
+          .collection('vendor_daily_analytics')
+          .doc('${vendorId}_$today');
+
+      await dailyStatsDoc.set({
+        'vendorId': vendorId,
+        'date': today,
+        'favorites': action == 'favorite' ? FieldValue.increment(1) : 
+                    action == 'unfavorite' ? FieldValue.increment(-1) : 0,
+        'views': action == 'view' ? FieldValue.increment(1) : 0,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      debugPrint('✅ Analytics tracked: $action for vendor $vendorId');
+    } catch (e) {
+      debugPrint('❌ Error tracking analytics: $e');
+      // Don't throw - analytics tracking shouldn't break the main functionality
+    }
+  }
+
+  /// Track vendor popup view for analytics
+  static Future<void> trackVendorView(String vendorId, String userId) async {
+    await _trackVendorAnalytics(vendorId, 'view', userId);
   }
 }

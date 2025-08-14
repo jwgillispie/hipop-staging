@@ -1319,18 +1319,148 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving product: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        // Check if this is a limit error and show upgrade dialog
+        if (e.toString().contains('Product limit reached')) {
+          _showProductLimitReachedDialog(dialogContext);
+        } else {
+          // Show regular error dialog
+          _showErrorDialog(dialogContext, 'Error saving product', e.toString());
+        }
       }
     }
   }
 
   void _showEditProductDialog(VendorProduct product) {
     _showProductDialog(product);
+  }
+
+  void _showProductLimitReachedDialog(BuildContext dialogContext) {
+    showDialog(
+      context: dialogContext,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.upgrade,
+                color: Colors.orange[700],
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Product Limit Reached',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'You\'ve reached your limit of 3 products on the free plan.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Upgrade to Vendor Pro (\$29/month) to unlock:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('✅ Unlimited products'),
+                  const Text('✅ Unlimited product lists'),
+                  const Text('✅ Advanced analytics'),
+                  const Text('✅ Revenue tracking'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // TODO: Navigate to premium upgrade flow
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Premium upgrade flow would open here'),
+                  backgroundColor: Colors.blue,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext dialogContext, String title, String message) {
+    showDialog(
+      context: dialogContext,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Colors.red[600],
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showDeleteProductDialog(VendorProduct product) {
@@ -1456,9 +1586,257 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
   }
 
   void _viewProductList(VendorProductList list) {
-    // TODO: Implement detailed product list view with products
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('View ${list.name} details - Coming soon!')),
+    showDialog(
+      context: context,
+      builder: (context) => _buildProductListViewDialog(list),
+    );
+  }
+
+  Widget _buildProductListViewDialog(VendorProductList list) {
+    // Get products in this list
+    final listProducts = _products.where((product) => 
+      list.productIds.contains(product.id)
+    ).toList();
+    
+    // Get products NOT in this list
+    final availableProducts = _products.where((product) => 
+      !list.productIds.contains(product.id)
+    ).toList();
+
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: list.color != null 
+                    ? Color(int.parse(list.color!.substring(1), radix: 16) + 0xFF000000)
+                    : Theme.of(context).primaryColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.list_alt, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          list.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (list.description != null)
+                          Text(
+                            list.description!,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _editProductList(list);
+                        },
+                        icon: const Icon(Icons.edit, color: Colors.white),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: DefaultTabController(
+                length: 2,
+                child: Column(
+                  children: [
+                    const TabBar(
+                      tabs: [
+                        Tab(icon: Icon(Icons.inventory), text: 'Products in List'),
+                        Tab(icon: Icon(Icons.add_circle_outline), text: 'Add Products'),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          // Products in list tab
+                          _buildProductsInListTab(list, listProducts),
+                          // Add products tab
+                          _buildAddProductsTab(list, availableProducts),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductsInListTab(VendorProductList list, List<VendorProduct> listProducts) {
+    if (listProducts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inventory, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No Products in List',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Switch to "Add Products" tab to add products to this list.',
+              style: TextStyle(color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: listProducts.length,
+      itemBuilder: (context, index) {
+        final product = listProducts[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue[100],
+              child: Text(
+                product.name[0].toUpperCase(),
+                style: TextStyle(
+                  color: Colors.blue[800],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            title: Text(
+              product.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.category),
+                if (product.basePrice != null)
+                  Text('\$${product.basePrice!.toStringAsFixed(2)}'),
+              ],
+            ),
+            trailing: IconButton(
+              onPressed: () => _removeProductFromList(list, product),
+              icon: const Icon(Icons.remove_circle, color: Colors.red),
+              tooltip: 'Remove from list',
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAddProductsTab(VendorProductList list, List<VendorProduct> availableProducts) {
+    if (availableProducts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle, size: 64, color: Colors.green[400]),
+            const SizedBox(height: 16),
+            Text(
+              'All Products Added',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'All your products are already in this list!',
+              style: TextStyle(color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: availableProducts.length,
+      itemBuilder: (context, index) {
+        final product = availableProducts[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.green[100],
+              child: Text(
+                product.name[0].toUpperCase(),
+                style: TextStyle(
+                  color: Colors.green[800],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            title: Text(
+              product.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(product.category),
+                if (product.basePrice != null)
+                  Text('\$${product.basePrice!.toStringAsFixed(2)}'),
+              ],
+            ),
+            trailing: ElevatedButton.icon(
+              onPressed: () => _addProductToList(list, product),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1701,14 +2079,109 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving list: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        // Check if this is a limit error and show upgrade dialog
+        if (e.toString().contains('Product list limit reached')) {
+          _showProductListLimitReachedDialog();
+        } else {
+          // Show regular error dialog
+          _showErrorDialog(context, 'Error saving list', e.toString());
+        }
       }
     }
+  }
+
+  void _showProductListLimitReachedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.upgrade,
+                color: Colors.orange[700],
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Product List Limit Reached',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'You\'ve reached your limit of 1 product list on the free plan.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Upgrade to Vendor Pro (\$29/month) to unlock:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('✅ Unlimited product lists'),
+                  const Text('✅ Unlimited products'),
+                  const Text('✅ Advanced analytics'),
+                  const Text('✅ Revenue tracking'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // TODO: Navigate to premium upgrade flow
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Premium upgrade flow would open here'),
+                  backgroundColor: Colors.blue,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
   }
 
   // =============================================================================
@@ -1867,6 +2340,94 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error sending feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // =============================================================================
+  // PRODUCT LIST ITEM MANAGEMENT METHODS
+  // =============================================================================
+
+  Future<void> _addProductToList(VendorProductList list, VendorProduct product) async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Adding "${product.name}" to "${list.name}"...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // Add the product to the list using the service
+      await VendorProductService.addProductToList(list.id, product.id);
+
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added "${product.name}" to "${list.name}"'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the data to update the UI
+        await _loadInitialData();
+        
+        // Close and reopen the dialog to show updated data
+        Navigator.pop(context);
+        _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+      }
+    } catch (e) {
+      debugPrint('Error adding product to list: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding product to list: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _removeProductFromList(VendorProductList list, VendorProduct product) async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Removing "${product.name}" from "${list.name}"...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // Remove the product from the list using the service
+      await VendorProductService.removeProductFromList(list.id, product.id);
+
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Removed "${product.name}" from "${list.name}"'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh the data to update the UI
+        await _loadInitialData();
+        
+        // Close and reopen the dialog to show updated data
+        Navigator.pop(context);
+        _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+      }
+    } catch (e) {
+      debugPrint('Error removing product from list: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing product from list: $e'),
             backgroundColor: Colors.red,
           ),
         );

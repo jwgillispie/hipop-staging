@@ -10,6 +10,8 @@ import '../services/vendor_market_relationship_service.dart';
 import '../../market/services/market_service.dart';
 import '../../market/models/market.dart';
 import '../../shared/services/real_time_analytics_service.dart';
+import '../../premium/services/subscription_service.dart';
+import '../../premium/widgets/upgrade_prompt_widget.dart';
 
 /// Vendor Sales Tracker Screen
 /// 
@@ -53,6 +55,10 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   bool _isSaving = false;
   VendorSalesData? _existingSalesData;
   
+  // Premium access state
+  bool _hasPremiumAccess = false;
+  bool _isCheckingPremium = true;
+  
   // Quick entry mode for busy vendors
   bool _quickEntryMode = false;
   
@@ -68,6 +74,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     _selectedDate = widget.selectedDate ?? DateTime.now();
     _selectedMarketId = widget.marketId;
     _commissionRateController.text = '5.0'; // Default 5% commission
+    _checkPremiumAccess();
     _loadApprovedMarkets();
     _loadExistingSalesData();
     
@@ -91,6 +98,37 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     _commissionRateController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkPremiumAccess() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      setState(() {
+        _hasPremiumAccess = false;
+        _isCheckingPremium = false;
+      });
+      return;
+    }
+
+    try {
+      final hasAccess = await SubscriptionService.hasFeature(
+        userId,
+        'sales_tracking',
+      );
+      if (mounted) {
+        setState(() {
+          _hasPremiumAccess = hasAccess;
+          _isCheckingPremium = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasPremiumAccess = false;
+          _isCheckingPremium = false;
+        });
+      }
+    }
   }
   
   Future<void> _loadExistingSalesData() async {
@@ -224,18 +262,22 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           ),
         ],
       ),
-      body: _isLoading
+      body: _isCheckingPremium
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-              key: _formKey,
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildRevenueTab(),
-                ],
-              ),
-            ),
-      bottomNavigationBar: Container(
+          : !_hasPremiumAccess
+              ? _buildPremiumRequiredScreen()
+              : _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Form(
+                      key: _formKey,
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildRevenueTab(),
+                        ],
+                      ),
+                    ),
+      bottomNavigationBar: _hasPremiumAccess ? Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
@@ -277,7 +319,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                   ),
           ),
         ),
-      ),
+      ) : null,
     );
   }
   
@@ -570,6 +612,146 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumRequiredScreen() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 60),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.orange.shade300),
+            ),
+            child: Icon(
+              Icons.attach_money,
+              size: 64,
+              color: Colors.orange[700],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Sales Tracker',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.orange[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Revenue tracking is a premium feature exclusively available to Vendor Pro subscribers.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Colors.grey[700],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Upgrade to track your sales, revenue, commissions, and gain insights into your business performance.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          _buildPremiumPrompt(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPremiumPrompt() {
+    return Card(
+      color: Colors.orange.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.attach_money,
+                    color: Colors.orange,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Unlock Vendor Pro Sales Tracking',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Upgrade to Vendor Pro (\$29/month) to unlock:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('💰 Revenue & commission tracking'),
+                SizedBox(height: 4),
+                Text('📊 Sales performance analytics'),
+                SizedBox(height: 4),
+                Text('📈 Market-by-market revenue insights'),
+                SizedBox(height: 4),
+                Text('🧾 Transaction history & reporting'),
+                SizedBox(height: 4),
+                Text('📱 Mobile-optimized data entry'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => ContextualUpgradePrompts.showFeatureLockedPrompt(
+                  context,
+                  userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                  userType: 'vendor',
+                  featureName: 'sales_tracking',
+                  featureDisplayName: 'Sales Tracking',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Upgrade to Vendor Pro',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

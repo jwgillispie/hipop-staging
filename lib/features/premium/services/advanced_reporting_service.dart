@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../vendor/services/vendor_premium_analytics_service.dart';
-import '../../organizer/services/market_organizer_premium_analytics_service.dart';
 import '../../shared/services/customer_feedback_service.dart';
 import 'market_intelligence_service.dart';
 import 'price_optimization_service.dart';

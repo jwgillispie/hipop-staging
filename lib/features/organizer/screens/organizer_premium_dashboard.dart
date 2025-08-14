@@ -7,6 +7,8 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/organizer/screens/organizer_analytics_screen.dart';
+import 'package:hipop/features/premium/services/subscription_service.dart';
+import 'package:hipop/features/premium/screens/premium_onboarding_screen.dart';
 
 class OrganizerPremiumDashboard extends StatefulWidget {
   const OrganizerPremiumDashboard({super.key});
@@ -20,18 +22,143 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   late TabController _tabController;
   Stream<List<VendorPost>>? _marketPostsStream;
   Stream<Map<String, int>>? _marketAnalyticsStream;
+  bool _hasAdvancedAnalytics = false;
+  bool _hasMarketIntelligence = false;
+  bool _isLoadingSubscription = true;
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
-      final organizerId = authState.user.uid;
-      _marketPostsStream = _getMarketPosts(organizerId);
-      _marketAnalyticsStream = _getMarketAnalytics(organizerId);
-      debugPrint('🔍 Organizer premium dashboard initialized for organizer: $organizerId');
+      _userId = authState.user.uid;
+      _checkSubscriptionFeatures(_userId!);
+      _marketPostsStream = _getMarketPosts(_userId!);
+      _marketAnalyticsStream = _getMarketAnalytics(_userId!);
+      debugPrint('🔍 Organizer premium dashboard initialized for organizer: $_userId');
     }
+  }
+
+  Future<void> _checkSubscriptionFeatures(String userId) async {
+    try {
+      final results = await Future.wait([
+        SubscriptionService.hasFeature(userId, 'advanced_analytics'),
+        SubscriptionService.hasFeature(userId, 'market_intelligence'),
+      ]);
+      
+      setState(() {
+        _hasAdvancedAnalytics = results[0];
+        _hasMarketIntelligence = results[1];
+        _isLoadingSubscription = false;
+      });
+    } catch (e) {
+      debugPrint('Error checking subscription features: $e');
+      setState(() {
+        _isLoadingSubscription = false;
+      });
+    }
+  }
+
+  void _showUpgradeDialog(String featureName, String featureDescription) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.diamond, color: Colors.amber.shade600),
+            const SizedBox(width: 8),
+            const Text('Upgrade Required'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Unlock $featureName',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(featureDescription),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.deepPurple, size: 16),
+                      const SizedBox(width: 8),
+                      const Expanded(child: Text('Advanced Analytics Dashboard')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.deepPurple, size: 16),
+                      const SizedBox(width: 8),
+                      const Expanded(child: Text('Market Intelligence Reports')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.deepPurple, size: 16),
+                      const SizedBox(width: 8),
+                      const Expanded(child: Text('Vendor Performance Tracking')),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.deepPurple, size: 16),
+                      const SizedBox(width: 8),
+                      const Expanded(child: Text('Revenue Forecasting Tools')),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (_userId != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PremiumOnboardingScreen(
+                      userId: _userId!,
+                      userType: 'market_organizer',
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -166,9 +293,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           tabs: const [
             Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
             Tab(text: 'Analytics', icon: Icon(Icons.analytics)),
-            Tab(text: 'Communications', icon: Icon(Icons.campaign)),
-            Tab(text: 'Vendor Discovery', icon: Icon(Icons.search)),
-            Tab(text: 'Vendor Management', icon: Icon(Icons.people_alt)),
+            Tab(text: 'Vendor Posts', icon: Icon(Icons.campaign)),
           ],
         ),
       ),
@@ -177,9 +302,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
         children: [
           _buildOverviewTab(),
           _buildAnalyticsTab(),
-          _buildCommunicationsTab(),
-          _buildVendorDiscoveryTab(),
-          _buildVendorManagementTab(),
+          _buildVendorPostsTab(),
         ],
       ),
     );
@@ -224,12 +347,12 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
 
   Widget _buildFeatureList() {
     final features = [
-      '🔍 Vendor Discovery Engine - Find and invite qualified vendors with smart matching',
-      '📊 Market Performance Analytics - Track vendor performance, revenue trends',
-      '📧 Bulk Communication Suite - Professional messaging to all vendors at once',
-      '👥 Vendor Management Dashboard - Application scoring, performance ranking',
-      '💰 Revenue Analytics - Commission tracking, financial reporting',
-      '📈 Growth Insights - Market expansion opportunities and trends',
+      '📊 Advanced Market Analytics - Track vendor performance, revenue trends, and market insights',
+      '🎯 "Looking for Vendors" Posts - Create targeted posts that appear in vendor market discovery',
+      '📈 Vendor Post Analytics - Track views, responses, and conversion rates for your posts',
+      '🔍 Smart Vendor Matching - Your posts are automatically matched to relevant vendors',
+      '💬 Response Management - Efficiently manage vendor inquiries and applications',
+      '📱 Integrated Discovery - Seamless integration with vendor premium discovery features',
     ];
 
     return Column(
@@ -261,15 +384,21 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
             '0',
             Icons.people,
             Colors.blue,
+            isLocked: false,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _buildMetricCard(
             'This Month Revenue',
-            '\$0.00',
+            _hasAdvancedAnalytics ? '\$0.00' : '•••',
             Icons.attach_money,
             Colors.green,
+            isLocked: !_hasAdvancedAnalytics,
+            onTap: !_hasAdvancedAnalytics ? () => _showUpgradeDialog(
+              'Advanced Analytics',
+              'Track your revenue trends, forecasting, and financial insights.',
+            ) : null,
           ),
         ),
       ],
@@ -283,11 +412,16 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           return const LoadingWidget(message: 'Loading analytics...');
         }
 
+        if (_isLoadingSubscription) {
+          return const LoadingWidget(message: 'Checking subscription features...');
+        }
+
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Basic Analytics Card (Always Available)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -299,15 +433,15 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.deepPurple.withValues(alpha: 0.1),
+                              color: Colors.blue.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.analytics, color: Colors.deepPurple, size: 24),
+                            child: const Icon(Icons.bar_chart, color: Colors.blue, size: 24),
                           ),
                           const SizedBox(width: 12),
                           const Expanded(
                             child: Text(
-                              'Market Analytics Dashboard',
+                              'Basic Analytics',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -317,14 +451,14 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.amber.shade100,
+                              color: Colors.green.shade100,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.amber.shade300),
+                              border: Border.all(color: Colors.green.shade300),
                             ),
                             child: Text(
-                              'Premium',
+                              'Free',
                               style: TextStyle(
-                                color: Colors.amber.shade700,
+                                color: Colors.green.shade700,
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -334,34 +468,117 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'View detailed market performance, vendor analytics, and revenue insights.',
+                        'View basic market metrics and vendor post statistics.',
                         style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const OrganizerAnalyticsScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.launch),
-                          label: const Text('Open Analytics Dashboard'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
+              
+              // Advanced Analytics Card (Premium Gated)
+              Card(
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.analytics, color: Colors.deepPurple, size: 24),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'Advanced Analytics Dashboard',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade100,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.amber.shade300),
+                                ),
+                                child: Text(
+                                  'Premium',
+                                  style: TextStyle(
+                                    color: Colors.amber.shade700,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Advanced market performance, vendor analytics, revenue insights, and forecasting tools.',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _hasAdvancedAnalytics ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const OrganizerAnalyticsScreen(),
+                                  ),
+                                );
+                              } : () {
+                                _showUpgradeDialog(
+                                  'Advanced Analytics',
+                                  'Get detailed insights into your market performance, vendor analytics, revenue trends, and forecasting tools.',
+                                );
+                              },
+                              icon: Icon(_hasAdvancedAnalytics ? Icons.launch : Icons.lock),
+                              label: Text(_hasAdvancedAnalytics ? 'Open Advanced Dashboard' : 'Upgrade to Access'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _hasAdvancedAnalytics ? Colors.deepPurple : Colors.grey.shade400,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_hasAdvancedAnalytics)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.lock,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Analytics Preview
               Expanded(
                 child: _buildAnalyticsPreview(),
               ),
@@ -372,7 +589,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     );
   }
 
-  Widget _buildVendorDiscoveryTab() {
+  Widget _buildVendorPostsTab() {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -392,12 +609,12 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                           color: Colors.deepPurple.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.search, color: Colors.deepPurple, size: 24),
+                        child: const Icon(Icons.campaign, color: Colors.deepPurple, size: 24),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Vendor Discovery Engine',
+                          '"Looking for Vendors" Posts',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -424,23 +641,39 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Find and invite qualified vendors based on intelligent matching algorithms.',
+                    'Create targeted posts to attract qualified vendors. Your posts appear directly in vendor market discovery feeds.',
                     style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        context.go('/organizer/vendor-discovery');
-                      },
-                      icon: const Icon(Icons.search),
-                      label: const Text('Open Vendor Discovery'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.go('/organizer/vendor-posts/create');
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Create Post'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            context.go('/organizer/vendor-posts');
+                          },
+                          icon: const Icon(Icons.list),
+                          label: const Text('Manage Posts'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.deepPurple,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -448,13 +681,13 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           ),
           const SizedBox(height: 16),
           
-          // Discovery Features Preview
+          // Vendor Posts Features Preview
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Discovery Features',
+                  'Vendor Post Features',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -469,27 +702,27 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                     childAspectRatio: 1.1,
                     children: [
                       _buildFeatureCard(
-                        'Smart Matching',
-                        'Find vendors based on your market categories and requirements',
-                        Icons.psychology,
+                        'Smart Targeting',
+                        'Posts automatically appear to vendors in matching categories',
+                        Icons.gps_fixed,
                         Colors.purple,
                       ),
                       _buildFeatureCard(
-                        'Vendor Analytics',
-                        'See vendor ratings, experience, and performance metrics',
-                        Icons.analytics,
+                        'Response Management',
+                        'View and manage vendor inquiries and applications',
+                        Icons.inbox,
                         Colors.blue,
                       ),
                       _buildFeatureCard(
-                        'Bulk Invitations',
-                        'Send invitations to multiple qualified vendors at once',
-                        Icons.send,
+                        'Performance Analytics',
+                        'Track views, response rates, and conversion metrics',
+                        Icons.analytics,
                         Colors.green,
                       ),
                       _buildFeatureCard(
-                        'Response Tracking',
-                        'Track invitation responses and follow-up with vendors',
-                        Icons.track_changes,
+                        'Integration Benefits',
+                        'Seamlessly integrates with vendor discovery system',
+                        Icons.integration_instructions,
                         Colors.orange,
                       ),
                     ],
@@ -556,7 +789,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                   final analytics = analyticsSnapshot.data ?? {};
                   final totalVendors = analytics['totalVendors'] ?? 0;
                   final activeMarkets = analytics['activeMarkets'] ?? 0;
-                  final totalEvents = posts.length;
+                  // Removed unused totalEvents variable
                   final totalRevenue = analytics['totalRevenue'] ?? 0;
 
                   return GridView.count(
@@ -565,29 +798,44 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.2,
                     children: [
+                      // Free metrics - always visible
                       _buildMetricCard(
                         'Total Vendors',
                         '$totalVendors',
                         Icons.people,
                         Colors.blue,
+                        isLocked: false,
                       ),
                       _buildMetricCard(
                         'Active Markets',
                         '$activeMarkets',
                         Icons.store,
                         Colors.green,
+                        isLocked: false,
                       ),
+                      
+                      // Premium metrics - gated
                       _buildMetricCard(
-                        'Total Events',
-                        '$totalEvents',
-                        Icons.event,
+                        'Vendor Posts',
+                        _hasMarketIntelligence ? '${posts.length}' : '•••',
+                        Icons.campaign,
                         Colors.orange,
+                        isLocked: !_hasMarketIntelligence,
+                        onTap: !_hasMarketIntelligence ? () => _showUpgradeDialog(
+                          'Market Intelligence',
+                          'Track vendor post performance, engagement metrics, and response analytics.',
+                        ) : null,
                       ),
                       _buildMetricCard(
-                        'Revenue',
-                        '\$${totalRevenue.toString()}',
+                        'Revenue Insights',
+                        _hasAdvancedAnalytics ? '\$${totalRevenue.toString()}' : '•••',
                         Icons.attach_money,
                         Colors.purple,
+                        isLocked: !_hasAdvancedAnalytics,
+                        onTap: !_hasAdvancedAnalytics ? () => _showUpgradeDialog(
+                          'Advanced Analytics',
+                          'Access detailed revenue tracking, forecasting, and financial insights.',
+                        ) : null,
                       ),
                     ],
                   );
@@ -597,350 +845,69 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           );
   }
 
-  Widget _buildVendorManagementTab() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.people_alt, color: Colors.orange, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Vendor Management Suite',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.amber.shade300),
-                        ),
-                        child: Text(
-                          'Premium',
-                          style: TextStyle(
-                            color: Colors.amber.shade700,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Advanced tools for managing vendor applications, performance tracking, and market optimization.',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            _showComingSoonDialog();
-                          },
-                          icon: const Icon(Icons.score),
-                          label: const Text('Application Scoring'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            _showComingSoonDialog();
-                          },
-                          icon: const Icon(Icons.trending_up),
-                          label: const Text('Performance'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.orange,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _buildVendorPreview(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVendorPreview() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Vendor Applications & Performance',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Advanced tools for vendor management coming soon',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.people_outline,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No Vendor Data Yet',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Start managing vendors to see\napplication scoring and performance tracking',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    _showComingSoonDialog();
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Vendor'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showComingSoonDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Coming Soon!'),
-        content: const Text(
-          'Advanced vendor management features are currently under development. They will include:\n\n• Application scoring system\n• Performance tracking\n• Automated vendor communications\n• Market optimization tools',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildMetricCard(
+    String title, 
+    String value, 
+    IconData icon, 
+    Color color, {
+    bool isLocked = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 2,
+        child: Stack(
           children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCommunicationsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            child: Padding(
+            Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.deepPurple.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.campaign, color: Colors.deepPurple, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Vendor Communication Suite',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.amber.shade300),
-                        ),
-                        child: Text(
-                          'Premium',
-                          style: TextStyle(
-                            color: Colors.amber.shade700,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    icon, 
+                    size: 32, 
+                    color: isLocked ? Colors.grey.shade400 : color,
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Professional bulk messaging system to communicate efficiently with all your vendors.',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        context.go('/organizer/vendor-communications');
-                      },
-                      icon: const Icon(Icons.campaign),
-                      label: const Text('Open Communication Suite'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                      ),
+                  const SizedBox(height: 8),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isLocked ? Colors.grey.shade400 : color,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isLocked ? Colors.grey.shade400 : Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Communication Features Preview
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Communication Features',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            if (isLocked)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.lock,
+                      size: 24,
+                      color: Colors.grey,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                    children: [
-                      _buildFeatureCard(
-                        'Bulk Messaging',
-                        'Send professional messages to hundreds of vendors at once',
-                        Icons.mail_outline,
-                        Colors.blue,
-                      ),
-                      _buildFeatureCard(
-                        'Message Templates',
-                        'Pre-built templates for events, policies, and announcements',
-                        Icons.article,
-                        Colors.green,
-                      ),
-                      _buildFeatureCard(
-                        'Smart Targeting',
-                        'Target vendors by market, category, or custom selection',
-                        Icons.filter_list,
-                        Colors.orange,
-                      ),
-                      _buildFeatureCard(
-                        'Analytics & Tracking',
-                        'Monitor delivery rates and vendor engagement metrics',
-                        Icons.analytics,
-                        Colors.purple,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
   }

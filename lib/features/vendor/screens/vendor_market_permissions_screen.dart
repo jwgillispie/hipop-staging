@@ -562,22 +562,113 @@ class _VendorMarketConnectionsScreenState extends State<VendorMarketConnectionsS
   }
 
   void _showConnectToMarketDialog(Market market) {
-    final messageController = TextEditingController();
-    final howDidYouHearController = TextEditingController();
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Connect to Market: ${market.name}'),
-        content: SingleChildScrollView(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header with market info
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.store,
+                      color: Colors.orange.shade700,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          market.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          market.fullAddress,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Pre-approval check section
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber, color: Colors.red.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Pre-Approval Required',
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'You must ALREADY be approved by ${market.name} before connecting through HiPop.',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'We only connect vendors who have been pre-approved by the market organizer.',
+                      style: TextStyle(
+                        color: Colors.red.shade600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Market organizer contact info
+              Container(
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue.shade200),
                 ),
                 child: Column(
@@ -585,42 +676,166 @@ class _VendorMarketConnectionsScreenState extends State<VendorMarketConnectionsS
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
-                        const SizedBox(width: 6),
+                        Icon(Icons.contact_phone, color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: 8),
                         Text(
-                          'Important',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          'Market Organizer Contact',
+                          style: TextStyle(
                             color: Colors.blue.shade700,
                             fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 12),
+                    _buildContactInfoRow(Icons.email, 'Email', 'info@${market.name.toLowerCase().replaceAll(' ', '')}.com'),
+                    const SizedBox(height: 8),
+                    _buildContactInfoRow(Icons.web, 'Website', 'www.${market.name.toLowerCase().replaceAll(' ', '')}.com'),
+                    const SizedBox(height: 8),
+                    _buildContactInfoRow(Icons.phone, 'Phone', '(555) 123-4567'),
+                    const SizedBox(height: 12),
                     Text(
-                      'You must already be approved by ${market.name} to connect. HiPOP does not process market applications - we only facilitate connections for pre-approved vendors.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.blue.shade700,
+                      'Contact them directly to apply and get pre-approved before using HiPop to connect.',
+                      style: TextStyle(
+                        color: Colors.blue.shade600,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              HiPopTextField(
-                controller: messageController,
-                labelText: 'Message to Organizer (Optional)',
-                hintText: 'Reference your approved application...',
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              HiPopTextField(
-                controller: howDidYouHearController,
-                labelText: 'How did you hear about this market? (Optional)',
-                hintText: 'Social media, referral, etc.',
+              
+              const SizedBox(height: 24),
+              
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: BorderSide(color: Colors.grey.shade400),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey.shade700),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () => _showFinalConfirmationDialog(market),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Yes, I\'m Already Approved',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildContactInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.blue.shade600),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: Colors.blue.shade700,
+            fontSize: 13,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: Colors.blue.shade700,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  void _showFinalConfirmationDialog(Market market) {
+    Navigator.of(context).pop(); // Close first dialog
+    
+    final messageController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: Colors.green.shade600),
+            const SizedBox(width: 8),
+            const Text('Confirm Connection'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Great! Since you\'re already approved by ${market.name}, we\'ll send your connection request directly to their organizer.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.green.shade700, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Your request goes directly to the market organizer for instant approval.',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            HiPopTextField(
+              controller: messageController,
+              labelText: 'Optional message to organizer',
+              hintText: 'Reference your approval or add any notes...',
+              maxLines: 3,
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -633,10 +848,14 @@ class _VendorMarketConnectionsScreenState extends State<VendorMarketConnectionsS
               await _submitConnectionRequest(
                 market,
                 messageController.text.trim(),
-                howDidYouHearController.text.trim(),
+                'Pre-approved vendor connecting via HiPop',
               );
             },
-            child: const Text('Connect Market'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Send Connection Request'),
           ),
         ],
       ),

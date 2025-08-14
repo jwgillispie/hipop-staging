@@ -6,10 +6,11 @@ import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
 import '../../shared/widgets/common/hipop_text_field.dart';
 import '../../premium/services/subscription_service.dart';
-import '../../premium/models/user_subscription.dart';
 import '../../shared/services/user_profile_service.dart';
 import '../services/vendor_market_discovery_service.dart';
-import '../services/vendor_application_service.dart';
+import '../../organizer/services/vendor_post_discovery_service.dart';
+import '../../organizer/models/organizer_vendor_post_result.dart';
+import '../widgets/vendor/vendor_post_response_dialog.dart';
 
 class VendorMarketDiscoveryScreen extends StatefulWidget {
   const VendorMarketDiscoveryScreen({super.key});
@@ -28,9 +29,11 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
   String? _error;
   
   List<MarketDiscoveryResult> _discoveryResults = [];
+  List<OrganizerVendorPostResult> _vendorPostResults = [];
   List<String> _selectedCategories = [];
   String _selectedDistance = '25';
   bool _onlyActivelyRecruiting = false;
+  String _selectedDiscoveryType = 'both'; // 'markets', 'posts', 'both'
   
   final List<String> _distanceOptions = ['5', '10', '25', '50', '100'];
   final List<String> _availableCategories = [
@@ -88,7 +91,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       setState(() => _hasPremiumAccess = true);
       
       // Load initial results (without location for now)
-      await _discoverMarkets();
+      await _performDiscovery();
       
     } catch (e) {
       setState(() {
@@ -100,7 +103,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
 
   // Location functionality removed - could be added back with proper location package integration
 
-  Future<void> _discoverMarkets() async {
+  Future<void> _performDiscovery() async {
     if (!_hasPremiumAccess) return;
     
     setState(() => _isLoading = true);
@@ -109,20 +112,42 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      final results = await VendorMarketDiscoveryService.discoverMarketsForVendor(
-        user.uid,
-        categories: _selectedCategories.isEmpty ? null : _selectedCategories,
-        // Location functionality removed - could be enabled with proper location package
-        latitude: null,
-        longitude: null,
-        maxDistance: double.parse(_selectedDistance),
-        searchQuery: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
-        onlyActivelyRecruiting: _onlyActivelyRecruiting,
-        limit: 20,
-      );
+      // Discover markets if needed
+      if (_selectedDiscoveryType == 'markets' || _selectedDiscoveryType == 'both') {
+        final marketResults = await VendorMarketDiscoveryService.discoverMarketsForVendor(
+          user.uid,
+          categories: _selectedCategories.isEmpty ? null : _selectedCategories,
+          // Location functionality removed - could be enabled with proper location package
+          latitude: null,
+          longitude: null,
+          maxDistance: double.parse(_selectedDistance),
+          searchQuery: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+          onlyActivelyRecruiting: _onlyActivelyRecruiting,
+          limit: 15,
+        );
+        _discoveryResults = marketResults;
+      } else {
+        _discoveryResults = [];
+      }
+
+      // Discover vendor posts if needed
+      if (_selectedDiscoveryType == 'posts' || _selectedDiscoveryType == 'both') {
+        final postResults = await VendorPostDiscoveryService.discoverVendorPosts(
+          vendorId: user.uid,
+          categories: _selectedCategories.isEmpty ? null : _selectedCategories,
+          latitude: null,
+          longitude: null,
+          maxDistance: double.parse(_selectedDistance),
+          searchQuery: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+          onlyActivelyRecruiting: _onlyActivelyRecruiting,
+          limit: 15,
+        );
+        _vendorPostResults = postResults;
+      } else {
+        _vendorPostResults = [];
+      }
 
       setState(() {
-        _discoveryResults = results;
         _isLoading = false;
       });
     } catch (e) {
@@ -152,25 +177,9 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      // Navigate to market application with market pre-selected
-      context.go('/vendor/market-connections');
+      // Show application flow dialog instead of navigating away
+      await _showApplicationDialog(market);
       
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Navigate to Market Connections to connect to ${market.name}'),
-            backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'GO',
-              textColor: Colors.white,
-              onPressed: () {
-                context.go('/vendor/market-connections');
-              },
-            ),
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -180,6 +189,96 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
           ),
         );
       }
+    }
+  }
+
+  Future<void> _showApplicationDialog(Market market) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Apply to ${market.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('To apply to this market, please visit their website:'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.language, color: Colors.blue.shade600),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Visit market website or contact organizer directly',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'We\'ll save this market to your interests so you can easily find it later.',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Save market to user's interested markets
+              await _saveMarketInterest(market);
+              // Show success message for application
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Application saved for ${market.name}. Contact the market organizer to complete your application.'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveMarketInterest(Market market) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // In a real implementation, save to Firestore
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${market.name} saved to your interested markets'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error saving market interest: $e');
     }
   }
 
@@ -218,15 +317,15 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   ? ErrorDisplayWidget(
                       title: 'Discovery Error',
                       message: _error!,
-                      onRetry: _discoverMarkets,
+                      onRetry: _performDiscovery,
                     )
                   : Column(
                       children: [
                         _buildFiltersSection(),
                         Expanded(
-                          child: _discoveryResults.isEmpty
+                          child: (_discoveryResults.isEmpty && _vendorPostResults.isEmpty)
                               ? _buildEmptyState()
-                              : _buildResultsList(),
+                              : _buildCombinedResultsList(),
                         ),
                       ],
                     ),
@@ -234,12 +333,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
   }
 
   Widget _buildUpgradePrompt() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+    return SingleChildScrollView(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -359,7 +459,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildFiltersSection() {
@@ -374,13 +474,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
             labelText: 'Search markets by name or location',
             hintText: 'e.g., "Downtown Farmers Market"',
             prefixIcon: const Icon(Icons.search),
-            onChanged: (_) => _discoverMarkets(),
+            onChanged: (_) => _performDiscovery(),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear),
                     onPressed: () {
                       _searchController.clear();
-                      _discoverMarkets();
+                      _performDiscovery();
                     },
                   )
                 : null,
@@ -397,6 +497,14 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   'Search Distance: ${_selectedDistance}mi',
                   Icons.location_on,
                   onTap: () => _showDistanceDialog(),
+                ),
+                const SizedBox(width: 8),
+                
+                // Discovery type filter
+                _buildFilterChip(
+                  _getDiscoveryTypeLabel(),
+                  Icons.swap_horiz,
+                  onTap: () => _showDiscoveryTypeDialog(),
                 ),
                 const SizedBox(width: 8),
                 
@@ -419,7 +527,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     setState(() {
                       _onlyActivelyRecruiting = !_onlyActivelyRecruiting;
                     });
-                    _discoverMarkets();
+                    _performDiscovery();
                   },
                 ),
               ],
@@ -453,24 +561,6 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
     );
   }
 
-  Widget _buildResultsList() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _discoveryResults.length + (_isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _discoveryResults.length) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        
-        final result = _discoveryResults[index];
-        return _buildMarketCard(result);
-      },
-    );
-  }
 
   Widget _buildMarketCard(MarketDiscoveryResult result) {
     return Card(
@@ -708,7 +798,8 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                 _searchController.clear();
                 _selectedCategories.clear();
                 _onlyActivelyRecruiting = false;
-                _discoverMarkets();
+                _selectedDiscoveryType = 'both';
+                _performDiscovery();
               },
               child: const Text('Clear All Filters'),
             ),
@@ -859,7 +950,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
             onChanged: (value) {
               setState(() => _selectedDistance = value!);
               Navigator.pop(context);
-              _discoverMarkets();
+              _performDiscovery();
             },
           )).toList(),
         ),
@@ -911,7 +1002,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               onPressed: () {
                 setState(() => _selectedCategories = tempSelected);
                 Navigator.pop(context);
-                _discoverMarkets();
+                _performDiscovery();
               },
               child: const Text('Apply'),
             ),
@@ -925,5 +1016,597 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
     return category.split('_').map((word) => 
       word[0].toUpperCase() + word.substring(1)
     ).join(' ');
+  }
+
+  String _getDiscoveryTypeLabel() {
+    switch (_selectedDiscoveryType) {
+      case 'markets':
+        return 'Markets Only';
+      case 'posts':
+        return 'Vendor Posts Only';
+      case 'both':
+      default:
+        return 'Markets & Posts';
+    }
+  }
+
+  void _showDiscoveryTypeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discovery Type'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('Markets & Vendor Posts'),
+              value: 'both',
+              groupValue: _selectedDiscoveryType,
+              onChanged: (value) {
+                setState(() => _selectedDiscoveryType = value!);
+                Navigator.pop(context);
+                _performDiscovery();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Markets Only'),
+              value: 'markets',
+              groupValue: _selectedDiscoveryType,
+              onChanged: (value) {
+                setState(() => _selectedDiscoveryType = value!);
+                Navigator.pop(context);
+                _performDiscovery();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Vendor Posts Only'),
+              value: 'posts',
+              groupValue: _selectedDiscoveryType,
+              onChanged: (value) {
+                setState(() => _selectedDiscoveryType = value!);
+                Navigator.pop(context);
+                _performDiscovery();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCombinedResultsList() {
+    // Combine and sort results by relevance/urgency
+    final combinedResults = <Map<String, dynamic>>[];
+    
+    // Add market results
+    for (final result in _discoveryResults) {
+      combinedResults.add({
+        'type': 'market',
+        'data': result,
+        'score': result.relevanceScore,
+        'isUrgent': result.isActivelyRecruiting,
+      });
+    }
+    
+    // Add vendor post results
+    for (final result in _vendorPostResults) {
+      combinedResults.add({
+        'type': 'vendor_post',
+        'data': result,
+        'score': result.relevanceScore,
+        'isUrgent': result.isUrgent,
+      });
+    }
+
+    // Sort by score and urgency
+    combinedResults.sort((a, b) {
+      // Urgent items first
+      if (a['isUrgent'] && !b['isUrgent']) return -1;
+      if (!a['isUrgent'] && b['isUrgent']) return 1;
+      
+      // Then by score
+      return (b['score'] as double).compareTo(a['score'] as double);
+    });
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: combinedResults.length + (_isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == combinedResults.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        
+        final item = combinedResults[index];
+        final type = item['type'] as String;
+        
+        if (type == 'market') {
+          return _buildMarketCard(item['data'] as MarketDiscoveryResult);
+        } else {
+          return _buildVendorPostCard(item['data'] as OrganizerVendorPostResult);
+        }
+      },
+    );
+  }
+
+  Widget _buildVendorPostCard(OrganizerVendorPostResult result) {
+    final post = result.post;
+    final market = result.market;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.deepPurple.shade100,
+            width: 2,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with post type indicator
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.deepPurple.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.campaign, size: 14, color: Colors.deepPurple.shade700),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Looking for Vendors',
+                          style: TextStyle(
+                            color: Colors.deepPurple.shade700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (result.isPremiumOnly)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.diamond, size: 12, color: Colors.amber.shade700),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Premium',
+                            style: TextStyle(
+                              color: Colors.amber.shade700,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (result.isUrgent)
+                    Container(
+                      margin: EdgeInsets.only(left: result.isPremiumOnly ? 8 : 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.schedule, size: 12, color: Colors.red.shade700),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Urgent',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Post title and market info
+              Text(
+                post.title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.deepPurple.shade800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.storefront, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '${market.name} • ${market.city}, ${market.state}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Post description
+              Text(
+                post.description,
+                style: Theme.of(context).textTheme.bodyMedium,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Key metrics row
+              Row(
+                children: [
+                  if (result.distanceFromVendor != null) ...[
+                    _buildMetricChip(
+                      Icons.directions,
+                      '${result.distanceFromVendor!.toStringAsFixed(1)} mi',
+                      Colors.blue,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  _buildMetricChip(
+                    Icons.category,
+                    '${post.categories.length} categories',
+                    Colors.green,
+                  ),
+                  const SizedBox(width: 8),
+                  if (post.requirements.boothFee != null)
+                    _buildMetricChip(
+                      Icons.attach_money,
+                      post.requirements.boothFee == 0 
+                        ? 'Free' 
+                        : '\$${post.requirements.boothFee!.toStringAsFixed(0)}',
+                      Colors.orange,
+                    ),
+                  if (result.applicationDeadline != null) ...[
+                    const SizedBox(width: 8),
+                    _buildMetricChip(
+                      Icons.schedule,
+                      _formatDeadline(result.applicationDeadline!),
+                      result.isDeadlineApproaching ? Colors.red : Colors.purple,
+                    ),
+                  ],
+                ],
+              ),
+              
+              if (result.matchReasons.isNotEmpty || result.opportunities.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                
+                // Match reasons and opportunities
+                if (result.matchReasons.isNotEmpty) ...[
+                  ...result.matchReasons.take(2).map((reason) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            reason,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+                
+                if (result.opportunities.isNotEmpty) ...[
+                  ...result.opportunities.take(2).map((opportunity) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.lightbulb, size: 16, color: Colors.amber[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            opportunity,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ],
+              
+              const SizedBox(height: 16),
+              
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _showVendorPostDetails(result),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.deepPurple,
+                        side: const BorderSide(color: Colors.deepPurple),
+                      ),
+                      child: const Text('View Details'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _respondToVendorPost(result),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Respond'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDeadline(DateTime deadline) {
+    final now = DateTime.now();
+    final difference = deadline.difference(now);
+    
+    if (difference.isNegative) {
+      return 'Expired';
+    } else if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return '1 day left';
+    } else if (difference.inDays <= 7) {
+      return '${difference.inDays} days left';
+    } else {
+      return '${(difference.inDays / 7).floor()} weeks left';
+    }
+  }
+
+  void _showVendorPostDetails(OrganizerVendorPostResult result) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        result.post.title,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${result.market.name} • ${result.market.city}, ${result.market.state}',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 16),
+                      Text(
+                        'Description',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(result.post.description),
+                      
+                      const SizedBox(height: 16),
+                      Text(
+                        'Categories Needed',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: result.post.categories.map((category) => 
+                          Chip(
+                            label: Text(_formatCategoryName(category)),
+                            backgroundColor: Colors.deepPurple.shade50,
+                          ),
+                        ).toList(),
+                      ),
+                      
+                      if (result.post.requirements.applicationDeadline != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Application Deadline',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${result.post.requirements.applicationDeadline!.toLocal().toString().split(' ')[0]} (${_formatDeadline(result.post.requirements.applicationDeadline!)})',
+                          style: TextStyle(
+                            color: result.isDeadlineApproaching ? Colors.red : null,
+                          ),
+                        ),
+                      ],
+                      
+                      if (result.post.requirements.boothFee != null || result.post.requirements.commissionRate != null) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Fees & Rates',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (result.post.requirements.boothFee != null)
+                          Text('Booth Fee: \$${result.post.requirements.boothFee!.toStringAsFixed(0)}'),
+                        if (result.post.requirements.commissionRate != null)
+                          Text('Commission: ${(result.post.requirements.commissionRate! * 100).toStringAsFixed(1)}%'),
+                      ],
+                      
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _respondToVendorPost(result);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.deepPurple,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('Respond to This Post'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _respondToVendorPost(OrganizerVendorPostResult result) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('User not authenticated');
+
+      // Get user profile for response
+      final userProfile = await UserProfileService().getUserProfile(user.uid);
+      if (userProfile == null) throw Exception('User profile not found');
+
+      // Show response dialog
+      await showDialog(
+        context: context,
+        builder: (context) => VendorPostResponseDialog(
+          post: result.post,
+          market: result.market,
+          vendorProfile: userProfile,
+          onSubmit: (response) async {
+            await VendorPostDiscoveryService.respondToPost(
+              result.post.id,
+              user.uid,
+              response,
+            );
+            
+            // Track analytics
+            await _trackVendorPostInteraction('respond', result.post.id);
+            
+            // Show success message
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Your response has been sent to ${result.market.name}!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _trackVendorPostInteraction(String action, String postId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // Track the interaction (simplified analytics)
+      debugPrint('📊 Tracking vendor post interaction: $action on post $postId by ${user.uid}');
+      
+      // In a real implementation, you'd send this to your analytics service
+      // Analytics.track('vendor_post_interaction', {
+      //   'action': action,
+      //   'postId': postId,
+      //   'vendorId': user.uid,
+      //   'timestamp': DateTime.now().toIso8601String(),
+      // });
+    } catch (e) {
+      debugPrint('Error tracking vendor post interaction: $e');
+    }
   }
 }

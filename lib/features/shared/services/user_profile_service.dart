@@ -62,6 +62,26 @@ class UserProfileService implements IUserProfileService {
         debugPrint('DEBUG: Document data: ${doc.data()}');
         return UserProfile.fromFirestore(doc);
       }
+      
+      // Handle missing user profile gracefully
+      debugPrint('DEBUG: User profile not found for userId: $userId');
+      debugPrint('DEBUG: This might be a deleted user or new user that needs profile creation');
+      
+      // If this is the current authenticated user and they don't have a profile,
+      // sign them out to force re-authentication/profile creation
+      if (_auth.currentUser?.uid == userId) {
+        debugPrint('DEBUG: Missing profile belongs to current authenticated user');
+        debugPrint('DEBUG: Auto-signing out user to prevent app hanging');
+        
+        // Sign out the user with missing profile
+        try {
+          await _auth.signOut();
+          debugPrint('DEBUG: Successfully signed out user with missing profile');
+        } catch (signOutError) {
+          debugPrint('DEBUG: Error signing out user: $signOutError');
+        }
+      }
+      
       return null;
     } catch (e) {
       debugPrint('Error getting user profile: $e');

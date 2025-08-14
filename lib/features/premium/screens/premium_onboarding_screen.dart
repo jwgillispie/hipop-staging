@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_subscription.dart';
 import '../services/subscription_service.dart';
-import '../services/stripe_service.dart';
 
 /// Premium onboarding screen that guides users through tier selection and setup
 class PremiumOnboardingScreen extends StatefulWidget {
@@ -932,8 +932,21 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
     });
 
     try {
-      // In a real implementation, this would integrate with Stripe
-      // For now, we'll simulate the subscription upgrade
+      // Get user email for checkout session
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser?.email == null) {
+        throw Exception('User email is required for subscription');
+      }
+
+      // For now, simulate successful payment processing
+      // In production, this would integrate with proper Stripe checkout
+      debugPrint('Processing subscription for ${_selectedPlan!['title']}');
+      
+      // Simulate payment processing delay
+      await Future.delayed(const Duration(seconds: 2));
+      
+      // For staging, directly upgrade the user
+      // TODO: Implement proper Stripe checkout flow
       await SubscriptionService.upgradeToTier(widget.userId, _selectedTier!);
       
       // Navigate to success page
@@ -941,9 +954,10 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+      
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to process subscription: ${e.toString()}';
+        _errorMessage = 'Payment failed: ${e.toString()}';
         _isProcessing = false;
       });
     }

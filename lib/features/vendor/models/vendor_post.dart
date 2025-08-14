@@ -15,6 +15,7 @@ class VendorPost extends Equatable {
   final String? placeId;
   final String? locationName;
   final String? marketId; // New field for market relationship
+  final List<String> productListIds; // Associated product lists for this popup
   final DateTime popUpStartDateTime;
   final DateTime popUpEndDateTime;
   /// @deprecated Use getVendorContactInfo() instead. This field will be removed in future versions.
@@ -37,6 +38,7 @@ class VendorPost extends Equatable {
     this.placeId,
     this.locationName,
     this.marketId,
+    this.productListIds = const [],
     required this.popUpStartDateTime,
     required this.popUpEndDateTime,
     this.instagramHandle,
@@ -64,6 +66,9 @@ class VendorPost extends Equatable {
         placeId: data['placeId'],
         locationName: data['locationName'],
         marketId: data['marketId'],
+        productListIds: data['productListIds'] != null 
+            ? List<String>.from(data['productListIds'])
+            : [],
         popUpStartDateTime: data['popUpStartDateTime'] != null 
             ? (data['popUpStartDateTime'] as Timestamp).toDate()
             : (data['popUpDateTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
@@ -95,6 +100,7 @@ class VendorPost extends Equatable {
       'placeId': placeId,
       'locationName': locationName,
       'marketId': marketId,
+      'productListIds': productListIds,
       'popUpStartDateTime': Timestamp.fromDate(popUpStartDateTime),
       'popUpEndDateTime': Timestamp.fromDate(popUpEndDateTime),
       'instagramHandle': instagramHandle,
@@ -117,6 +123,7 @@ class VendorPost extends Equatable {
     String? placeId,
     String? locationName,
     String? marketId,
+    List<String>? productListIds,
     DateTime? popUpStartDateTime,
     DateTime? popUpEndDateTime,
     String? instagramHandle,
@@ -137,6 +144,7 @@ class VendorPost extends Equatable {
       placeId: placeId ?? this.placeId,
       locationName: locationName ?? this.locationName,
       marketId: marketId ?? this.marketId,
+      productListIds: productListIds ?? this.productListIds,
       popUpStartDateTime: popUpStartDateTime ?? this.popUpStartDateTime,
       popUpEndDateTime: popUpEndDateTime ?? this.popUpEndDateTime,
       instagramHandle: instagramHandle ?? this.instagramHandle,
@@ -264,6 +272,7 @@ class VendorPost extends Equatable {
         placeId,
         locationName,
         marketId,
+        productListIds,
         popUpStartDateTime,
         popUpEndDateTime,
         instagramHandle,

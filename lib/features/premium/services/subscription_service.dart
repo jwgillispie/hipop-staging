@@ -1,50 +1,106 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_subscription.dart';
+import 'premium_error_handler.dart';
+import 'premium_validation_service.dart';
+import 'premium_network_service.dart';
+import 'debug_logger_service.dart';
+import 'dart:async';
 
 class SubscriptionService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static final CollectionReference _subscriptionsCollection = 
       _firestore.collection('user_subscriptions');
-
-  /// Get user's current subscription
-  static Future<UserSubscription?> getUserSubscription(String userId) async {
+  static final _debugLogger = DebugLoggerService.instance;
+  static final _networkService = PremiumNetworkService.instance;
+  
+  // Initialize the service
+  static Future<void> initialize() async {
     try {
-      final snapshot = await _subscriptionsCollection
-          .where('userId', isEqualTo: userId)
-          .limit(1)
-          .get();
-      
-      if (snapshot.docs.isNotEmpty) {
-        return UserSubscription.fromFirestore(snapshot.docs.first);
-      }
-      return null;
+      await _networkService.initialize();
+      _debugLogger.logInfo(
+        operation: 'service_init',
+        message: 'SubscriptionService initialized successfully',
+      );
     } catch (e) {
-      debugPrint('Error getting user subscription: $e');
-      return null;
+      _debugLogger.logError(
+        operation: 'service_init',
+        message: 'Failed to initialize SubscriptionService: $e',
+      );
+      rethrow;
     }
   }
 
-  /// Create free subscription for new user
+  /// Get user's current subscription with comprehensive error handling
+  static Future<UserSubscription?> getUserSubscription(String userId) async {
+    // Validate input
+    final userIdValidation = PremiumValidationService.validateUserId(userId);
+    if (!userIdValidation.isValid) {
+      throw userIdValidation.toError();
+    }
+    
+    return await PremiumErrorHandler.executeWithErrorHandling(
+      operationName: 'getUserSubscription',
+      operation: () async {
+        final snapshot = await _subscriptionsCollection
+            .where('userId', isEqualTo: userIdValidation.value)
+            .limit(1)
+            .get();
+        
+        if (snapshot.docs.isNotEmpty) {
+          return UserSubscription.fromFirestore(snapshot.docs.first);
+        }
+        return null;
+      },
+      context: {
+        'user_id': userId,
+        'operation_type': 'read',
+      },
+      requiresNetwork: true,
+    );
+  }
+
+  /// Create free subscription for new user with comprehensive validation
   static Future<UserSubscription> createFreeSubscription(
     String userId, 
     String userType,
   ) async {
+    // Validate inputs
+    final validationResult = await PremiumValidationService.validateSubscriptionCreation(
+      userId: userId,
+      userType: userType,
+    );
+    if (!validationResult.isValid) {
+      throw validationResult.toError();
+    }
+    
     try {
-      final subscription = UserSubscription.createFree(userId, userType);
-      debugPrint('🔍 DEBUG: Created free subscription object - tier: ${subscription.tier.name}, userType: ${subscription.userType}, isFree: ${subscription.isFree}');
-      
-      final docRef = await _subscriptionsCollection.add(subscription.toFirestore());
-      debugPrint('✅ Free subscription created for user: $userId with ID: ${docRef.id}');
-      
-      return subscription.copyWith(id: docRef.id);
+        final subscription = UserSubscription.createFree(
+          validationResult.value['userId'],
+          validationResult.value['userType'],
+        );
+        
+        final docRef = await _subscriptionsCollection.add(subscription.toFirestore());
+        
+        _debugLogger.logInfo(
+          operation: 'createFreeSubscription',
+          message: 'Free subscription created successfully',
+          context: {
+            'user_id': userId,
+            'user_type': userType,
+            'subscription_id': docRef.id,
+            'tier': subscription.tier.name,
+          },
+        );
+        
+        return subscription.copyWith(id: docRef.id);
     } catch (e) {
-      debugPrint('❌ Error creating free subscription: $e');
-      throw Exception('Failed to create subscription: $e');
+      debugPrint('Error creating free subscription: $e');
+      rethrow;
     }
   }
 
-  /// Upgrade user to specific tier
+  /// Upgrade user to specific tier with comprehensive error handling
   static Future<UserSubscription> upgradeToTier(
     String userId,
     SubscriptionTier tier, {
@@ -53,30 +109,98 @@ class SubscriptionService {
     String? paymentMethodId,
     String? stripePriceId,
   }) async {
-    try {
-      final currentSubscription = await getUserSubscription(userId);
-      if (currentSubscription == null) {
-        throw Exception('No subscription found for user.');
-      }
-
-      final upgradedSubscription = currentSubscription.upgradeToTier(
-        tier,
-        stripeCustomerId: stripeCustomerId,
-        stripeSubscriptionId: stripeSubscriptionId,
-        paymentMethodId: paymentMethodId,
-        stripePriceId: stripePriceId,
-      );
-
-      await _subscriptionsCollection
-          .doc(currentSubscription.id)
-          .update(upgradedSubscription.toFirestore());
-      
-      debugPrint('✅ User upgraded to ${tier.name}: $userId');
-      return upgradedSubscription;
-    } catch (e) {
-      debugPrint('❌ Error upgrading to ${tier.name}: $e');
-      throw Exception('Failed to upgrade subscription: $e');
+    // Start flow tracking
+    final flowTracker = _debugLogger.startFlow(
+      'subscription_upgrade',
+      userId,
+      {
+        'target_tier': tier.name,
+        'has_stripe_customer_id': stripeCustomerId != null,
+        'has_stripe_subscription_id': stripeSubscriptionId != null,
+        'has_payment_method_id': paymentMethodId != null,
+        'has_stripe_price_id': stripePriceId != null,
+      },
+    );
+    
+    // Validate inputs
+    final userIdValidation = PremiumValidationService.validateUserId(userId);
+    if (!userIdValidation.isValid) {
+      _debugLogger.failFlow(flowTracker.flowId, 'Invalid user ID: ${userIdValidation.errorMessage}');
+      throw userIdValidation.toError();
     }
+    
+    if (stripeCustomerId != null) {
+      final customerIdValidation = PremiumValidationService.validateStripeCustomerId(stripeCustomerId);
+      if (!customerIdValidation.isValid) {
+        _debugLogger.failFlow(flowTracker.flowId, 'Invalid Stripe customer ID: ${customerIdValidation.errorMessage}');
+        throw customerIdValidation.toError();
+      }
+    }
+    
+    if (stripeSubscriptionId != null) {
+      final subscriptionIdValidation = PremiumValidationService.validateStripeSubscriptionId(stripeSubscriptionId);
+      if (!subscriptionIdValidation.isValid) {
+        _debugLogger.failFlow(flowTracker.flowId, 'Invalid Stripe subscription ID: ${subscriptionIdValidation.errorMessage}');
+        throw subscriptionIdValidation.toError();
+      }
+    }
+    
+    return await PremiumErrorHandler.executeWithErrorHandling(
+      operationName: 'upgradeToTier',
+      operation: () async {
+        _debugLogger.updateFlow(flowTracker.flowId, 'fetching_current_subscription');
+        
+        final currentSubscription = await getUserSubscription(userId);
+        if (currentSubscription == null) {
+          throw PremiumError.notFound('No subscription found for user');
+        }
+        
+        _debugLogger.updateFlow(flowTracker.flowId, 'creating_upgraded_subscription', {
+          'current_tier': currentSubscription.tier.name,
+          'target_tier': tier.name,
+        });
+        
+        final upgradedSubscription = currentSubscription.upgradeToTier(
+          tier,
+          stripeCustomerId: stripeCustomerId,
+          stripeSubscriptionId: stripeSubscriptionId,
+          paymentMethodId: paymentMethodId,
+          stripePriceId: stripePriceId,
+        );
+        
+        _debugLogger.updateFlow(flowTracker.flowId, 'updating_firestore');
+        
+        await _subscriptionsCollection
+            .doc(currentSubscription.id)
+            .update(upgradedSubscription.toFirestore());
+        
+        _debugLogger.logSubscriptionEvent(
+          event: 'subscription_upgraded',
+          userId: userId,
+          subscriptionId: currentSubscription.id,
+          additionalContext: {
+            'from_tier': currentSubscription.tier.name,
+            'to_tier': tier.name,
+            'stripe_customer_id': stripeCustomerId,
+            'stripe_subscription_id': stripeSubscriptionId,
+          },
+        );
+        
+        _debugLogger.completeFlow(flowTracker.flowId, {
+          'upgraded_tier': tier.name,
+          'subscription_id': currentSubscription.id,
+        });
+        
+        return upgradedSubscription;
+      },
+      context: {
+        'user_id': userId,
+        'target_tier': tier.name,
+        'operation_type': 'upgrade',
+        'flow_id': flowTracker.flowId,
+      },
+      requiresNetwork: true,
+    );
   }
 
   /// Upgrade user to premium (backward compatibility)
@@ -107,45 +231,133 @@ class SubscriptionService {
     );
   }
 
-  /// Cancel user subscription
+  /// Cancel user subscription with comprehensive error handling
   static Future<UserSubscription> cancelSubscription(String userId) async {
-    try {
-      final currentSubscription = await getUserSubscription(userId);
-      if (currentSubscription == null) {
-        throw Exception('No subscription found for user.');
-      }
-
-      final cancelledSubscription = currentSubscription.cancel();
-
-      await _subscriptionsCollection
-          .doc(currentSubscription.id)
-          .update(cancelledSubscription.toFirestore());
-      
-      debugPrint('✅ Subscription cancelled for user: $userId');
-      return cancelledSubscription;
-    } catch (e) {
-      debugPrint('❌ Error cancelling subscription: $e');
-      throw Exception('Failed to cancel subscription: $e');
+    // Start flow tracking
+    final flowTracker = _debugLogger.startFlow(
+      'subscription_cancellation',
+      userId,
+    );
+    
+    // Validate input
+    final userIdValidation = PremiumValidationService.validateUserId(userId);
+    if (!userIdValidation.isValid) {
+      _debugLogger.failFlow(flowTracker.flowId, 'Invalid user ID: ${userIdValidation.errorMessage}');
+      throw userIdValidation.toError();
     }
+    
+    return await PremiumErrorHandler.executeWithErrorHandling(
+      operationName: 'cancelSubscription',
+      operation: () async {
+        _debugLogger.updateFlow(flowTracker.flowId, 'fetching_current_subscription');
+        
+        final currentSubscription = await getUserSubscription(userIdValidation.value);
+        if (currentSubscription == null) {
+          throw PremiumError.notFound('No subscription found for user');
+        }
+        
+        _debugLogger.updateFlow(flowTracker.flowId, 'creating_cancelled_subscription', {
+          'current_tier': currentSubscription.tier.name,
+          'current_status': currentSubscription.status.name,
+        });
+        
+        final cancelledSubscription = currentSubscription.cancel();
+        
+        _debugLogger.updateFlow(flowTracker.flowId, 'updating_firestore');
+        
+        await _subscriptionsCollection
+            .doc(currentSubscription.id)
+            .update(cancelledSubscription.toFirestore());
+        
+        _debugLogger.logSubscriptionEvent(
+          event: 'subscription_cancelled',
+          userId: userId,
+          subscriptionId: currentSubscription.id,
+          additionalContext: {
+            'cancelled_tier': currentSubscription.tier.name,
+            'was_active': currentSubscription.isActive,
+          },
+        );
+        
+        _debugLogger.completeFlow(flowTracker.flowId, {
+          'cancelled_subscription_id': currentSubscription.id,
+          'final_status': cancelledSubscription.status.name,
+        });
+        
+        return cancelledSubscription;
+      },
+      context: {
+        'user_id': userId,
+        'operation_type': 'cancel',
+        'flow_id': flowTracker.flowId,
+      },
+      requiresNetwork: true,
+    );
   }
 
-  /// Check if user has a specific feature
+  /// Check if user has a specific feature with enhanced error handling
   static Future<bool> hasFeature(String userId, String featureName) async {
-    try {
-      final subscription = await getUserSubscription(userId);
-      if (subscription == null) {
-        // Create free subscription if none exists
-        final userProfile = await _firestore.collection('users').doc(userId).get();
-        final userType = userProfile.data()?['userType'] ?? 'shopper';
-        await createFreeSubscription(userId, userType);
-        return false; // Free tier doesn't have premium features
-      }
-
-      return subscription.hasFeature(featureName);
-    } catch (e) {
-      debugPrint('Error checking feature access: $e');
+    // Validate inputs
+    final userIdValidation = PremiumValidationService.validateUserId(userId);
+    if (!userIdValidation.isValid) {
+      _debugLogger.logError(
+        operation: 'hasFeature',
+        message: 'Invalid user ID provided',
+        context: {'provided_user_id': userId, 'feature_name': featureName},
+      );
       return false;
     }
+    
+    final featureValidation = PremiumValidationService.validateFeatureName(featureName);
+    if (!featureValidation.isValid) {
+      _debugLogger.logError(
+        operation: 'hasFeature',
+        message: 'Invalid feature name provided',
+        context: {'user_id': userId, 'provided_feature_name': featureName},
+      );
+      return false;
+    }
+    
+    return await PremiumErrorHandler.executeWithErrorHandling(
+      operationName: 'hasFeature',
+      operation: () async {
+        final subscription = await getUserSubscription(userIdValidation.value);
+        if (subscription == null) {
+          _debugLogger.logDebug(
+            operation: 'hasFeature',
+            message: 'No subscription found, creating free subscription',
+            context: {'user_id': userId, 'feature_name': featureName},
+          );
+          
+          // Create free subscription if none exists
+          final userProfile = await _firestore.collection('users').doc(userIdValidation.value).get();
+          final userType = userProfile.data()?['userType'] ?? 'shopper';
+          await createFreeSubscription(userIdValidation.value, userType);
+          return false; // Free tier doesn't have premium features
+        }
+        
+        final hasAccess = subscription.hasFeature(featureValidation.value);
+        
+        _debugLogger.logDebug(
+          operation: 'hasFeature',
+          message: 'Feature access check completed',
+          context: {
+            'user_id': userId,
+            'feature_name': featureName,
+            'has_access': hasAccess,
+            'user_tier': subscription.tier.name,
+          },
+        );
+        
+        return hasAccess;
+      },
+      context: {
+        'user_id': userId,
+        'feature_name': featureName,
+        'operation_type': 'feature_check',
+      },
+      requiresNetwork: true,
+    );
   }
 
   /// Check if user is within usage limit

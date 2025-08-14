@@ -59,7 +59,6 @@ import '../../features/shared/screens/legal_documents_screen.dart';
 import '../../features/shared/screens/account_verification_pending_screen.dart';
 import '../../features/shared/screens/ceo_verification_dashboard_screen.dart';
 // Premium screens
-import '../../features/premium/screens/subscription_test_screen.dart';
 import '../../features/premium/screens/premium_onboarding_screen.dart';
 import '../../features/premium/screens/subscription_success_screen.dart';
 import '../../features/premium/screens/subscription_cancel_screen.dart';
@@ -396,12 +395,7 @@ class AppRouter {
                 name: 'adminFix',
                 builder: (context, state) => const AdminFixScreen(),
               ),
-            if (kDebugMode)
-              GoRoute(
-                path: 'subscription-test',
-                name: 'subscriptionTest',
-                builder: (context, state) => const SubscriptionTestScreen(),
-              ),
+            // 🔒 SECURITY: SubscriptionTestScreen removed for production security
           ],
         ),
         // TEMPORARILY HIDDEN: Public vendor application form (only showing permissions for now)

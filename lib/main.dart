@@ -12,6 +12,7 @@ import 'blocs/auth/auth_bloc.dart';
 import 'blocs/auth/auth_event.dart';
 import 'blocs/auth/auth_state.dart';
 import 'blocs/favorites/favorites_bloc.dart';
+import 'blocs/subscription/subscription_bloc.dart';
 import 'core/routing/app_router.dart';
 import 'features/shared/services/remote_config_service.dart';
 import 'features/shared/services/real_time_analytics_service.dart';
@@ -112,6 +113,9 @@ class HiPopApp extends StatelessWidget {
             create: (context) => FavoritesBloc(
               favoritesRepository: context.read<FavoritesRepository>(),
             ),
+          ),
+          BlocProvider<SubscriptionBloc>(
+            create: (context) => SubscriptionBloc(),
           ),
         ],
         child: Builder(

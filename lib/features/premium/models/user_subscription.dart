@@ -292,6 +292,9 @@ class UserSubscription extends Equatable {
           'markets_managed': -1, // unlimited
           'events_per_month': 10,
           'vendor_communications_per_day': 50,
+          'vendor_posts_per_month': 2,
+          'post_responses_viewable': 5,
+          'post_analytics_days': 30,
         };
       case 'shopper':
         return {
@@ -353,6 +356,16 @@ class UserSubscription extends Equatable {
           'budget_planning_tools': true,
           'financial_forecasting': true,
           'advanced_market_intelligence': true,
+          
+          // New Organizer Vendor Post Features
+          'vendor_post_creation': true,
+          'vendor_post_analytics': true,
+          'unlimited_vendor_posts': true,
+          'priority_vendor_matching': true,
+          'advanced_response_management': true,
+          'vendor_recruitment_insights': true,
+          'post_performance_tracking': true,
+          'vendor_discovery_integration': true,
         };
       case SubscriptionTier.enterprise:
         return {
@@ -370,6 +383,16 @@ class UserSubscription extends Equatable {
           'budget_planning_tools': true,
           'financial_forecasting': true,
           'advanced_market_intelligence': true,
+          
+          // Organizer Vendor Post Features
+          'vendor_post_creation': true,
+          'vendor_post_analytics': true,
+          'unlimited_vendor_posts': true,
+          'priority_vendor_matching': true,
+          'advanced_response_management': true,
+          'vendor_recruitment_insights': true,
+          'post_performance_tracking': true,
+          'vendor_discovery_integration': true,
           
           // Enterprise-specific features
           'white_label_analytics': true,

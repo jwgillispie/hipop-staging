@@ -127,6 +127,18 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
     );
   }
 
+  void _showUpgradePromptWithoutLimitCheck() {
+    // Show upgrade prompt without the "limit reached" message
+    // This is called when user clicks "upgrade for unlimited photos" button
+    ContextualUpgradePrompts.showFeatureLockedPrompt(
+      context,
+      userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? '',
+      userType: widget.userType ?? 'vendor',
+      featureName: 'unlimited_photos',
+      featureDisplayName: 'Unlimited Photos',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -265,7 +277,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
     return Container(
       margin: const EdgeInsets.only(top: 8),
       child: InkWell(
-        onTap: _isLoading ? null : (canAddMore ? _handleAddPhoto : _showUpgradePrompt),
+        onTap: _isLoading ? null : (canAddMore ? _handleAddPhoto : _showUpgradePromptWithoutLimitCheck),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           width: double.infinity,

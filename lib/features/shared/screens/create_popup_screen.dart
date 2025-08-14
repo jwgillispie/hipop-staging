@@ -13,6 +13,8 @@ import '../services/photo_service.dart';
 import '../../market/services/market_service.dart';
 import '../services/user_profile_service.dart';
 import '../models/user_profile.dart';
+import '../../vendor/services/vendor_product_service.dart';
+import '../../vendor/models/vendor_product_list.dart';
 import 'dart:io';
 
 class CreatePopUpScreen extends StatefulWidget {
@@ -53,12 +55,18 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   String? _popupType;
   bool _isIndependent = false;
   bool _canAccessMarkets = false;
+  
+  // Product list integration
+  List<VendorProductList> _availableProductLists = [];
+  List<VendorProductList> _selectedProductLists = [];
+  bool _loadingProductLists = false;
 
   @override
   void initState() {
     super.initState();
     _loadMarkets();
     _loadCurrentUserProfile();
+    _loadProductLists();
     // Defer form initialization until after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeForm();
@@ -75,6 +83,32 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         }
       } catch (e) {
         debugPrint('Error loading user profile: $e');
+      }
+    }
+  }
+
+  Future<void> _loadProductLists() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    setState(() {
+      _loadingProductLists = true;
+    });
+
+    try {
+      final productLists = await VendorProductService.getProductLists(currentUser.uid);
+      if (mounted) {
+        setState(() {
+          _availableProductLists = productLists;
+          _loadingProductLists = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading product lists: $e');
+      if (mounted) {
+        setState(() {
+          _loadingProductLists = false;
+        });
       }
     }
   }
@@ -410,6 +444,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           userType: 'vendor',
         ),
         const SizedBox(height: 16),
+        _buildProductListSelectionWidget(),
+        const SizedBox(height: 16),
         _buildInstagramInfoWidget(),
       ],
     );
@@ -467,6 +503,165 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductListSelectionWidget() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.inventory_2, color: Colors.blue[600]),
+                const SizedBox(width: 12),
+                const Text(
+                  'Product Lists (Optional)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                if (_loadingProductLists)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+          ),
+          if (_availableProductLists.isEmpty && !_loadingProductLists)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Text(
+                'No product lists found. Create product lists to showcase your items.',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+            )
+          else if (_availableProductLists.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                'Select product lists to showcase at this pop-up:',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            Container(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                itemCount: _availableProductLists.length,
+                itemBuilder: (context, index) {
+                  final productList = _availableProductLists[index];
+                  final isSelected = _selectedProductLists.contains(productList);
+                  
+                  return Container(
+                    width: 160,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedProductLists.remove(productList);
+                          } else {
+                            _selectedProductLists.add(productList);
+                          }
+                        });
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isSelected ? Colors.blue : Colors.grey.shade300,
+                            width: isSelected ? 2 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          color: isSelected ? Colors.blue.shade50 : Colors.white,
+                        ),
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    productList.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: isSelected ? Colors.blue[800] : Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: Colors.blue[600],
+                                    size: 16,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${productList.productIds.length} items',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (productList.description?.isNotEmpty == true)
+                              Expanded(
+                                child: Text(
+                                  productList.description!,
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )
+                            else
+                              Expanded(
+                                child: Text(
+                                  'Product list',
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -959,6 +1154,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           instagramHandle: _currentUserProfile?.instagramHandle,
           photoUrls: photoUrls,
           marketId: _selectedMarket?.id,
+          productListIds: _selectedProductLists.map((list) => list.id).toList(),
           updatedAt: now,
         );
         
@@ -992,6 +1188,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           description: _descriptionController.text.trim(),
           instagramHandle: _currentUserProfile?.instagramHandle,
           marketId: _selectedMarket?.id,
+          productListIds: _selectedProductLists.map((list) => list.id).toList(),
           createdAt: now,
           updatedAt: now,
         );
@@ -1009,6 +1206,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             final finalPost = tempPost.copyWith(
               id: postId,
               photoUrls: photoUrls,
+              productListIds: _selectedProductLists.map((list) => list.id).toList(),
             );
             await widget.postsRepository.updatePost(finalPost);
           }

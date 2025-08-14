@@ -1,66 +1,71 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:crypto/crypto.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class StripeService {
-  static const String _baseUrl = 'https://api.stripe.com/v1';
+  // 🔒 SECURITY: All Stripe secret key operations moved to server-side Cloud Functions
   
-  /// Get the secret key from environment
-  static String get _secretKey {
-    final key = dotenv.env['STRIPE_SECRET_KEY'];
-    if (key == null || key.isEmpty) {
-      throw Exception('STRIPE_SECRET_KEY not found in environment');
-    }
-    return key;
-  }
-
-  /// Create a checkout session for a subscription
+  // Rate limiting and debug tracking
+  static final Map<String, DateTime> _lastOperationTime = {};
+  static const Duration _defaultTimeout = Duration(seconds: 30);
+  static const Duration _rateLimitWindow = Duration(minutes: 1);
+  
+  // Debug logger - would need to import if actually used
+  // static final _debugLogger = DebugLoggerService.instance;
+  
+  /// Create a checkout session for a subscription using secure Cloud Function
   static Future<String> createCheckoutSession({
     required String priceId,
     required String customerEmail,
     required Map<String, String> metadata,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/checkout/sessions'),
-        headers: {
-          'Authorization': 'Bearer $_secretKey',
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: {
-          'mode': 'subscription',
-          'line_items[0][price]': priceId,
-          'line_items[0][quantity]': '1',
-          'customer_email': customerEmail,
-          'success_url': kIsWeb 
-              ? '${Uri.base.origin}/#/subscription/success?session_id={CHECKOUT_SESSION_ID}&user_id=${metadata['user_id']}'
-              : 'hipop://subscription/success?session_id={CHECKOUT_SESSION_ID}&user_id=${metadata['user_id']}',
-          'cancel_url': kIsWeb 
-              ? '${Uri.base.origin}/#/subscription/cancel'
-              : 'hipop://subscription/cancel',
-          'allow_promotion_codes': 'true',
-          'billing_address_collection': 'required',
-          'metadata[user_id]': metadata['user_id'] ?? '',
-          'metadata[user_type]': metadata['user_type'] ?? '',
-          'metadata[environment]': 'staging',
-        },
-      );
+      debugPrint('🔒 Creating secure checkout session via Cloud Function');
+      debugPrint('📧 Customer email: $customerEmail');
+      debugPrint('💰 Price ID: $priceId');
+      debugPrint('📋 Metadata: $metadata');
+      
+      // Call secure Cloud Function instead of direct Stripe API
+      final callable = FirebaseFunctions.instance.httpsCallable('createCheckoutSession');
+      final result = await callable.call({
+        'priceId': priceId,
+        'customerEmail': customerEmail,
+        'userId': metadata['user_id'],
+        'userType': metadata['user_type'],
+        'successUrl': kIsWeb 
+            ? '${Uri.base.origin}/#/subscription/success?session_id={CHECKOUT_SESSION_ID}&user_id=${metadata['user_id']}'
+            : 'hipop://subscription/success?session_id={CHECKOUT_SESSION_ID}&user_id=${metadata['user_id']}',
+        'cancelUrl': kIsWeb 
+            ? '${Uri.base.origin}/#/subscription/cancel'
+            : 'hipop://subscription/cancel',
+        'environment': dotenv.env['ENVIRONMENT'] ?? 'staging',
+      });
 
-      debugPrint('Stripe API Response Status: ${response.statusCode}');
-      debugPrint('Stripe API Response Body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['url'] as String;
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception('Stripe API Error: ${error['error']['message']}');
+      final checkoutUrl = result.data['url'] as String?;
+      if (checkoutUrl == null || checkoutUrl.isEmpty) {
+        throw Exception('No checkout URL returned from server');
       }
+
+      debugPrint('✅ Secure checkout session created: $checkoutUrl');
+      return checkoutUrl;
     } catch (e) {
-      debugPrint('❌ Error creating checkout session: $e');
+      debugPrint('❌ Error creating secure checkout session: $e');
+      
+      // Provide user-friendly error messages
+      if (e is FirebaseFunctionsException) {
+        switch (e.code) {
+          case 'invalid-argument':
+            throw Exception('Invalid subscription information provided');
+          case 'permission-denied':
+            throw Exception('Not authorized to create subscription');
+          case 'unavailable':
+            throw Exception('Subscription service temporarily unavailable');
+          default:
+            throw Exception('Unable to process subscription request');
+        }
+      }
+      
       rethrow;
     }
   }
@@ -216,103 +221,75 @@ class StripeService {
     }
   }
 
-  /// Verify webhook signature for secure webhook processing
-  /// Implements HMAC-SHA256 signature verification as per Stripe documentation
-  static bool verifyWebhookSignature(String payload, String signature) {
-    final webhookSecret = dotenv.env['STRIPE_WEBHOOK_SECRET'];
-    if (webhookSecret == null || webhookSecret.isEmpty) {
-      debugPrint('⚠️ No webhook secret configured');
-      return false;
-    }
-    
+  /// Verify subscription session using secure server-side validation
+  /// 🔒 SECURITY: Session verification moved to Cloud Function for security
+  static Future<bool> verifySubscriptionSession(String sessionId) async {
     try {
-      // Parse signature header - format: "t=timestamp,v1=signature"
-      final signatureParts = signature.split(',');
-      String? timestamp;
-      String? v1Signature;
+      debugPrint('🔒 Verifying subscription session via Cloud Function');
+      debugPrint('🎫 Session ID: $sessionId');
       
-      for (final part in signatureParts) {
-        final keyValue = part.split('=');
-        if (keyValue.length == 2) {
-          final key = keyValue[0].trim();
-          final value = keyValue[1].trim();
-          
-          if (key == 't') {
-            timestamp = value;
-          } else if (key == 'v1') {
-            v1Signature = value;
-          }
-        }
-      }
+      final callable = FirebaseFunctions.instance.httpsCallable('verifySubscriptionSession');
+      final result = await callable.call({
+        'sessionId': sessionId,
+      });
       
-      if (timestamp == null || v1Signature == null) {
-        debugPrint('❌ Invalid signature format');
-        return false;
-      }
-      
-      // Check timestamp tolerance (5 minutes)
-      final webhookTimestamp = int.tryParse(timestamp);
-      if (webhookTimestamp == null) {
-        debugPrint('❌ Invalid timestamp in signature');
-        return false;
-      }
-      
-      final currentTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final timeDifference = (currentTimestamp - webhookTimestamp).abs();
-      const toleranceInSeconds = 300; // 5 minutes
-      
-      if (timeDifference > toleranceInSeconds) {
-        debugPrint('❌ Webhook timestamp too old: ${timeDifference}s > ${toleranceInSeconds}s');
-        return false;
-      }
-      
-      // Create signed payload: timestamp.payload
-      final signedPayload = '$timestamp.$payload';
-      
-      // Generate expected signature using HMAC-SHA256
-      final expectedSignature = _computeHmacSha256(webhookSecret, signedPayload);
-      
-      // Compare signatures using constant-time comparison
-      final isValid = _constantTimeCompare(expectedSignature, v1Signature);
-      
-      if (!isValid) {
-        debugPrint('❌ Webhook signature verification failed');
-        debugPrint('Expected: $expectedSignature');
-        debugPrint('Received: $v1Signature');
-      } else {
-        debugPrint('✅ Webhook signature verified successfully');
-      }
+      final isValid = result.data['valid'] as bool? ?? false;
+      debugPrint(isValid ? '✅ Session verified successfully' : '❌ Session verification failed');
       
       return isValid;
-      
     } catch (e) {
-      debugPrint('❌ Error verifying webhook signature: $e');
+      debugPrint('❌ Error verifying subscription session: $e');
       return false;
     }
   }
   
-  /// Compute HMAC-SHA256 signature
-  static String _computeHmacSha256(String key, String message) {
-    final keyBytes = utf8.encode(key);
-    final messageBytes = utf8.encode(message);
-    
-    final hmac = Hmac(sha256, keyBytes);
-    final digest = hmac.convert(messageBytes);
-    
-    return digest.toString();
-  }
-  
-  /// Constant-time string comparison to prevent timing attacks
-  static bool _constantTimeCompare(String a, String b) {
-    if (a.length != b.length) {
+  /// Cancel subscription using secure server-side operation
+  /// 🔒 SECURITY: Cancellation handled server-side for security
+  static Future<bool> cancelSubscription(String userId) async {
+    try {
+      debugPrint('🔒 Cancelling subscription via Cloud Function');
+      debugPrint('👤 User ID: $userId');
+      
+      final callable = FirebaseFunctions.instance.httpsCallable('cancelSubscription');
+      final result = await callable.call({
+        'userId': userId,
+      });
+      
+      final success = result.data['success'] as bool? ?? false;
+      debugPrint(success ? '✅ Subscription cancelled successfully' : '❌ Subscription cancellation failed');
+      
+      return success;
+    } catch (e) {
+      debugPrint('❌ Error cancelling subscription: $e');
       return false;
     }
-    
-    int result = 0;
-    for (int i = 0; i < a.length; i++) {
-      result |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
-    }
-    
-    return result == 0;
+  }
+  
+  /// Get comprehensive error information for debugging
+  static Map<String, dynamic> getDebugInfo() {
+    return {
+      'service_name': 'StripeService',
+      'rate_limit_entries': _lastOperationTime.length,
+      'environment_variables': {
+        'stripe_secret_key_present': dotenv.env['STRIPE_SECRET_KEY'] != null,
+        'stripe_publishable_key_present': dotenv.env['STRIPE_PUBLISHABLE_KEY'] != null,
+        'environment': dotenv.env['ENVIRONMENT'] ?? 'unknown',
+      },
+      'configuration': {
+        'default_timeout_seconds': _defaultTimeout.inSeconds,
+        'rate_limit_window_seconds': _rateLimitWindow.inSeconds,
+      },
+      'platform_info': {
+        'is_web': kIsWeb,
+        'debug_mode': kDebugMode,
+      },
+    };
+  }
+  
+  /// Clear rate limiting cache (useful for testing)
+  static void clearRateLimitCache() {
+    _lastOperationTime.clear();
+    // Debug logging would go here
+    debugPrint('Rate limit cache cleared');
   }
 }
