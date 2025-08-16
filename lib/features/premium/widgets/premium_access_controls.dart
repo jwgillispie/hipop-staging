@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import '../../../blocs/subscription/subscription_bloc.dart';
 import '../../../blocs/subscription/subscription_state.dart';
@@ -646,7 +647,8 @@ class PremiumAccessControls {
   }
 
   static void _navigateToUpgrade(BuildContext context, String userType) {
-    context.go('/premium-onboarding');
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    context.go('/premium/onboarding?userId=$userId&userType=$userType');
   }
 
   static void _navigateToSubscriptionManagement(BuildContext context) {

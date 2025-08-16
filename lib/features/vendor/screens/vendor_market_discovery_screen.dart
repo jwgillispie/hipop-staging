@@ -928,27 +928,52 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                       
                       const SizedBox(height: 16),
                       Text(
-                        'Operating Schedule',
+                        'Event Details',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...result.market.operatingDays.entries.map((entry) => 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 100,
-                                child: Text(
-                                  entry.key.toUpperCase(),
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 100,
+                              child: Text(
+                                'Date:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
                                 ),
                               ),
-                              Text(entry.value),
-                            ],
-                          ),
+                            ),
+                            Text(
+                              '${result.market.eventDate.month}/${result.market.eventDate.day}/${result.market.eventDate.year}',
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 100,
+                              child: Text(
+                                'Time:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            Text(
+                              result.market.timeRange,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          ],
                         ),
                       ),
                       

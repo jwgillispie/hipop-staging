@@ -18,7 +18,7 @@ class VendorApplicationService {
       debugPrint('DEBUG: Market ID: ${application.marketId}');
       debugPrint('DEBUG: Vendor ID: ${application.vendorId}');
       debugPrint('DEBUG: Status: ${application.status.name}');
-      debugPrint('DEBUG: Requested dates: ${application.requestedDates.map((d) => d.toIso8601String()).join(', ')}');
+      debugPrint('DEBUG: Application Type: ${application.applicationType.name}');
       
       final docRef = await _applicationsCollection.add(application.toFirestore());
       debugPrint('✅ Vendor application submitted with ID: ${docRef.id}');
@@ -44,11 +44,10 @@ class VendorApplicationService {
     );
   }
 
-  /// Submit a new vendor application with profile validation (legacy method)
+  /// Submit a new vendor application with profile validation
   static Future<String> submitApplicationWithProfile(
     String vendorId,
-    String marketId,
-    List<String> operatingDays, {
+    String marketId, {
     String? specialMessage,
   }) async {
     try {
@@ -77,7 +76,6 @@ class VendorApplicationService {
         id: '', // Will be set by Firestore
         marketId: marketId,
         vendorId: vendorId,
-        operatingDays: operatingDays,
         specialMessage: specialMessage,
         status: ApplicationStatus.pending,
         createdAt: DateTime.now(),
@@ -104,11 +102,10 @@ class VendorApplicationService {
     }
   }
 
-  /// Submit a new vendor application with specific dates
-  static Future<String> submitApplicationWithDates(
+  /// Submit a new vendor application for a market event
+  static Future<String> submitMarketEventApplication(
     String vendorId,
-    String marketId,
-    List<DateTime> requestedDates, {
+    String marketId, {
     String? specialMessage,
     String? howDidYouHear,
   }) async {
@@ -133,16 +130,11 @@ class VendorApplicationService {
         throw Exception('You have already applied to this market.');
       }
 
-      // Generate legacy operating days from requested dates for backward compatibility
-      final legacyOperatingDays = _generateLegacyOperatingDays(requestedDates);
-
-      // Create the application with both legacy and new date fields
+      // Create the application for the specific market event
       final application = VendorApplication(
         id: '', // Will be set by Firestore
         marketId: marketId,
         vendorId: vendorId,
-        operatingDays: legacyOperatingDays, // Legacy field for backward compatibility
-        requestedDates: requestedDates, // New field with actual dates
         specialMessage: specialMessage,
         howDidYouHear: howDidYouHear,
         status: ApplicationStatus.pending,
@@ -161,7 +153,7 @@ class VendorApplicationService {
 
       debugPrint('DEBUG: Submitting application for vendor: ${vendorProfile.businessName ?? vendorProfile.displayName}');
       debugPrint('DEBUG: Application market ID: $marketId');
-      debugPrint('DEBUG: Requested dates: ${requestedDates.map((d) => d.toIso8601String()).join(', ')}');
+      debugPrint('DEBUG: Application type: ${application.applicationType.name}');
       debugPrint('DEBUG: Profile metadata: ${application.metadata}');
 
       return await submitApplication(application);
@@ -501,7 +493,7 @@ class VendorApplicationService {
         specialties: [], // Not in profile, leave empty for now
         priceRange: '', // Not in profile, leave empty for now
         certifications: '', // Not in profile, leave empty for now
-        operatingDays: application.operatingDays, // Use the selected operating days
+        operatingDays: [], // Operating days are now handled at the market level
         boothPreferences: application.specialMessage ?? '',
         specialRequirements: application.specialMessage ?? '',
         canDeliver: false, // Default to false
@@ -620,25 +612,19 @@ class VendorApplicationService {
       for (final doc in snapshot.docs) {
         final application = VendorApplication.fromFirestore(doc);
         
-        // Check if application has requested dates
-        if (application.hasRequestedDates) {
-          // Check if all requested dates are in the past
-          final allDatesInPast = application.requestedDates.every((date) {
-            final dateOnly = DateTime(date.year, date.month, date.day);
-            return dateOnly.isBefore(today);
-          });
-
-          if (allDatesInPast) {
-            // Auto-reject this application
-            await updateApplicationStatus(
-              application.id,
-              ApplicationStatus.rejected,
-              'system', // System rejection
-              reviewNotes: 'Automatically rejected: All requested dates are in the past.',
-            );
-            rejectedCount++;
-            debugPrint('Auto-rejected application ${application.id} for ${application.vendorBusinessName} - past dates');
-          }
+        // For the new 1:1 market-event system, applications are for specific market events
+        // TODO: Add logic to fetch market and check if event date is in the past
+        // For now, we don't auto-reject since this requires market lookup
+        if (false) { // Disabled for now
+          // Auto-reject this application
+          await updateApplicationStatus(
+            application.id,
+            ApplicationStatus.rejected,
+            'system', // System rejection
+            reviewNotes: 'Automatically rejected: Market event date is in the past.',
+          );
+          rejectedCount++;
+          debugPrint('Auto-rejected application ${application.id} for ${application.vendorBusinessName} - past dates');
         }
       }
 
@@ -664,25 +650,19 @@ class VendorApplicationService {
       for (final doc in snapshot.docs) {
         final application = VendorApplication.fromFirestore(doc);
         
-        // Check if application has requested dates
-        if (application.hasRequestedDates) {
-          // Check if all requested dates are in the past
-          final allDatesInPast = application.requestedDates.every((date) {
-            final dateOnly = DateTime(date.year, date.month, date.day);
-            return dateOnly.isBefore(today);
-          });
-
-          if (allDatesInPast) {
-            // Auto-reject this application
-            await updateApplicationStatus(
-              application.id,
-              ApplicationStatus.rejected,
-              'system', // System rejection
-              reviewNotes: 'Automatically rejected: All requested dates are in the past.',
-            );
-            rejectedCount++;
-            debugPrint('Auto-rejected application ${application.id} for ${application.vendorBusinessName} - past dates');
-          }
+        // For the new 1:1 market-event system, applications are for specific market events
+        // TODO: Add logic to fetch market and check if event date is in the past
+        // For now, we don't auto-reject since this requires market lookup
+        if (false) { // Disabled for now
+          // Auto-reject this application
+          await updateApplicationStatus(
+            application.id,
+            ApplicationStatus.rejected,
+            'system', // System rejection
+            reviewNotes: 'Automatically rejected: Market event date is in the past.',
+          );
+          rejectedCount++;
+          debugPrint('Auto-rejected application ${application.id} for ${application.vendorBusinessName} - past dates');
         }
       }
 

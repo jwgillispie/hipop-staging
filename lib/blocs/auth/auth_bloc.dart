@@ -47,6 +47,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
     final user = event.user as User?;
+    print('🔐 DEBUG: AuthUserChanged - user is ${user != null ? "not null" : "null"}');
     
     if (user != null) {
       try {
@@ -116,6 +117,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(Authenticated(user: user, userType: 'shopper', userProfile: null));
       }
     } else {
+      print('🔐 DEBUG: Emitting Unauthenticated state');
       emit(Unauthenticated());
     }
   }
@@ -219,12 +221,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogoutEvent(LogoutEvent event, Emitter<AuthState> emit) async {
+    print('🔐 DEBUG: LogoutEvent triggered');
     emit(const AuthLoading(message: 'Signing out...'));
     
     try {
+      print('🔐 DEBUG: Calling _authRepository.signOut()');
       await _authRepository.signOut();
+      print('🔐 DEBUG: Sign out completed, waiting for AuthUserChanged event');
       // State will be updated via AuthUserChanged event
     } catch (e) {
+      print('🔐 DEBUG: Error during logout: $e');
       emit(AuthError(message: e.toString()));
     }
   }

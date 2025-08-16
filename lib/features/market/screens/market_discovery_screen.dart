@@ -223,7 +223,7 @@ class _MarketDiscoveryScreenState extends State<MarketDiscoveryScreen> {
   Widget _buildMarketCard(Market market) {
     final vendorCount = _marketVendorCounts[market.id] ?? 0;
     final activeToday = _marketActiveVendorsToday[market.id] ?? 0;
-    final isOpenToday = market.isOpenToday;
+    final isOpenToday = market.isHappeningToday;
 
     return Card(
       elevation: 2,
@@ -326,11 +326,11 @@ class _MarketDiscoveryScreenState extends State<MarketDiscoveryScreen> {
                         
                         const Spacer(),
                         
-                        if (isOpenToday && market.todaysHours != null) ...[
+                        if (isOpenToday) ...[
                           Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 4),
                           Text(
-                            market.todaysHours!,
+                            market.timeRange,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],

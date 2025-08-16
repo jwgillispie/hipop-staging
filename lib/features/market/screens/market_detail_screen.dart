@@ -235,50 +235,106 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
           
           const SizedBox(height: 24),
           
-          // Operating Schedule
-          if (widget.market.operatingDays.isNotEmpty) ...[
-            Text(
-              'Operating Schedule',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          // Event Schedule
+          Text(
+            'Event Schedule',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.market.operatingDays.entries.map((entry) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 80,
-                            child: Text(
-                              _formatOperatingDayKey(entry.key),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            entry.value,
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 16,
+                        color: Colors.grey[600],
                       ),
-                    );
-                  }).toList(),
-                ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Event Date:',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${widget.market.eventDate.month}/${widget.market.eventDate.day}/${widget.market.eventDate.year}',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Time:',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.market.timeRange,
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        widget.market.isHappeningToday ? Icons.check_circle : 
+                        widget.market.isFutureEvent ? Icons.schedule : Icons.history,
+                        size: 16,
+                        color: widget.market.isHappeningToday ? Colors.green : 
+                               widget.market.isFutureEvent ? Colors.orange : Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Status:',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.market.isHappeningToday ? 'Happening Today' : 
+                        widget.market.isFutureEvent ? 'Upcoming' : 'Past Event',
+                        style: TextStyle(
+                          color: widget.market.isHappeningToday ? Colors.green : 
+                                 widget.market.isFutureEvent ? Colors.orange : Colors.grey,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -715,44 +771,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
     }
   }
 
-  String _formatOperatingDayKey(String key) {
-    // Check if this is a specific date format (contains underscores and numbers)
-    if (key.contains('_') && RegExp(r'_\d{4}_\d{1,2}_\d{1,2}$').hasMatch(key)) {
-      // Parse specific date format: "sunday_2025_7_27"
-      final parts = key.split('_');
-      if (parts.length == 4) {
-        final year = int.tryParse(parts[1]);
-        final month = int.tryParse(parts[2]);
-        final day = int.tryParse(parts[3]);
-        
-        if (year != null && month != null && day != null) {
-          final monthName = _getMonthName(month);
-          return '$monthName $day';
-        }
-      }
-    }
-    
-    // Regular recurring day format
-    return key.toUpperCase();
-  }
-
-  String _getMonthName(int month) {
-    switch (month) {
-      case 1: return 'Jan';
-      case 2: return 'Feb';
-      case 3: return 'Mar';
-      case 4: return 'Apr';
-      case 5: return 'May';
-      case 6: return 'Jun';
-      case 7: return 'Jul';
-      case 8: return 'Aug';
-      case 9: return 'Sep';
-      case 10: return 'Oct';
-      case 11: return 'Nov';
-      case 12: return 'Dec';
-      default: return 'Month';
-    }
-  }
 
   String _buildVendorShareContent(ManagedVendor vendor) {
     final buffer = StringBuffer();
@@ -790,28 +808,4 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
     return buffer.toString();
   }
 
-  String _buildMarketShareContent(Market market) {
-    final buffer = StringBuffer();
-    
-    buffer.writeln('🏪 Market Discovery!');
-    buffer.writeln();
-    buffer.writeln('📍 ${market.name}');
-    if (market.description != null && market.description!.isNotEmpty) {
-      buffer.writeln(market.description);
-    }
-    buffer.writeln();
-    buffer.writeln('📍 Location: ${market.address}');
-    buffer.writeln();
-    
-    // Add schedule information if available
-    buffer.writeln('🗓️ Visit this amazing local market!');
-    buffer.writeln();
-    
-    buffer.writeln('Discovered on HiPop - Discover local pop-ups and markets');
-    buffer.writeln('Download: https://hipopapp.com');
-    buffer.writeln();
-    buffer.writeln('#FarmersMarket #LocalMarket #${market.address.replaceAll(' ', '')} #SupportLocal #HiPop');
-    
-    return buffer.toString();
-  }
 }

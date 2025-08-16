@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Reusable premium dashboard components for consistent Vendor Pro UI/UX
 /// Ensures $29/month value proposition is clearly demonstrated
@@ -405,7 +406,8 @@ class VendorPremiumDashboardComponents {
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate to upgrade flow
-                    context.go('/premium-onboarding');
+                    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+                    context.go('/premium/onboarding?userId=$userId&userType=vendor');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade600,

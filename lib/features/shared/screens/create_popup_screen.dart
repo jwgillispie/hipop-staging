@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
-import 'package:hipop/features/vendor/services/vendor_market_relationship_service.dart';
+import 'package:hipop/features/vendor/models/post_type.dart';
 import '../../../repositories/vendor_posts_repository.dart';
 import '../../market/models/market.dart';
 import '../widgets/common/hipop_text_field.dart';
@@ -16,6 +17,7 @@ import '../models/user_profile.dart';
 import '../../vendor/services/vendor_product_service.dart';
 import '../../vendor/models/vendor_product_list.dart';
 import '../../premium/services/subscription_service.dart';
+import '../services/real_time_analytics_service.dart';
 import 'dart:io';
 
 class CreatePopUpScreen extends StatefulWidget {
@@ -37,6 +39,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   final _vendorNameController = TextEditingController();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _vendorNotesController = TextEditingController();
   
   final UserProfileService _userProfileService = UserProfileService();
   UserProfile? _currentUserProfile;
@@ -49,13 +52,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   PlaceDetails? _selectedPlace;
   
   List<Market> _availableMarkets = [];
-  List<Market> _approvedMarkets = [];
   Market? _selectedMarket;
   bool _loadingMarkets = false;
-  bool _loadingApprovedMarkets = false;
   String? _popupType;
   bool _isIndependent = false;
-  bool _canAccessMarkets = false;
   
   // Product list integration
   List<VendorProductList> _availableProductLists = [];
@@ -76,6 +76,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     _loadCurrentUserProfile();
     _loadProductLists();
     _checkSubscriptionLimits();
+    
+    // Track post creation start
+    _trackPostCreationStart();
+    
     // Defer form initialization until after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeForm();
@@ -144,19 +148,26 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         } else {
           // Free tier vendor - check popup_posts_per_month limit
           final limit = subscription?.getLimit('popup_posts_per_month') ?? 3;
-          // Get current usage - for now we'll simulate this
-          // In a real implementation, you'd track actual usage
-          final currentUsage = 0; // TODO: Track actual popup post count this month
+          // Get current usage from vendor_stats collection
+          final currentUsage = await _getCurrentMonthlyPostCount(currentUser.uid);
           _remainingPosts = limit - currentUsage;
           _canCreatePost = _remainingPosts > 0;
           _isNearLimit = _remainingPosts == 1;
         }
       } else if (userType == 'market_organizer') {
-        // Check if organizer can create vendor posts
-        final remaining = await SubscriptionService.getRemainingVendorPosts(currentUser.uid);
-        _remainingPosts = remaining;
-        _canCreatePost = remaining > 0 || remaining == -1; // -1 means unlimited
-        _isNearLimit = remaining == 1;
+        // Check organizer limits using same system as vendors
+        if (subscription?.isPremium == true) {
+          _remainingPosts = -1; // Unlimited for premium
+          _canCreatePost = true;
+          _isNearLimit = false;
+        } else {
+          // Free tier organizer - check same monthly limit as vendors
+          const limit = 3; // Same limit as vendors
+          final currentUsage = await _getCurrentMonthlyPostCount(currentUser.uid);
+          _remainingPosts = limit - currentUsage;
+          _canCreatePost = _remainingPosts > 0;
+          _isNearLimit = _remainingPosts == 1;
+        }
       } else {
         _canCreatePost = true; // Default to allowing for other user types
         _remainingPosts = -1;
@@ -189,6 +200,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     // Check for type parameter from query string
     final uri = GoRouterState.of(context).uri;
     _popupType = uri.queryParameters['type'];
+    final marketId = uri.queryParameters['marketId'];
+    
+    // Track post type selection
+    _trackPostTypeSelection(_popupType);
     
     // Check for duplicate arguments first
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -225,6 +240,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       _vendorNameController.text = post.vendorName;
       _locationController.text = post.location;
       _descriptionController.text = post.description;
+      _vendorNotesController.text = post.vendorNotes ?? '';
       // Instagram handle will be auto-populated from user profile
       _selectedStartDateTime = post.popUpStartDateTime;
       _selectedEndDateTime = post.popUpEndDateTime;
@@ -262,10 +278,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           _isIndependent = false;
         });
       } else {
-        // Default to independent unless user has approved markets
+        // Default to independent
         setState(() {
-          _isIndependent = !_canAccessMarkets;
+          _isIndependent = true;
         });
+      }
+      
+      // Set selected market if marketId is provided
+      if (marketId != null && marketId.isNotEmpty) {
+        _setSelectedMarketById(marketId);
       }
     }
   }
@@ -281,63 +302,212 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         _loadingMarkets = false;
       });
       
-      // Load approved markets after all markets are loaded
-      _loadApprovedMarkets();
     } catch (e) {
       setState(() => _loadingMarkets = false);
     }
   }
   
-  Future<void> _loadApprovedMarkets() async {
-    setState(() => _loadingApprovedMarkets = true);
-    
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // Get markets the vendor has permission for
-        final approvedMarketIds = await VendorMarketRelationshipService.getApprovedMarketsForVendor(user.uid);
-        
-        // Filter the available markets to only show approved ones
-        final approvedMarkets = _availableMarkets.where((market) => 
-          approvedMarketIds.contains(market.id)
-        ).toList();
-        
-        setState(() {
-          _approvedMarkets = approvedMarkets;
-          _canAccessMarkets = approvedMarkets.isNotEmpty;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading approved markets: $e');
-    } finally {
-      setState(() => _loadingApprovedMarkets = false);
-    }
-  }
   
-  void _setSelectedMarketById(String marketId) {
-    final market = _availableMarkets.firstWhere(
+  Future<void> _setSelectedMarketById(String marketId) async {
+    // Try to find in already loaded markets first
+    Market? market = _availableMarkets.firstWhere(
       (m) => m.id == marketId,
       orElse: () => Market(
         id: marketId,
-        name: 'Unknown Market',
+        name: 'Loading...',
         address: '',
         city: '',
         state: '',
         latitude: 0,
         longitude: 0,
-        operatingDays: {},
+        eventDate: DateTime.now(),
+        startTime: '9:00 AM',
+        endTime: '5:00 PM',
         isActive: true,
         createdAt: DateTime.now(),
       ),
     );
-    setState(() => _selectedMarket = market);
+    
+    // If not found in available markets, fetch it directly
+    if (market.name == 'Loading...') {
+      try {
+        final fetchedMarket = await MarketService.getMarket(marketId);
+        if (fetchedMarket != null) {
+          market = fetchedMarket;
+          // Add to available markets if not already there
+          if (!_availableMarkets.any((m) => m.id == marketId)) {
+            _availableMarkets.add(fetchedMarket);
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching market: $e');
+      }
+    }
+    
+    if (mounted) {
+      final previousMarketId = _selectedMarket?.id;
+      setState(() {
+        _selectedMarket = market;
+        // Pre-fill location and time from market data
+        if (market != null && market.name != 'Loading...') {
+          _locationController.text = '${market.address}, ${market.city}, ${market.state}';
+          _selectedPlace = PlaceDetails(
+            placeId: market.id,
+            name: market.name,
+            formattedAddress: '${market.address}, ${market.city}, ${market.state}',
+            latitude: market.latitude,
+            longitude: market.longitude,
+          );
+          // Pre-fill time if market has operating hours for today
+          _prefillMarketTime(market);
+        }
+      });
+      
+      // Track market selection change
+      if (previousMarketId != market?.id) {
+        _trackMarketSelection(market?.id);
+      }
+    }
+  }
+  
+  void _prefillMarketTime(Market market) {
+    // Get today's day name
+    final now = DateTime.now();
+    final dayName = _getDayName(now.weekday);
+    
+    // Check if market is happening today
+    if (market.isHappeningToday) {
+      String hours = '${market.startTime} - ${market.endTime}';
+      // Parse hours like "9:00 AM-2:00 PM"
+      try {
+        // Extract just the time portion if it includes date info
+        if (hours.contains('(')) {
+          hours = hours.substring(0, hours.indexOf('(')).trim();
+        }
+        
+        final parts = hours.split('-');
+        if (parts.length == 2) {
+          final startTime = _parseTimeString(parts[0].trim());
+          final endTime = _parseTimeString(parts[1].trim());
+          
+          if (startTime != null && endTime != null) {
+            setState(() {
+              _selectedStartDateTime = DateTime(
+                now.year, now.month, now.day,
+                startTime.hour, startTime.minute,
+              );
+              _selectedEndDateTime = DateTime(
+                now.year, now.month, now.day,
+                endTime.hour, endTime.minute,
+              );
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint('Error parsing market hours: $e');
+      }
+    }
+  }
+  
+  DateTime? _parseTimeString(String timeStr) {
+    try {
+      // Parse time like "9:00 AM" or "2:00 PM"
+      final isPM = timeStr.toUpperCase().contains('PM');
+      final isAM = timeStr.toUpperCase().contains('AM');
+      
+      // Remove AM/PM and trim
+      String cleanTime = timeStr.replaceAll(RegExp(r'[AP]M', caseSensitive: false), '').trim();
+      
+      final timeParts = cleanTime.split(':');
+      if (timeParts.length != 2) return null;
+      
+      int hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+      
+      // Convert to 24-hour format
+      if (isPM && hour != 12) {
+        hour += 12;
+      } else if (isAM && hour == 12) {
+        hour = 0;
+      }
+      
+      return DateTime(2000, 1, 1, hour, minute);
+    } catch (e) {
+      debugPrint('Error parsing time string: $e');
+      return null;
+    }
+  }
+  
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'monday';
+      case 2: return 'tuesday';
+      case 3: return 'wednesday';
+      case 4: return 'thursday';
+      case 5: return 'friday';
+      case 6: return 'saturday';
+      case 7: return 'sunday';
+      default: return '';
+    }
+  }
+  
+  Map<String, DateTime>? _getNextMarketDay(Market market) {
+    // Find the next available market day
+    final now = DateTime.now();
+    
+    // Check next 30 days for market hours
+    for (int i = 0; i < 30; i++) {
+      final checkDate = now.add(Duration(days: i));
+      final dayName = _getDayName(checkDate.weekday);
+      
+      // Check if market event date matches the check date
+      if (market.eventDate.year == checkDate.year && 
+          market.eventDate.month == checkDate.month && 
+          market.eventDate.day == checkDate.day) {
+        String hours = '${market.startTime} - ${market.endTime}';
+        // Parse hours
+        if (hours.contains('(')) {
+          hours = hours.substring(0, hours.indexOf('(')).trim();
+        }
+        
+        final parts = hours.split('-');
+        if (parts.length == 2) {
+          final startTime = _parseTimeString(parts[0].trim());
+          final endTime = _parseTimeString(parts[1].trim());
+          
+          if (startTime != null && endTime != null) {
+            final start = DateTime(
+              checkDate.year, checkDate.month, checkDate.day,
+              startTime.hour, startTime.minute,
+            );
+            final end = DateTime(
+              checkDate.year, checkDate.month, checkDate.day,
+              endTime.hour, endTime.minute,
+            );
+            
+            // Only return if the time is in the future
+            if (start.isAfter(now)) {
+              return {'start': start, 'end': end};
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
   }
 
   @override
   void dispose() {
+    // Track abandonment if user exits without completing
+    if (!_isLoading) {
+      _trackPostCreationAbandonment();
+    }
+    
     _vendorNameController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
+    _vendorNotesController.dispose();
     super.dispose();
   }
 
@@ -391,6 +561,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       iconData = Icons.edit;
       title = 'Update Your Pop-Up';
       subtitle = 'Make changes to your existing event';
+    } else if (_popupType == 'market' && _selectedMarket != null) {
+      iconData = Icons.storefront;
+      title = 'Create Market Pop-Up';
+      subtitle = 'Submit your pop-up for market approval';
     } else {
       iconData = Icons.store;
       title = 'Create Your Pop-Up';
@@ -420,6 +594,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           ),
           textAlign: TextAlign.center,
         ),
+        // Show monthly limit for ALL post types (free users limited to 3 total per month)
         if (_remainingPosts > 0 && _remainingPosts != -1) ...[
           const SizedBox(height: 12),
           Container(
@@ -433,8 +608,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             ),
             child: Text(
               _remainingPosts == 1 
-                ? '⚠️ Last popup this month' 
-                : '📊 $_remainingPosts popups remaining this month',
+                ? '⚠️ Last post this month' 
+                : '📊 $_remainingPosts posts remaining this month',
               style: TextStyle(
                 color: _remainingPosts == 1 ? Colors.orange.shade700 : Colors.blue.shade700,
                 fontSize: 12,
@@ -462,6 +637,11 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Show selected market prominently if one is selected
+        if (_selectedMarket != null && _popupType == 'market') ...[
+          _buildSelectedMarketCard(),
+          const SizedBox(height: 20),
+        ],
         HiPopTextField(
           controller: _vendorNameController,
           labelText: 'Your Business Name',
@@ -475,47 +655,50 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           },
         ),
         const SizedBox(height: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Location',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            SimplePlacesWidget(
-              initialLocation: _locationController.text,
-              onLocationSelected: (location) {
-                setState(() {
-                  _locationController.text = location?.formattedAddress ?? '';
-                  // Store the selected place for location data
-                  _selectedPlace = location;
-                });
-              },
-            ),
-            if (_locationController.text.isEmpty) ...[
-              const SizedBox(height: 4),
+        // Only show location picker for independent posts
+        if (_popupType != 'market' || _selectedMarket == null) ...[
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                'Please enter or select a location',
+                'Location',
                 style: TextStyle(
-                  color: Colors.red[700],
-                  fontSize: 12,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
                 ),
               ),
+              const SizedBox(height: 8),
+              SimplePlacesWidget(
+                initialLocation: _locationController.text,
+                onLocationSelected: (location) {
+                  setState(() {
+                    _locationController.text = location?.formattedAddress ?? '';
+                    // Store the selected place for location data
+                    _selectedPlace = location;
+                  });
+                  _trackFormFieldInteraction('location', location?.formattedAddress);
+                },
+              ),
+              if (_locationController.text.isEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Please enter or select a location',
+                  style: TextStyle(
+                    color: Colors.red[700],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ],
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_popupType != 'independent') ...[
-          _buildMarketPicker(),
+          ),
           const SizedBox(height: 16),
         ],
-        _buildDateTimePicker(),
-        const SizedBox(height: 16),
+        // Only show date/time picker for independent posts
+        if (_popupType != 'market' || _selectedMarket == null) ...[
+          _buildDateTimePicker(),
+          const SizedBox(height: 16),
+        ],
         HiPopTextField(
           controller: _descriptionController,
           labelText: 'Description',
@@ -534,15 +717,31 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           },
         ),
         const SizedBox(height: 16),
+        
+        // Add vendor notes field for market posts
+        if (_popupType == 'market' || (_selectedMarket != null && !_isIndependent)) ...[
+          HiPopTextField(
+            controller: _vendorNotesController,
+            labelText: 'Message to Market Organizer (Optional)',
+            hintText: 'Add any special requests or information for the organizer...',
+            prefixIcon: const Icon(Icons.message),
+            maxLines: 3,
+            textCapitalization: TextCapitalization.sentences,
+            validator: null, // Optional field
+          ),
+          const SizedBox(height: 16),
+        ],
+        
         PhotoUploadWidget(
           onPhotosSelected: (photos) {
             setState(() {
               _selectedPhotos = photos;
             });
+            _trackPhotoUploadInteraction(photos);
           },
           initialImagePaths: widget.editingPost?.photoUrls,
           userId: FirebaseAuth.instance.currentUser?.uid,
-          userType: 'vendor',
+          userType: _subscriptionInfo?['userType'] ?? 'vendor',
         ),
         const SizedBox(height: 16),
         _buildProductListSelectionWidget(),
@@ -601,6 +800,183 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                       ),
                     ),
                   ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  String _getMarketScheduleText() {
+    if (_selectedMarket == null) return 'Market schedule';
+    
+    // Debug: Log market event details
+    debugPrint('Market ${_selectedMarket!.name} event: ${_selectedMarket!.eventDisplayInfo}');
+    
+    // If we have pre-filled start/end times from the market, use those
+    if (_selectedStartDateTime != null && _selectedEndDateTime != null) {
+      final dateStr = _formatDate(_selectedStartDateTime!);
+      final startTime = _formatTime(_selectedStartDateTime!);
+      final endTime = _formatTime(_selectedEndDateTime!);
+      return '$dateStr: $startTime-$endTime';
+    }
+    
+    // Get the next market day
+    final nextDay = _getNextMarketDay(_selectedMarket!);
+    if (nextDay != null) {
+      final start = nextDay['start']!;
+      final end = nextDay['end']!;
+      final dateStr = _formatDate(start);
+      final startTime = _formatTime(start);
+      final endTime = _formatTime(end);
+      return '$dateStr: $startTime-$endTime';
+    }
+    
+    // Fallback: Check today's hours
+    final now = DateTime.now();
+    final dayName = _getDayName(now.weekday);
+    // Check if market is happening today
+    if (_selectedMarket!.isHappeningToday) {
+      String hours = '${_selectedMarket!.startTime} - ${_selectedMarket!.endTime}';
+      // Extract just the time portion if it includes date info
+      if (hours.contains('(')) {
+        hours = hours.substring(0, hours.indexOf('(')).trim();
+      }
+      return 'Today: $hours';
+    }
+    
+    return 'Market schedule varies';
+  }
+  
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+  }
+  
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour;
+    final minute = dateTime.minute;
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+    final displayMinute = minute.toString().padLeft(2, '0');
+    return '$displayHour:$displayMinute $period';
+  }
+  
+  Widget _buildSelectedMarketCard() {
+    if (_selectedMarket == null) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.storefront,
+                  color: Colors.green.shade700,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Market-Associated Pop-Up',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _selectedMarket!.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${_selectedMarket!.address}, ${_selectedMarket!.city}',
+                        style: TextStyle(color: Colors.grey[700]),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _getMarketScheduleText(),
+                        style: TextStyle(color: Colors.grey[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This post will be submitted for market organizer approval',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -686,6 +1062,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                             _selectedProductLists.add(productList);
                           }
                         });
+                        _trackFormFieldInteraction('product_lists', _selectedProductLists.length);
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -942,6 +1319,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             _selectedEndDateTime = selectedStart.add(const Duration(hours: 4));
           }
         });
+        _trackDateTimeSelection(selectedStart, 'start');
       }
     }
   }
@@ -1006,6 +1384,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           setState(() {
             _selectedEndDateTime = selectedEnd;
           });
+          _trackDateTimeSelection(selectedEnd, 'end');
         } else if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1233,7 +1612,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                 Text(
                   userType == 'vendor' 
                     ? 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining. Upgrade to Vendor Pro for unlimited popups!'
-                    : 'You have $_remainingPosts vendor post${_remainingPosts == 1 ? '' : 's'} remaining this month.',
+                    : 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining this month. Upgrade to Organizer Pro for unlimited posts!',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,
@@ -1460,6 +1839,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     }
   }
 
+  // Removed _buildMarketPicker - vendors use SelectMarketScreen flow
+  /*
   Widget _buildMarketPicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1572,6 +1953,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       ],
     );
   }
+  */
 
   Future<void> _savePost() async {
     if (!_formKey.currentState!.validate()) {
@@ -1584,54 +1966,82 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       return;
     }
 
-    if (_locationController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter or select a location'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+    // Check monthly limit for ALL post types (3 total per month for free vendors)
+    final canCreatePost = await _checkMonthlyPostLimit();
+    if (!canCreatePost) {
+      return; // Error message already shown in _checkMonthlyPostLimit
     }
 
-    if (_selectedStartDateTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a start time for your pop-up'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    // For market posts, dates are handled by the market schedule
+    if (_popupType == 'market' && _selectedMarket != null) {
+      // Auto-fill date/time if not already set
+      if (_selectedStartDateTime == null || _selectedEndDateTime == null) {
+        _prefillMarketTime(_selectedMarket!);
+        // If still no time after prefill, use next market day
+        if (_selectedStartDateTime == null || _selectedEndDateTime == null) {
+          final nextMarketDay = _getNextMarketDay(_selectedMarket!);
+          if (nextMarketDay != null) {
+            _selectedStartDateTime = nextMarketDay['start'];
+            _selectedEndDateTime = nextMarketDay['end'];
+          } else {
+            // Fallback to next occurrence with default times
+            final tomorrow = DateTime.now().add(const Duration(days: 1));
+            _selectedStartDateTime = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0);
+            _selectedEndDateTime = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 14, 0);
+          }
+        }
+      }
+    } else {
+      // For independent posts, validate location and times
+      if (_locationController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter or select a location'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-    if (_selectedEndDateTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select an end time for your pop-up'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+      if (_selectedStartDateTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a start time for your pop-up'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-    if (_selectedStartDateTime!.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pop-up start time must be in the future'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+      if (_selectedEndDateTime == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select an end time for your pop-up'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
-    if (_selectedEndDateTime!.isBefore(_selectedStartDateTime!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pop-up end time must be after start time'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+      if (_selectedStartDateTime!.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pop-up start time must be in the future'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      if (_selectedEndDateTime!.isBefore(_selectedStartDateTime!)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pop-up end time must be after start time'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
@@ -1675,6 +2085,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           photoUrls: photoUrls,
           marketId: _selectedMarket?.id,
           productListIds: _selectedProductLists.map((list) => list.id).toList(),
+          vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
+              ? _vendorNotesController.text.trim() 
+              : null,
           updatedAt: now,
         );
         
@@ -1691,6 +2104,18 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         }
       } else {
         // Create new post
+        // Determine post type based on whether a market is selected
+        final postType = (_selectedMarket != null && _popupType == 'market') 
+            ? PostType.market 
+            : PostType.independent;
+        
+        // Set approval status for market posts
+        final approvalStatus = postType == PostType.market 
+            ? ApprovalStatus.pending 
+            : null;
+        
+        debugPrint('Creating post with type: ${postType.value}, marketId: ${_selectedMarket?.id}, approvalStatus: ${approvalStatus?.value}');
+        
         final tempPost = VendorPost(
           id: '', // Will be set by repository
           vendorId: user.uid,
@@ -1708,7 +2133,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           description: _descriptionController.text.trim(),
           instagramHandle: _currentUserProfile?.instagramHandle,
           marketId: _selectedMarket?.id,
+          postType: postType,
+          approvalStatus: approvalStatus,
+          approvalRequestedAt: postType == PostType.market ? now : null,
+          associatedMarketId: _selectedMarket?.id,
+          associatedMarketName: _selectedMarket?.name,
           productListIds: _selectedProductLists.map((list) => list.id).toList(),
+          vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
+              ? _vendorNotesController.text.trim() 
+              : null,
           createdAt: now,
           updatedAt: now,
         );
@@ -1733,6 +2166,12 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         }
         
         if (mounted) {
+          // Track successful post creation
+          await _trackPostCreationSuccess(postType, _selectedMarket?.id);
+          
+          // Update visual cues to reflect new post count
+          await _checkSubscriptionLimits();
+          
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Pop-up created successfully!'),
@@ -1760,6 +2199,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
   void _showUpgradeDialog() {
     final userType = _subscriptionInfo?['userType'] ?? 'vendor';
+    
+    // Track when users view upgrade options from limit dialog
+    _trackUpgradeDialogViewed(userType);
     
     showDialog(
       context: context,
@@ -1869,6 +2311,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              _trackUpgradeFromLimitDialog(userType);
               _navigateToUpgrade(userType);
             },
             style: ElevatedButton.styleFrom(
@@ -1880,5 +2323,306 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         ],
       ),
     );
+  }
+
+  /// Get current monthly post count for any user (vendor or organizer)
+  Future<int> _getCurrentMonthlyPostCount(String userId) async {
+    try {
+      final statsRef = FirebaseFirestore.instance.collection('user_stats').doc(userId);
+      final statsDoc = await statsRef.get();
+      
+      if (!statsDoc.exists) {
+        return 0; // No posts created yet
+      }
+      
+      final data = statsDoc.data()!;
+      final currentMonth = _getCurrentMonth();
+      final storedMonth = data['currentCountMonth'] as String?;
+      
+      if (storedMonth != currentMonth) {
+        return 0; // Different month, count has reset
+      }
+      
+      return (data['monthlyPostCount'] as num?)?.toInt() ?? 0;
+    } catch (e) {
+      debugPrint('Error getting monthly post count: $e');
+      return 0; // Default to 0 on error
+    }
+  }
+
+  /// Check if user can create a market post based on monthly limits
+  Future<bool> _checkMonthlyPostLimit() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+
+      // Check if user is premium
+      final userDoc = await FirebaseFirestore.instance
+          .collection('user_profiles')
+          .doc(user.uid)
+          .get();
+      
+      if (!userDoc.exists) return false;
+      
+      final userData = userDoc.data()!;
+      final isPremium = userData['isPremium'] ?? false;
+      
+      // Premium users have unlimited posts
+      if (isPremium) return true;
+      
+      // Free users: check monthly limit
+      final currentCount = await _getCurrentMonthlyPostCount(user.uid);
+      const monthlyLimit = 3;
+      
+      if (currentCount >= monthlyLimit) {
+        if (mounted) {
+          // Get user type for appropriate messaging
+          final userDoc = await FirebaseFirestore.instance
+              .collection('user_profiles')
+              .doc(user.uid)
+              .get();
+          final userType = userDoc.data()?['userType'] ?? 'vendor';
+          
+          // Track monthly limit encounter
+          await _trackMonthlyLimitEncounter(currentCount, monthlyLimit, userType);
+          
+          final upgradeType = userType == 'market_organizer' ? 'organizer' : 'vendor';
+          final productName = userType == 'market_organizer' ? 'Organizer Pro' : 'Vendor Pro';
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('You\'ve reached your monthly limit of $monthlyLimit posts. Upgrade to $productName for unlimited posts.'),
+              backgroundColor: Colors.orange,
+              action: SnackBarAction(
+                label: 'Upgrade',
+                textColor: Colors.white,
+                onPressed: () {
+                  _trackUpgradeFromLimitDialog(upgradeType);
+                  _navigateToUpgrade(upgradeType);
+                },
+              ),
+            ),
+          );
+        }
+        return false;
+      }
+      
+      return true;
+    } catch (e) {
+      debugPrint('Error checking monthly post limit: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error checking post limit: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
+  String _getCurrentMonth() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  }
+
+  // Analytics tracking methods
+  
+  Future<void> _trackPostCreationStart() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    final userType = _currentUserProfile?.userType ?? 'vendor';
+    final isPremium = _subscriptionInfo?['isPremium'] ?? false;
+    
+    await RealTimeAnalyticsService.trackEvent('post_creation_started', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'isPremium': isPremium,
+      'screenContext': widget.editingPost != null ? 'edit' : 'create',
+      'startTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackPostTypeSelection(String? postType) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null || postType == null) return;
+    
+    final userType = _currentUserProfile?.userType ?? 'vendor';
+    final isPremium = _subscriptionInfo?['isPremium'] ?? false;
+    
+    await RealTimeAnalyticsService.trackEvent('post_type_selected', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'isPremium': isPremium,
+      'selectedPostType': postType,
+      'selectionTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackPostCreationSuccess(PostType postType, String? marketId) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    final userType = _currentUserProfile?.userType ?? 'vendor';
+    final isPremium = _subscriptionInfo?['isPremium'] ?? false;
+    
+    await RealTimeAnalyticsService.trackEvent('post_creation_completed', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'isPremium': isPremium,
+      'postType': postType.value,
+      'marketId': marketId,
+      'hasPhotos': _selectedPhotos.isNotEmpty,
+      'hasProductLists': _selectedProductLists.isNotEmpty,
+      'requiresApproval': postType == PostType.market,
+      'completionTime': DateTime.now().toIso8601String(),
+      'remainingPosts': _remainingPosts,
+    });
+  }
+  
+  Future<void> _trackMonthlyLimitEncounter(int currentCount, int limit, String userType) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('monthly_limit_encountered', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'currentPostCount': currentCount,
+      'monthlyLimit': limit,
+      'encounterTime': DateTime.now().toIso8601String(),
+      'attemptedPostType': _popupType ?? 'unknown',
+    });
+  }
+  
+  Future<void> _trackUpgradeDialogViewed(String userType) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('upgrade_dialog_viewed', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'viewSource': 'monthly_limit',
+      'remainingPosts': _remainingPosts,
+      'viewTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackUpgradeFromLimitDialog(String userType) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('upgrade_clicked_from_limit', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'clickSource': 'monthly_limit_dialog',
+      'remainingPosts': _remainingPosts,
+      'clickTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackPostCreationAbandonment() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    final userType = _currentUserProfile?.userType ?? 'vendor';
+    final isPremium = _subscriptionInfo?['isPremium'] ?? false;
+    
+    // Calculate abandonment stage
+    String abandonmentStage = 'initial';
+    if (_vendorNameController.text.isNotEmpty) {
+      abandonmentStage = 'business_name_entered';
+    }
+    if (_locationController.text.isNotEmpty || _selectedMarket != null) {
+      abandonmentStage = 'location_selected';
+    }
+    if (_descriptionController.text.isNotEmpty) {
+      abandonmentStage = 'description_entered';
+    }
+    if (_selectedStartDateTime != null) {
+      abandonmentStage = 'datetime_selected';
+    }
+    if (_selectedPhotos.isNotEmpty) {
+      abandonmentStage = 'photos_added';
+    }
+    
+    await RealTimeAnalyticsService.trackEvent('post_creation_abandoned', {
+      'userId': currentUser.uid,
+      'userType': userType,
+      'isPremium': isPremium,
+      'abandonmentStage': abandonmentStage,
+      'postType': _popupType ?? 'unknown',
+      'selectedMarketId': _selectedMarket?.id,
+      'hasBusinessName': _vendorNameController.text.isNotEmpty,
+      'hasLocation': _locationController.text.isNotEmpty || _selectedMarket != null,
+      'hasDescription': _descriptionController.text.isNotEmpty,
+      'hasDateTime': _selectedStartDateTime != null,
+      'hasPhotos': _selectedPhotos.isNotEmpty,
+      'hasProductLists': _selectedProductLists.isNotEmpty,
+      'remainingPosts': _remainingPosts,
+      'canCreatePost': _canCreatePost,
+      'isNearLimit': _isNearLimit,
+      'abandonmentTime': DateTime.now().toIso8601String(),
+      'screenContext': widget.editingPost != null ? 'edit' : 'create',
+    });
+  }
+  
+  Future<void> _trackFormFieldInteraction(String fieldName, dynamic value) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('form_field_interaction', {
+      'userId': currentUser.uid,
+      'userType': _currentUserProfile?.userType ?? 'vendor',
+      'fieldName': fieldName,
+      'hasValue': value != null && value.toString().isNotEmpty,
+      'postType': _popupType ?? 'unknown',
+      'remainingPosts': _remainingPosts,
+      'interactionTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackMarketSelection(String? marketId) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('market_selection_changed', {
+      'userId': currentUser.uid,
+      'userType': _currentUserProfile?.userType ?? 'vendor',
+      'selectedMarketId': marketId,
+      'previousMarketId': _selectedMarket?.id,
+      'selectionSource': marketId != null ? 'market_chosen' : 'independent_chosen',
+      'selectionTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackDateTimeSelection(DateTime? dateTime, String type) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('datetime_selection', {
+      'userId': currentUser.uid,
+      'userType': _currentUserProfile?.userType ?? 'vendor',
+      'dateTimeType': type, // 'start' or 'end'
+      'selectedDateTime': dateTime?.toIso8601String(),
+      'postType': _popupType ?? 'unknown',
+      'marketId': _selectedMarket?.id,
+      'selectionTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  Future<void> _trackPhotoUploadInteraction(List<File> photos) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    
+    await RealTimeAnalyticsService.trackEvent('photo_upload_interaction', {
+      'userId': currentUser.uid,
+      'userType': _currentUserProfile?.userType ?? 'vendor',
+      'photoCount': photos.length,
+      'isPremium': _subscriptionInfo?['isPremium'] ?? false,
+      'postType': _popupType ?? 'unknown',
+      'uploadTime': DateTime.now().toIso8601String(),
+    });
   }
 }

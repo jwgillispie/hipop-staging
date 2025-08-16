@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../blocs/subscription/subscription_bloc.dart';
 import '../../../blocs/subscription/subscription_state.dart';
 import '../../../blocs/subscription/subscription_event.dart';
@@ -645,7 +646,8 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
   }
 
   void _navigateToUpgrade() {
-    context.go('/premium-onboarding');
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    context.go('/premium/onboarding?userId=$userId&userType=vendor');
   }
 
   String _getFeatureDisplayName(String featureName) {

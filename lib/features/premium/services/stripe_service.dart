@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import '../../shared/services/remote_config_service.dart';
 
 class StripeService {
   // 🔒 SECURITY: All Stripe secret key operations moved to server-side Cloud Functions
@@ -94,8 +95,15 @@ class StripeService {
       debugPrint('📧 User email: $userEmail');
       debugPrint('⏰ Timestamp: ${DateTime.now()}');
       
-      // Get the price ID for this user type
-      final priceId = _getPriceIdForUserType(userType);
+      // Get the price ID for this user type - try Remote Config first, then fallback
+      String priceId = await RemoteConfigService.getStripePriceId(userType);
+      
+      // If Remote Config fails, use local method
+      if (priceId.isEmpty) {
+        debugPrint('⚠️ Remote Config price ID empty, trying local .env');
+        priceId = _getPriceIdForUserType(userType);
+      }
+      
       if (priceId.isEmpty) {
         debugPrint('❌ No price configured for user type: $userType');
         throw Exception('No price configured for user type: $userType');

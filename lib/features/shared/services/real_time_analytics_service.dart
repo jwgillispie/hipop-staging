@@ -592,6 +592,28 @@ class EventTypes {
   static const String favorite = 'favorite';
   static const String share = 'share';
   static const String error = 'error';
+  
+  // New 1:1 Market-Event System Events
+  static const String postCreationStarted = 'post_creation_started';
+  static const String postCreationCompleted = 'post_creation_completed';
+  static const String postCreationAbandoned = 'post_creation_abandoned';
+  static const String postTypeSelected = 'post_type_selected';
+  static const String marketPostApprovalDecision = 'market_post_approval_decision';
+  static const String marketBulkApprovalDecision = 'market_bulk_approval_decision';
+  static const String monthlyLimitEncountered = 'monthly_limit_encountered';
+  static const String upgradeDialogViewed = 'upgrade_dialog_viewed';
+  static const String upgradeClickedFromLimit = 'upgrade_clicked_from_limit';
+  static const String formFieldInteraction = 'form_field_interaction';
+  static const String marketSelectionChanged = 'market_selection_changed';
+  static const String datetimeSelection = 'datetime_selection';
+  static const String photoUploadInteraction = 'photo_upload_interaction';
+  static const String marketEventPerformance = 'market_event_performance';
+  static const String eventScheduleComparison = 'event_schedule_comparison';
+  static const String vendorParticipationPattern = 'vendor_participation_pattern';
+  static const String marketDiscoveryPattern = 'market_discovery_pattern';
+  static const String postCreationFunnel = 'post_creation_funnel';
+  static const String monthlyLimitAnalytics = 'monthly_limit_analytics';
+  static const String approvalWorkflowEfficiency = 'approval_workflow_efficiency';
 }
 
 /// Common vendor interaction actions
@@ -618,4 +640,351 @@ class MarketActions {
   static const String searchPerformed = 'search_performed';
   static const String filterApplied = 'filter_applied';
   static const String directionsClick = 'directions_click';
+  static const String marketDiscovered = 'market_discovered';
+  static const String eventAttended = 'event_attended';
+  static const String vendorParticipated = 'vendor_participated';
+}
+
+/// Market Event Performance Analytics - Static methods for RealTimeAnalyticsService
+class MarketEventAnalytics {
+  /// Track market event performance metrics
+  static Future<void> trackMarketEventPerformance({
+    required String marketId,
+    required String eventId,
+    required DateTime eventDate,
+    required int vendorCount,
+    required int approvedVendors,
+    required int pendingVendors,
+    required int deniedVendors,
+    int? estimatedAttendance,
+    Map<String, dynamic>? additionalMetrics,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('market_event_performance', {
+      'marketId': marketId,
+      'eventId': eventId,
+      'eventDate': eventDate.toIso8601String(),
+      'vendorMetrics': {
+        'totalApplications': vendorCount,
+        'approved': approvedVendors,
+        'pending': pendingVendors,
+        'denied': deniedVendors,
+        'approvalRate': vendorCount > 0 ? (approvedVendors / vendorCount) * 100 : 0,
+      },
+      'estimatedAttendance': estimatedAttendance,
+      'isWeekend': eventDate.weekday >= 6,
+      'dayOfWeek': eventDate.weekday,
+      'hourOfDay': eventDate.hour,
+      'monthOfYear': eventDate.month,
+      'quarterOfYear': ((eventDate.month - 1) ~/ 3) + 1,
+      ...?additionalMetrics,
+      'trackingTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  /// Track single event vs recurring schedule performance comparison
+  static Future<void> trackEventScheduleComparison({
+    required String marketId,
+    required String eventType, // 'single_event' or 'recurring_schedule'
+    required int vendorParticipation,
+    required int customerAttendance,
+    DateTime? eventDate,
+    Map<String, dynamic>? previousMetrics,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('event_schedule_comparison', {
+      'marketId': marketId,
+      'eventType': eventType,
+      'vendorParticipation': vendorParticipation,
+      'customerAttendance': customerAttendance,
+      'eventDate': eventDate?.toIso8601String(),
+      'previousMetrics': previousMetrics,
+      'comparisonTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  /// Track vendor participation patterns in new 1:1 system
+  static Future<void> trackVendorParticipationPattern({
+    required String vendorId,
+    required String marketId,
+    required String participationType, // 'application_submitted', 'approved', 'event_completed'
+    required DateTime eventDate,
+    bool isRepeatVendor = false,
+    int? previousEventsCount,
+    Map<String, dynamic>? performanceMetrics,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('vendor_participation_pattern', {
+      'vendorId': vendorId,
+      'marketId': marketId,
+      'participationType': participationType,
+      'eventDate': eventDate.toIso8601String(),
+      'isRepeatVendor': isRepeatVendor,
+      'previousEventsCount': previousEventsCount ?? 0,
+      'performanceMetrics': performanceMetrics,
+      'dayOfWeek': eventDate.weekday,
+      'isWeekend': eventDate.weekday >= 6,
+      'seasonality': _getSeason(eventDate),
+      'trackingTime': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  /// Track market discovery patterns for new 1:1 system
+  static Future<void> trackMarketDiscoveryPattern({
+    required String marketId,
+    required String discoverySource, // 'search', 'browse', 'recommendation', 'direct_link'
+    required String userType, // 'vendor', 'customer', 'guest'
+    String? searchTerm,
+    String? referralSource,
+    Map<String, dynamic>? userLocation,
+    String? userId,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('market_discovery_pattern', {
+      'marketId': marketId,
+      'discoverySource': discoverySource,
+      'userType': userType,
+      'searchTerm': searchTerm,
+      'referralSource': referralSource,
+      'userLocation': userLocation,
+      'discoverTime': DateTime.now().toIso8601String(),
+      'dayOfWeek': DateTime.now().weekday,
+      'hourOfDay': DateTime.now().hour,
+    }, userId: userId);
+  }
+  
+  /// Track post creation success rates and conversion funnels
+  static Future<void> trackPostCreationFunnel({
+    required String userId,
+    required String funnelStage, // 'started', 'type_selected', 'form_filled', 'submitted', 'completed'
+    required String postType,
+    String? marketId,
+    bool? hitMonthlyLimit,
+    bool? upgradedFromLimit,
+    Duration? timeSpent,
+    Map<String, dynamic>? formData,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('post_creation_funnel', {
+      'userId': userId,
+      'funnelStage': funnelStage,
+      'postType': postType,
+      'marketId': marketId,
+      'hitMonthlyLimit': hitMonthlyLimit,
+      'upgradedFromLimit': upgradedFromLimit,
+      'timeSpentSeconds': timeSpent?.inSeconds,
+      'formCompletionData': formData,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  /// Track monthly limit encounter patterns and upgrade conversions
+  static Future<void> trackMonthlyLimitAnalytics({
+    required String userId,
+    required String userType,
+    required String action, // 'limit_hit', 'upgrade_viewed', 'upgrade_clicked', 'upgrade_completed'
+    required int currentUsage,
+    required int monthlyLimit,
+    String? upgradeSource, // 'limit_dialog', 'banner', 'menu'
+    bool? conversionCompleted,
+    String? subscriptionTier,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('monthly_limit_analytics', {
+      'userId': userId,
+      'userType': userType,
+      'action': action,
+      'currentUsage': currentUsage,
+      'monthlyLimit': monthlyLimit,
+      'usagePercentage': (currentUsage / monthlyLimit) * 100,
+      'upgradeSource': upgradeSource,
+      'conversionCompleted': conversionCompleted,
+      'subscriptionTier': subscriptionTier,
+      'monthYear': '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}',
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+  
+  /// Track approval workflow efficiency for organizers
+  static Future<void> trackApprovalWorkflowEfficiency({
+    required String organizerId,
+    required String marketId,
+    required int pendingCount,
+    required int processedCount,
+    required Duration averageApprovalTime,
+    required double approvalRate,
+    Map<String, int>? approvalsByHour,
+    Map<String, int>? denialReasons,
+  }) async {
+    await RealTimeAnalyticsService.trackEvent('approval_workflow_efficiency', {
+      'organizerId': organizerId,
+      'marketId': marketId,
+      'pendingCount': pendingCount,
+      'processedCount': processedCount,
+      'averageApprovalTimeMinutes': averageApprovalTime.inMinutes,
+      'approvalRate': approvalRate,
+      'approvalsByHour': approvalsByHour,
+      'denialReasons': denialReasons,
+      'workflowDate': DateTime.now().toIso8601String(),
+      'dayOfWeek': DateTime.now().weekday,
+    });
+  }
+  
+  /// Helper method to determine season from date
+  static String _getSeason(DateTime date) {
+    final month = date.month;
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    if (month >= 9 && month <= 11) return 'fall';
+    return 'winter';
+  }
+  
+  /// Get comprehensive analytics data for dashboard
+  static Future<Map<String, dynamic>> getMarketEventAnalytics({
+    String? marketId,
+    String? organizerId,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? timeRange = '30d', // '7d', '30d', '90d', '1y'
+  }) async {
+    try {
+      final now = DateTime.now();
+      final defaultStartDate = startDate ?? now.subtract(_getDurationFromRange(timeRange!));
+      final defaultEndDate = endDate ?? now;
+      
+      final metrics = await RealTimeAnalyticsService.getAnalyticsMetrics(
+        marketId: marketId,
+        startDate: defaultStartDate,
+        endDate: defaultEndDate,
+      );
+      
+      // Add specific market event metrics aggregation
+      final eventMetrics = await _aggregateMarketEventMetrics(
+        marketId: marketId,
+        organizerId: organizerId,
+        startDate: defaultStartDate,
+        endDate: defaultEndDate,
+      );
+      
+      return {
+        ...metrics,
+        'marketEventMetrics': eventMetrics,
+        'timeRange': timeRange,
+        'dateRange': {
+          'start': defaultStartDate.toIso8601String(),
+          'end': defaultEndDate.toIso8601String(),
+        },
+        'generatedAt': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      debugPrint('Error getting market event analytics: $e');
+      return {};
+    }
+  }
+  
+  /// Aggregate market event specific metrics
+  static Future<Map<String, dynamic>> _aggregateMarketEventMetrics({
+    String? marketId,
+    String? organizerId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      Query query = FirebaseFirestore.instance.collection('user_events')
+          .where('timestamp', isGreaterThanOrEqualTo: startDate)
+          .where('timestamp', isLessThanOrEqualTo: endDate);
+      
+      final snapshot = await query.get();
+      
+      final aggregatedMetrics = {
+        'totalEvents': 0,
+        'totalVendorApplications': 0,
+        'approvalRate': 0.0,
+        'averageApprovalTimeMinutes': 0.0,
+        'marketDiscoveryBreakdown': <String, int>{},
+        'vendorParticipationTrends': <String, int>{},
+        'monthlyLimitEncounters': 0,
+        'upgradeConversions': 0,
+        'funnelDropoffRates': <String, double>{},
+        'seasonalTrends': <String, int>{},
+        'weekdayVsWeekendPerformance': <String, int>{},
+      };
+      
+      int totalApprovals = 0;
+      int totalDenials = 0;
+      List<int> approvalTimes = [];
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final eventType = data['eventType'] as String?;
+        final eventData = data['data'] as Map<String, dynamic>? ?? {};
+        
+        // Filter by market/organizer if specified
+        if (marketId != null && eventData['marketId'] != marketId) continue;
+        if (organizerId != null && eventData['organizerId'] != organizerId) continue;
+        
+        switch (eventType) {
+          case 'market_event_performance':
+            aggregatedMetrics['totalEvents'] = (aggregatedMetrics['totalEvents'] as int? ?? 0) + 1;
+            final vendorMetrics = eventData['vendorMetrics'] as Map<String, dynamic>? ?? {};
+            aggregatedMetrics['totalVendorApplications'] = (aggregatedMetrics['totalVendorApplications'] as int) + (vendorMetrics['totalApplications'] as int? ?? 0);
+            break;
+            
+          case 'market_post_approval_decision':
+            final decision = eventData['decision'] as String?;
+            if (decision == 'approved') totalApprovals++;
+            if (decision == 'denied') totalDenials++;
+            
+            final timeToDecision = eventData['timeToDecisionMinutes'] as int?;
+            if (timeToDecision != null) approvalTimes.add(timeToDecision);
+            break;
+            
+          case 'market_discovery_pattern':
+            final source = eventData['discoverySource'] as String? ?? 'unknown';
+            final breakdown = aggregatedMetrics['marketDiscoveryBreakdown'] as Map<String, int>;
+            breakdown[source] = (breakdown[source] ?? 0) + 1;
+            break;
+            
+          case 'vendor_participation_pattern':
+            final participationType = eventData['participationType'] as String? ?? 'unknown';
+            final trends = aggregatedMetrics['vendorParticipationTrends'] as Map<String, int>;
+            trends[participationType] = (trends[participationType] ?? 0) + 1;
+            break;
+            
+          case 'monthly_limit_encountered':
+            aggregatedMetrics['monthlyLimitEncounters'] = (aggregatedMetrics['monthlyLimitEncounters'] as int? ?? 0) + 1;
+            break;
+            
+          case 'upgrade_clicked_from_limit':
+            aggregatedMetrics['upgradeConversions'] = (aggregatedMetrics['upgradeConversions'] as int? ?? 0) + 1;
+            break;
+        }
+      }
+      
+      // Calculate derived metrics
+      if (totalApprovals + totalDenials > 0) {
+        aggregatedMetrics['approvalRate'] = (totalApprovals / (totalApprovals + totalDenials)) * 100;
+      }
+      
+      if (approvalTimes.isNotEmpty) {
+        aggregatedMetrics['averageApprovalTimeMinutes'] = 
+            approvalTimes.reduce((a, b) => a + b) / approvalTimes.length;
+      }
+      
+      return aggregatedMetrics;
+    } catch (e) {
+      debugPrint('Error aggregating market event metrics: $e');
+      return {};
+    }
+  }
+  
+  /// Helper to convert time range string to Duration
+  static Duration _getDurationFromRange(String range) {
+    switch (range) {
+      case '7d':
+        return const Duration(days: 7);
+      case '30d':
+        return const Duration(days: 30);
+      case '90d':
+        return const Duration(days: 90);
+      case '1y':
+        return const Duration(days: 365);
+      default:
+        return const Duration(days: 30);
+    }
+  }
 }

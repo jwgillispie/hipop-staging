@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../blocs/auth/auth_bloc.dart';
 import '../../../../blocs/auth/auth_event.dart';
 import '../../../../blocs/auth/auth_state.dart';
@@ -10,7 +9,6 @@ import '../../../auth/services/onboarding_service.dart';
 import '../../services/specialized_account_deletion_service.dart';
 import '../../models/user_feedback.dart';
 import '../../services/user_feedback_service.dart';
-import '../../../premium/screens/subscription_management_screen.dart';
 
 class SettingsDropdown extends StatefulWidget {
   const SettingsDropdown({super.key});
@@ -223,9 +221,6 @@ class _SettingsDropdownState extends State<SettingsDropdown> {
       tooltip: 'Settings',
       onSelected: (String value) {
         switch (value) {
-          case 'subscription':
-            _navigateToSubscriptionManagement();
-            break;
           case 'change-password':
             _showChangePasswordDialog();
             break;
@@ -244,17 +239,6 @@ class _SettingsDropdownState extends State<SettingsDropdown> {
         }
       },
       itemBuilder: (BuildContext context) => [
-        const PopupMenuItem<String>(
-          value: 'subscription',
-          child: Row(
-            children: [
-              Icon(Icons.credit_card, color: Colors.purple),
-              SizedBox(width: 12),
-              Text('Manage Subscription'),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
         const PopupMenuItem<String>(
           value: 'change-password',
           child: Row(
@@ -315,20 +299,5 @@ class _SettingsDropdownState extends State<SettingsDropdown> {
         ),
       ],
     );
-  }
-  
-  void _navigateToSubscriptionManagement() {
-    final authBloc = context.read<AuthBloc>();
-    final authState = authBloc.state;
-    
-    if (authState is Authenticated) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SubscriptionManagementScreen(
-            userId: authState.user.uid,
-          ),
-        ),
-      );
-    }
   }
 }

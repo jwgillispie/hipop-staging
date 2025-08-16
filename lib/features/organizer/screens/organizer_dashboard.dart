@@ -7,9 +7,7 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
-import 'package:hipop/features/shared/widgets/debug_atlanta_august_creator.dart';
 import 'package:hipop/features/shared/widgets/debug_database_cleaner.dart';
-import 'package:hipop/features/shared/widgets/debug_market_creator.dart';
 
 class OrganizerDashboard extends StatefulWidget {
   const OrganizerDashboard({super.key});
@@ -197,9 +195,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                 // Debug Database Cleaner
                 const DebugDatabaseCleaner(),
                 // Debug Market Creator
-                const DebugMarketCreator(),
-                // Debug Atlanta August Creator
-                const DebugAtlantaAugustCreator(),
+
                 // Welcome Card
                 Card(
                   child: Padding(

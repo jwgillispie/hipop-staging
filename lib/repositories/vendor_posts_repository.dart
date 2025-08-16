@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../features/vendor/models/vendor_post.dart';
+import '../features/vendor/models/post_type.dart';
 
 // Helper class for proximity search
 class _PostWithDistance {
@@ -15,6 +16,7 @@ abstract class IVendorPostsRepository {
   Stream<List<VendorPost>> getVendorPosts(String vendorId);
   Stream<List<VendorPost>> getAllActivePosts();
   Stream<List<VendorPost>> getMarketPosts(String marketId);
+  Stream<List<VendorPost>> getPendingMarketPosts(String marketId);
   Stream<List<VendorPost>> searchPostsByLocation(String location);
   Stream<List<VendorPost>> searchPostsByLocationAndProximity({
     required String location,
@@ -26,6 +28,8 @@ abstract class IVendorPostsRepository {
   Future<void> updatePost(VendorPost post);
   Future<void> deletePost(String postId);
   Future<VendorPost?> getPost(String postId);
+  Future<void> approvePost(String postId, String approvedBy);
+  Future<void> denyPost(String postId, String deniedBy, String? reason);
 }
 
 class VendorPostsRepository implements IVendorPostsRepository {
@@ -60,7 +64,13 @@ class VendorPostsRepository implements IVendorPostsRepository {
           for (final doc in snapshot.docs) {
             try {
               final post = VendorPost.fromFirestore(doc);
-              posts.add(post);
+              // Only include posts that are either:
+              // 1. Independent posts (no market association), OR
+              // 2. Market posts that are approved
+              if (post.postType == PostType.independent || 
+                  (post.postType == PostType.market && post.approvalStatus == ApprovalStatus.approved)) {
+                posts.add(post);
+              }
             } catch (e) {
               debugPrint('Failed to parse vendor post ${doc.id}: $e');
             }
@@ -194,6 +204,10 @@ class VendorPostsRepository implements IVendorPostsRepository {
         locationKeywords: VendorPost.generateLocationKeywords(post.location),
       );
       final docRef = await _firestore.collection(_collection).add(postWithKeywords.toFirestore());
+      
+      // Track monthly post count for ALL post types (free vendors limited to 3 total per month)
+      await _updateVendorPostCount(post.vendorId);
+      
       return docRef.id;
     } catch (e) {
       throw VendorPostException('Failed to create post: ${e.toString()}');
@@ -379,6 +393,134 @@ class VendorPostsRepository implements IVendorPostsRepository {
     } catch (e) {
       return true; // If we can't check, assume migration is needed
     }
+  }
+
+  @override
+  Stream<List<VendorPost>> getPendingMarketPosts(String marketId) {
+    return _firestore
+        .collection(_collection)
+        .where('marketId', isEqualTo: marketId)
+        .where('postType', isEqualTo: 'market')
+        .where('approvalStatus', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) {
+          final posts = <VendorPost>[];
+          
+          for (final doc in snapshot.docs) {
+            try {
+              final post = VendorPost.fromFirestore(doc);
+              posts.add(post);
+            } catch (e) {
+              debugPrint('Failed to parse vendor post ${doc.id}: $e');
+            }
+          }
+          
+          // Sort by creation date (newest first)
+          posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          
+          return posts;
+        });
+  }
+
+  @override
+  Future<void> approvePost(String postId, String approvedBy) async {
+    try {
+      final now = DateTime.now();
+      
+      // Verify post exists
+      final postDoc = await _firestore.collection(_collection).doc(postId).get();
+      if (!postDoc.exists) {
+        throw VendorPostException('Post not found');
+      }
+      
+      // Update the post status
+      await _firestore.collection(_collection).doc(postId).update({
+        'approvalStatus': 'approved',
+        'approvalDecidedAt': Timestamp.fromDate(now),
+        'approvedBy': approvedBy,
+        'updatedAt': Timestamp.fromDate(now),
+      });
+      
+      // Post count was already tracked during creation for market posts
+      // No need to track again on approval
+      
+    } catch (e) {
+      throw VendorPostException('Failed to approve post: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> denyPost(String postId, String deniedBy, String? reason) async {
+    try {
+      final now = DateTime.now();
+      await _firestore.collection(_collection).doc(postId).update({
+        'approvalStatus': 'denied',
+        'approvalDecidedAt': Timestamp.fromDate(now),
+        'approvedBy': deniedBy,
+        'approvalNote': reason,
+        'updatedAt': Timestamp.fromDate(now),
+      });
+    } catch (e) {
+      throw VendorPostException('Failed to deny post: ${e.toString()}');
+    }
+  }
+
+  /// Update user's monthly post count (for free tier tracking - vendors and organizers)
+  Future<void> _updateVendorPostCount(String userId) async {
+    try {
+      // Check if user is premium first (works for both vendors and organizers)
+      final userDoc = await _firestore.collection('user_profiles').doc(userId).get();
+      if (!userDoc.exists) return;
+      
+      final userData = userDoc.data()!;
+      final isPremium = userData['isPremium'] ?? false;
+      
+      // Skip counting for premium users
+      if (isPremium) return;
+      
+      // Get or create user stats document (unified for vendors and organizers)
+      final statsRef = _firestore.collection('user_stats').doc(userId);
+      final statsDoc = await statsRef.get();
+      
+      final currentMonth = _getCurrentMonth();
+      
+      if (statsDoc.exists) {
+        final data = statsDoc.data()!;
+        final lastMonth = data['currentCountMonth'] as String?;
+        
+        if (lastMonth == currentMonth) {
+          // Same month - increment count
+          await statsRef.update({
+            'monthlyPostCount': FieldValue.increment(1),
+            'lastPostCreatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+        } else {
+          // New month - reset count to 1
+          await statsRef.update({
+            'monthlyPostCount': 1,
+            'currentCountMonth': currentMonth,
+            'lastPostCreatedAt': Timestamp.fromDate(DateTime.now()),
+          });
+        }
+      } else {
+        // Create new stats document
+        await statsRef.set({
+          'userId': userId,
+          'monthlyPostCount': 1,
+          'currentCountMonth': currentMonth,
+          'lastPostCreatedAt': Timestamp.fromDate(DateTime.now()),
+          'createdAt': Timestamp.fromDate(DateTime.now()),
+        });
+      }
+    } catch (e) {
+      debugPrint('Error updating vendor post count: $e');
+      // Don't throw - this shouldn't block the approval
+    }
+  }
+
+  String _getCurrentMonth() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
   }
 
 }

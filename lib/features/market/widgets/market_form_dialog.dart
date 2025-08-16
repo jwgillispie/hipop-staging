@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hipop/blocs/auth/auth_bloc.dart';
+import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/vendor/models/managed_vendor.dart';
 import 'package:hipop/features/vendor/models/unified_vendor.dart';
 import 'package:hipop/features/vendor/models/vendor_application.dart';
 import '../../market/models/market.dart';
-import '../models/market_schedule.dart';
 import '../../market/services/market_service.dart';
+import '../../premium/services/subscription_service.dart';
 import '../../shared/services/places_service.dart';
+import '../../shared/services/real_time_analytics_service.dart';
 import '../../vendor/services/vendor_application_service.dart';
 import '../../vendor/services/managed_vendor_service.dart';
-import '../widgets/market_schedule_form.dart';
 import '../../shared/widgets/common/simple_places_widget.dart';
 import '../../../core/constants/ui_utils.dart';
 import '../../../core/constants/constants.dart';
@@ -31,9 +34,10 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   PlaceDetails? _selectedPlace;
   String _selectedAddress = '';
 
-  // New schedule system
-  List<MarketSchedule> _marketSchedules = [];
-  bool _isLoadingSchedules = false;
+  // Event date and time
+  DateTime? _selectedEventDate;
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 14, minute: 0);
   
   // Vendor management
   List<VendorApplication> _approvedApplications = [];
@@ -56,6 +60,11 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       _selectedAddress = '${market.address}, ${market.city}, ${market.state}';
       _descriptionController.text = market.description ?? '';
       _selectedVendorIds = List.from(market.associatedVendorIds);
+      _selectedEventDate = market.eventDate;
+      
+      // Parse existing times
+      _parseTime(market.startTime, true);
+      _parseTime(market.endTime, false);
       
       // Create a PlaceDetails object from existing market data
       _selectedPlace = PlaceDetails(
@@ -65,120 +74,43 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
         latitude: market.latitude,
         longitude: market.longitude,
       );
-      
-      // Load existing schedules if available
-      _loadExistingSchedules();
     }
     
     // Load vendor data
     _loadVendorData();
   }
   
-  Future<void> _loadExistingSchedules() async {
-    if (widget.market?.scheduleIds?.isNotEmpty == true) {
-      setState(() {
-        _isLoadingSchedules = true;
-      });
-      
-      try {
-        // Load existing schedules from the database
-        final schedules = await MarketService.getMarketSchedules(widget.market!.id);
-        if (schedules.isNotEmpty) {
-          setState(() {
-            _marketSchedules = schedules;
-            _isLoadingSchedules = false;
-          });
-          return;
-        }
-      } catch (e) {
-        print('Error loading existing schedules: $e');
-        // If loading fails, fall back to legacy conversion
-      }
-      
-      setState(() {
-        _isLoadingSchedules = false;
-      });
-    }
-    
-    // If no schedules found or loading failed, convert legacy operating days
-    _convertLegacyOperatingDays();
-  }
-  
-  void _convertLegacyOperatingDays() {
-    if (widget.market?.operatingDays.isNotEmpty == true) {
-      // Convert old operatingDays format to MarketSchedule
-      final operatingDays = widget.market!.operatingDays;
-      final daysOfWeek = <int>[];
-      String? startTime;
-      String? endTime;
-      
-      // Extract days and times from legacy format
-      for (final entry in operatingDays.entries) {
-        final dayIndex = _getDayIndex(entry.key);
-        if (dayIndex != null) {
-          daysOfWeek.add(dayIndex);
-          
-          // Parse time from format like "9AM-2PM"
-          final times = _parseLegacyTimeString(entry.value);
-          startTime ??= times['start'];
-          endTime ??= times['end'];
-        }
-      }
-      
-      if (daysOfWeek.isNotEmpty && startTime != null && endTime != null) {
-        _marketSchedules = [
-          MarketSchedule.recurring(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            marketId: widget.market!.id,
-            startTime: startTime,
-            endTime: endTime,
-            pattern: RecurrencePattern.weekly,
-            daysOfWeek: daysOfWeek,
-            startDate: DateTime.now(),
-          ),
-        ];
-      }
-    }
-  }
-  
-  int? _getDayIndex(String dayKey) {
-    switch (dayKey.toLowerCase()) {
-      case 'monday': return 1;
-      case 'tuesday': return 2;
-      case 'wednesday': return 3;
-      case 'thursday': return 4;
-      case 'friday': return 5;
-      case 'saturday': return 6;
-      case 'sunday': return 7;
-      default: return null;
-    }
-  }
-  
-  Map<String, String> _parseLegacyTimeString(String timeString) {
-    // Parse strings like "9AM-2PM" or "9:00AM-2:00PM"
-    final parts = timeString.split('-');
-    if (parts.length == 2) {
-      return {
-        'start': _formatTime(parts[0].trim()),
-        'end': _formatTime(parts[1].trim()),
-      };
-    }
-    return {'start': '9:00 AM', 'end': '2:00 PM'};
-  }
-  
-  String _formatTime(String timePart) {
-    // Convert "9AM" or "9:00AM" to "9:00 AM"
-    final regex = RegExp(r'(\d{1,2}):?(\d{0,2})(AM|PM)', caseSensitive: false);
-    final match = regex.firstMatch(timePart);
+  void _parseTime(String timeString, bool isStart) {
+    // Parse time strings like "9:00 AM" or "2:00 PM"
+    final regex = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)', caseSensitive: false);
+    final match = regex.firstMatch(timeString);
     
     if (match != null) {
-      final hour = match.group(1) ?? '9';
-      final minute = match.group(2)?.isEmpty == true ? '00' : (match.group(2) ?? '00');
-      final period = match.group(3)?.toUpperCase() ?? 'AM';
-      return '$hour:$minute $period';
+      int hour = int.parse(match.group(1)!);
+      final minute = int.parse(match.group(2)!);
+      final period = match.group(3)!.toUpperCase();
+      
+      if (period == 'PM' && hour != 12) hour += 12;
+      if (period == 'AM' && hour == 12) hour = 0;
+      
+      final time = TimeOfDay(hour: hour, minute: minute);
+      setState(() {
+        if (isStart) {
+          _startTime = time;
+        } else {
+          _endTime = time;
+        }
+      });
     }
-    return timePart;
   }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$minute $period';
+  }
+  
   
   Future<void> _loadVendorData() async {
     setState(() => _isLoadingVendors = true);
@@ -248,9 +180,38 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       UIUtils.showErrorSnackBar(context, 'Please select a location for the market');
       return;
     }
-    if (_marketSchedules.isEmpty) {
-      UIUtils.showErrorSnackBar(context, 'Please configure at least one market schedule');
+    if (_selectedEventDate == null) {
+      UIUtils.showErrorSnackBar(context, 'Please select an event date');
       return;
+    }
+
+    // Check market creation limits for new markets only
+    if (!_isEditing) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is Authenticated && authState.userProfile != null) {
+        final currentMarketCount = authState.userProfile!.managedMarketIds.length;
+        final canCreate = await SubscriptionService.canCreateMarket(authState.userProfile!.userId, currentMarketCount);
+        
+        if (!canCreate) {
+          // Track analytics for limit encounter
+          RealTimeAnalyticsService.trackEvent(
+            'market_creation_limit_encountered',
+            {
+              'user_type': 'market_organizer',
+              'current_market_count': currentMarketCount,
+              'limit': 2,
+              'is_premium': false,
+              'source': 'market_form_dialog',
+            },
+            userId: authState.userProfile!.userId,
+          );
+          
+          if (mounted) {
+            _showMarketLimitDialog();
+          }
+          return;
+        }
+      }
     }
 
     setState(() => _isLoading = true);
@@ -278,7 +239,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     // Parse address components from selected place
     final addressComponents = _parseAddressComponents(_selectedPlace!.formattedAddress);
     
-    // First create the market
+    // Create the market with simple date/time
     final market = Market(
       id: '',
       name: _nameController.text.trim(),
@@ -287,7 +248,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       state: addressComponents['state'] ?? '',
       latitude: _selectedPlace!.latitude,
       longitude: _selectedPlace!.longitude,
-      operatingDays: _generateLegacyOperatingDays(), // Keep for backward compatibility
+      eventDate: _selectedEventDate!,
+      startTime: _formatTimeOfDay(_startTime),
+      endTime: _formatTimeOfDay(_endTime),
       description: _descriptionController.text.trim().isNotEmpty 
           ? _descriptionController.text.trim() 
           : null,
@@ -297,24 +260,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
 
     final createdMarketId = await MarketService.createMarket(market);
     
-    // Then create the schedules and link them to the market
-    final scheduleIds = <String>[];
-    debugPrint('Creating ${_marketSchedules.length} schedules for market $createdMarketId');
-    for (final schedule in _marketSchedules) {
-      debugPrint('Creating schedule: ${schedule.type} with ${schedule.specificDates?.length ?? 0} specific dates');
-      final scheduleWithMarketId = schedule.copyWith(marketId: createdMarketId);
-      final scheduleId = await MarketService.createMarketSchedule(scheduleWithMarketId);
-      scheduleIds.add(scheduleId);
-      debugPrint('Created schedule $scheduleId');
-    }
-    
-    // Update the market with schedule IDs
-    debugPrint('Updating market $createdMarketId with ${scheduleIds.length} schedule IDs: $scheduleIds');
-    final updatedMarket = market.copyWith(
-      id: createdMarketId,
-      scheduleIds: scheduleIds,
-    );
-    await MarketService.updateMarket(createdMarketId, updatedMarket.toFirestore());
+    final updatedMarket = market.copyWith(id: createdMarketId);
     
     if (mounted) {
       Navigator.pop(context, updatedMarket);
@@ -327,7 +273,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     // Parse address components from selected place
     final addressComponents = _parseAddressComponents(_selectedPlace!.formattedAddress);
     
-    // Update market basic info
+    // Update market with simple date/time
     final updatedMarket = market.copyWith(
       name: _nameController.text.trim(),
       address: addressComponents['address'] ?? _selectedPlace!.formattedAddress,
@@ -335,118 +281,184 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       state: addressComponents['state'] ?? market.state,
       latitude: _selectedPlace!.latitude,
       longitude: _selectedPlace!.longitude,
+      eventDate: _selectedEventDate ?? market.eventDate,
+      startTime: _formatTimeOfDay(_startTime),
+      endTime: _formatTimeOfDay(_endTime),
       description: _descriptionController.text.trim().isNotEmpty 
           ? _descriptionController.text.trim() 
           : null,
       associatedVendorIds: _selectedVendorIds,
-      operatingDays: _generateLegacyOperatingDays(), // Keep for backward compatibility
     );
     
-    // Handle schedule updates properly
     await MarketService.updateMarket(market.id, updatedMarket.toFirestore());
-    
-    // Update market schedules
-    await _updateMarketSchedules(market.id);
     
     if (mounted) {
       Navigator.pop(context, updatedMarket);
     }
   }
   
-  Map<String, String> _generateLegacyOperatingDays() {
-    final operatingDays = <String, String>{};
-    
-    for (final schedule in _marketSchedules) {
-      if (schedule.type == ScheduleType.recurring && schedule.daysOfWeek != null) {
-        for (final dayIndex in schedule.daysOfWeek!) {
-          final dayName = _getDayNameFromIndex(dayIndex);
-          if (dayName != null) {
-            operatingDays[dayName.toLowerCase()] = '${schedule.startTime}-${schedule.endTime}';
-          }
-        }
-      } else if (schedule.type == ScheduleType.specificDates && schedule.specificDates != null) {
-        // For specific dates, add each date as a formatted string
-        for (final date in schedule.specificDates!) {
-          final dayName = _getDayNameFromIndex(date.weekday);
-          if (dayName != null) {
-            final dateKey = '${dayName.toLowerCase()}_${date.year}_${date.month}_${date.day}';
-            final dateLabel = '${_getMonthName(date.month)} ${date.day}, ${date.year}';
-            operatingDays[dateKey] = '${schedule.startTime}-${schedule.endTime} ($dateLabel)';
-          }
-        }
-      }
-    }
-    
-    return operatingDays;
-  }
-  
-  String _getMonthName(int month) {
-    switch (month) {
-      case 1: return 'Jan';
-      case 2: return 'Feb';
-      case 3: return 'Mar';
-      case 4: return 'Apr';
-      case 5: return 'May';
-      case 6: return 'Jun';
-      case 7: return 'Jul';
-      case 8: return 'Aug';
-      case 9: return 'Sep';
-      case 10: return 'Oct';
-      case 11: return 'Nov';
-      case 12: return 'Dec';
-      default: return 'Unknown';
-    }
-  }
 
-  String? _getDayNameFromIndex(int dayIndex) {
-    switch (dayIndex) {
-      case 1: return 'Monday';
-      case 2: return 'Tuesday';
-      case 3: return 'Wednesday';
-      case 4: return 'Thursday';
-      case 5: return 'Friday';
-      case 6: return 'Saturday';
-      case 7: return 'Sunday';
-      default: return null;
-    }
-  }
+  Widget _buildEventDateTimeForm() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.event, color: Colors.blue[600]),
+                const SizedBox(width: 8),
+                Text(
+                  'Event Date & Time',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Event Date Picker
+            Text(
+              'Event Date',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ListTile(
+                title: Text(
+                  _selectedEventDate != null 
+                      ? '${_selectedEventDate!.month}/${_selectedEventDate!.day}/${_selectedEventDate!.year}'
+                      : 'Select event date',
+                  style: const TextStyle(color: Colors.black),
+                ),
+                leading: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedEventDate ?? DateTime.now().add(const Duration(days: 1)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (date != null) {
+                    setState(() {
+                      _selectedEventDate = date;
+                    });
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
 
-  Future<void> _updateMarketSchedules(String marketId) async {
-    try {
-      // Get existing schedules for this market
-      final existingSchedules = await MarketService.getMarketSchedules(marketId);
-      final existingScheduleIds = existingSchedules.map((s) => s.id).toSet();
-      final newScheduleIds = <String>[];
+            // Time selection
+            Text(
+              'Operating Hours',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ListTile(
+                    title: const Text('Start Time', style: TextStyle(color: Colors.black)),
+                    subtitle: Text(_formatTimeOfDay(_startTime), style: const TextStyle(color: Colors.black)),
+                    leading: const Icon(Icons.access_time),
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: _startTime,
+                      );
+                      if (time != null) {
+                        setState(() {
+                          _startTime = time;
+                        });
+                      }
+                    },
+                    dense: true,
+                  ),
+                ),
+                Expanded(
+                  child: ListTile(
+                    title: const Text('End Time', style: TextStyle(color: Colors.black)),
+                    subtitle: Text(_formatTimeOfDay(_endTime), style: const TextStyle(color: Colors.black)),
+                    leading: const Icon(Icons.access_time_filled),
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: _endTime,
+                      );
+                      if (time != null) {
+                        setState(() {
+                          _endTime = time;
+                        });
+                      }
+                    },
+                    dense: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-      // Process current schedules
-      for (final schedule in _marketSchedules) {
-        if (schedule.id != null && existingScheduleIds.contains(schedule.id)) {
-          // Update existing schedule
-          await MarketService.updateMarketSchedule(schedule.id!, schedule.toFirestore());
-          newScheduleIds.add(schedule.id!);
-        } else {
-          // Create new schedule
-          final scheduleWithMarketId = schedule.copyWith(marketId: marketId);
-          final scheduleId = await MarketService.createMarketSchedule(scheduleWithMarketId);
-          newScheduleIds.add(scheduleId);
-        }
-      }
-
-      // Delete removed schedules
-      final schedulesToDelete = existingScheduleIds.where((id) => 
-          !_marketSchedules.any((s) => s.id == id)).toList();
-      
-      for (final scheduleId in schedulesToDelete) {
-        await MarketService.deleteMarketSchedule(scheduleId);
-      }
-
-      // Update market with current schedule IDs
-      await MarketService.updateMarket(marketId, {'scheduleIds': newScheduleIds});
-      
-    } catch (e) {
-      debugPrint('Error updating market schedules: $e');
-      rethrow;
-    }
+            // Event Preview
+            if (_selectedEventDate != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green[600]),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Event Preview',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Date: ${_selectedEventDate!.month}/${_selectedEventDate!.day}/${_selectedEventDate!.year}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Time: ${_formatTimeOfDay(_startTime)} - ${_formatTimeOfDay(_endTime)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Map<String, String> _parseAddressComponents(String formattedAddress) {
@@ -473,6 +485,102 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       'city': '',
       'state': '',
     };
+  }
+
+  void _showMarketLimitDialog() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated || authState.userProfile == null) return;
+
+    final currentMarketCount = authState.userProfile!.managedMarketIds.length;
+    final usageSummary = await SubscriptionService.getMarketUsageSummary(
+      authState.userProfile!.userId, 
+      currentMarketCount,
+    );
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Market Creation Limit Reached'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You have reached your free tier limit of ${usageSummary['markets_limit']} markets.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current Usage: ${usageSummary['markets_used']} of ${usageSummary['markets_limit']} markets',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Upgrade to Market Organizer Pro for unlimited markets!',
+                    style: TextStyle(color: Colors.blue[700]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Pro Features:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• Unlimited markets'),
+                Text('• Advanced analytics'),
+                Text('• Vendor recruitment tools'),
+                Text('• Priority support'),
+                Text('• Revenue optimization'),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Navigate to upgrade screen
+              // This would typically navigate to subscription management
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
   }
 
 
@@ -809,28 +917,8 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                         textCapitalization: TextCapitalization.sentences,
                       ),
                       const SizedBox(height: 24),
-                      // Market Schedule Form
-                      _isLoadingSchedules
-                          ? Container(
-                              padding: const EdgeInsets.all(32),
-                              child: const Center(
-                                child: Column(
-                                  children: [
-                                    CircularProgressIndicator(),
-                                    SizedBox(height: 16),
-                                    Text('Loading schedule data...'),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : MarketScheduleForm(
-                              initialSchedules: _marketSchedules,
-                              onSchedulesChanged: (schedules) {
-                                setState(() {
-                                  _marketSchedules = schedules;
-                                });
-                              },
-                            ),
+                      // Event Date and Time Form
+                      _buildEventDateTimeForm(),
                       const SizedBox(height: 24),
                       // Vendor Management Section
                       _buildVendorManagementSection(),

@@ -164,11 +164,10 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
         throw Exception('User not authenticated');
       }
 
-      // Submit application using the new date-based approach
-      await VendorApplicationService.submitApplicationWithDates(
+      // Submit application for the market event
+      await VendorApplicationService.submitMarketEventApplication(
         authState.user.uid,
         _market!.id,
-        _selectedDates,
         specialMessage: _specialMessageController.text.trim().isEmpty 
             ? null 
             : _specialMessageController.text.trim(),

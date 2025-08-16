@@ -266,11 +266,10 @@ class _AdminFixScreenState extends State<AdminFixScreen> {
         state: 'GA',
         latitude: 33.8567,  // Approximate coordinates for Tucker, GA
         longitude: -84.2154,
+        eventDate: DateTime.now().add(const Duration(days: 7)), // Next Saturday
+        startTime: '8:00 AM',
+        endTime: '1:00 PM',
         description: 'Tucker\'s premier farmers market featuring local vendors, fresh produce, artisanal goods, and community spirit. Operating since 2010, we support local farmers and makers while bringing the community together every weekend.',
-        operatingDays: const {
-          'saturday': '8:00 AM - 1:00 PM',
-          'sunday': '10:00 AM - 2:00 PM',
-        },
         isActive: true,
         createdAt: DateTime.now(),
       );
@@ -341,10 +340,10 @@ class _AdminFixScreenState extends State<AdminFixScreen> {
         state: 'GA',
         latitude: 33.7557,  // Krog District coordinates
         longitude: -84.3640,
+        eventDate: DateTime.now().add(const Duration(days: 5)), // Next Friday
+        startTime: '6:00 PM',
+        endTime: '10:00 PM',
         description: 'Evening market featuring local artisans, vintage finds, and live music in the heart of Krog District. A unique nighttime shopping experience with handmade goods and creative vibes.',
-        operatingDays: const {
-          'friday': '6:00 PM - 10:00 PM',
-        },
         isActive: true,
         createdAt: DateTime.now(),
       );

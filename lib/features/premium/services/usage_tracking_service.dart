@@ -287,6 +287,144 @@ class UsageTrackingService {
     debugPrint('🧹 Cleared all usage caches');
   }
 
+  /// Revert usage tracking when an action fails after usage was already tracked
+  /// This is crucial for free tier users to prevent unfair counter decrements
+  static Future<UsageTrackingResult> revertUsage(
+    String userId,
+    String featureName, {
+    int amount = 1,
+    String? reason,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      debugPrint('🔄 Reverting usage: $featureName for user: $userId (amount: -$amount) - Reason: ${reason ?? "Action failed"}');
+
+      // Call server-side revert function for security and consistency
+      final result = await _functions.httpsCallable('revertUsage').call({
+        'userId': userId,
+        'featureName': featureName,
+        'amount': amount,
+        'reason': reason ?? 'Action failed after usage tracking',
+        'metadata': metadata,
+      });
+
+      final data = result.data as Map<String, dynamic>;
+      
+      // Update local cache with the reverted usage
+      _updateUsageCache(userId, featureName, data['currentUsage'] ?? 0);
+      
+      debugPrint('✅ Usage reverted successfully: $featureName = ${data['currentUsage']}/${data['limit']}');
+      
+      return UsageTrackingResult(
+        success: data['success'] ?? false,
+        currentUsage: data['currentUsage'] ?? 0,
+        limit: data['limit'] ?? 0,
+        percentageUsed: data['percentageUsed'] ?? 0,
+      );
+    } catch (e) {
+      debugPrint('❌ Error reverting usage: $e');
+      // If revert fails, we should clear the cache to force a fresh check
+      clearUserCache(userId);
+      return UsageTrackingResult(
+        success: false,
+        currentUsage: 0,
+        limit: 0,
+        percentageUsed: 0,
+        error: e.toString(),
+      );
+    }
+  }
+
+  /// Safe usage tracking with automatic rollback on failure
+  /// This pattern should be used for operations that might fail after resource allocation
+  static Future<SafeUsageResult> safeTrackUsage(
+    String userId,
+    String featureName,
+    Future<bool> Function() operation, {
+    int amount = 1,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      debugPrint('🛡️ Safe usage tracking: $featureName for user: $userId');
+
+      // First check if the action is allowed
+      final limitResult = await canUseFeature(userId, featureName, requestedAmount: amount);
+      
+      if (!limitResult.allowed) {
+        debugPrint('❌ Action denied by usage limits');
+        return SafeUsageResult(
+          success: false,
+          usageTracked: false,
+          usageResult: UsageTrackingResult(
+            success: false,
+            currentUsage: limitResult.currentUsage,
+            limit: limitResult.limit,
+            percentageUsed: limitResult.percentageUsed,
+          ),
+          reason: 'Usage limit exceeded',
+        );
+      }
+
+      // Track the usage first
+      final trackingResult = await trackUsage(userId, featureName, amount: amount, metadata: metadata);
+      
+      if (!trackingResult.success) {
+        debugPrint('❌ Failed to track usage');
+        return SafeUsageResult(
+          success: false,
+          usageTracked: false,
+          usageResult: trackingResult,
+          reason: 'Failed to track usage',
+        );
+      }
+
+      // Attempt the operation
+      bool operationSuccess = false;
+      try {
+        operationSuccess = await operation();
+      } catch (operationError) {
+        debugPrint('❌ Operation failed: $operationError');
+        operationSuccess = false;
+      }
+
+      if (!operationSuccess) {
+        debugPrint('🔄 Operation failed, reverting usage tracking');
+        
+        // Revert the usage since the operation failed
+        final revertResult = await revertUsage(
+          userId, 
+          featureName, 
+          amount: amount,
+          reason: 'Operation failed after usage tracking',
+          metadata: metadata,
+        );
+        
+        return SafeUsageResult(
+          success: false,
+          usageTracked: false, // Usage was reverted
+          usageResult: revertResult.success ? trackingResult : revertResult,
+          reason: 'Operation failed, usage reverted',
+        );
+      }
+
+      debugPrint('✅ Safe usage tracking completed successfully');
+      return SafeUsageResult(
+        success: true,
+        usageTracked: true,
+        usageResult: trackingResult,
+      );
+    } catch (e) {
+      debugPrint('❌ Error in safe usage tracking: $e');
+      return SafeUsageResult(
+        success: false,
+        usageTracked: false,
+        usageResult: UsageTrackingResult(success: false, currentUsage: 0, limit: 0, percentageUsed: 0),
+        reason: 'System error',
+        error: e.toString(),
+      );
+    }
+  }
+
   // PRIVATE HELPER METHODS
 
   static void _updateUsageCache(String userId, String featureName, int usage) {
@@ -585,4 +723,23 @@ class TierInfo {
       upgradeRecommended: map['upgradeRecommended'] ?? false,
     );
   }
+}
+
+class SafeUsageResult {
+  final bool success;
+  final bool usageTracked;
+  final UsageTrackingResult usageResult;
+  final String? reason;
+  final String? error;
+
+  SafeUsageResult({
+    required this.success,
+    required this.usageTracked,
+    required this.usageResult,
+    this.reason,
+    this.error,
+  });
+
+  bool get failed => !success;
+  bool get usageWasReverted => !usageTracked && reason?.contains('reverted') == true;
 }

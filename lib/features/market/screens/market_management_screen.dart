@@ -6,6 +6,8 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import '../../market/models/market.dart';
 import '../../market/services/market_service.dart';
+import '../../premium/services/subscription_service.dart';
+import '../../shared/services/real_time_analytics_service.dart';
 import '../widgets/market_form_dialog.dart';
 
 class MarketManagementScreen extends StatefulWidget {
@@ -21,6 +23,8 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
   List<Market> _markets = [];
   List<Market> _filteredMarkets = [];
   bool _isLoading = true;
+  Map<String, dynamic> _usageSummary = {};
+  bool _canCreateMarkets = true;
 
   @override
   void initState() {
@@ -50,9 +54,22 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           }
         }
         
+        // Load usage summary
+        final currentMarketCount = markets.length;
+        final usageSummary = await SubscriptionService.getMarketUsageSummary(
+          authState.userProfile!.userId, 
+          currentMarketCount,
+        );
+        final canCreate = await SubscriptionService.canCreateMarket(
+          authState.userProfile!.userId, 
+          currentMarketCount,
+        );
+        
         setState(() {
           _markets = markets;
           _filteredMarkets = markets;
+          _usageSummary = usageSummary;
+          _canCreateMarkets = canCreate;
           _isLoading = false;
         });
       }
@@ -84,6 +101,12 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
   }
 
   Future<void> _showCreateMarketDialog() async {
+    // Check if user can create markets before showing dialog
+    if (!_canCreateMarkets) {
+      _showMarketLimitReachedDialog();
+      return;
+    }
+
     final result = await showDialog<Market>(
       context: context,
       barrierDismissible: false,
@@ -232,6 +255,184 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
     }
   }
 
+  void _showMarketLimitReachedDialog() {
+    // Track analytics for limit dialog shown
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated && authState.userProfile != null) {
+      RealTimeAnalyticsService.trackEvent(
+        'market_limit_dialog_shown',
+        {
+          'user_type': 'market_organizer',
+          'current_market_count': _usageSummary['markets_used'] ?? 0,
+          'limit': _usageSummary['markets_limit'] ?? 2,
+          'is_premium': _usageSummary['is_premium'] ?? false,
+          'source': 'market_management_screen',
+        },
+        userId: authState.userProfile!.userId,
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('Market Limit Reached'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You have reached your free tier limit of ${_usageSummary['markets_limit']} markets.',
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current Usage: ${_usageSummary['markets_used']} of ${_usageSummary['markets_limit']} markets',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Upgrade to Market Organizer Pro for unlimited markets!',
+                    style: TextStyle(color: Colors.orange[700]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Pro Benefits:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• Unlimited markets'),
+                Text('• Advanced analytics'),
+                Text('• Vendor recruitment tools'),
+                Text('• Priority support'),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Navigate to upgrade screen
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUsageSummaryCard() {
+    if (_usageSummary.isEmpty) return const SizedBox.shrink();
+    
+    final isAtLimit = !_canCreateMarkets;
+    final isPremium = _usageSummary['is_premium'] == true;
+    
+    return Container(
+      margin: const EdgeInsets.all(16),
+      child: Card(
+        color: isAtLimit ? Colors.orange[50] : Colors.blue[50],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isPremium ? Icons.star : Icons.storage,
+                    color: isAtLimit ? Colors.orange[600] : Colors.blue[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isPremium ? 'Premium Account' : 'Market Usage',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isAtLimit ? Colors.orange[800] : Colors.blue[800],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!isPremium && isAtLimit)
+                    TextButton(
+                      onPressed: () {
+                        // TODO: Navigate to upgrade screen
+                      },
+                      child: const Text('Upgrade'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (isPremium)
+                Text(
+                  'Unlimited markets available',
+                  style: TextStyle(color: Colors.blue[700]),
+                )
+              else ...[
+                Text(
+                  '${_usageSummary['markets_used']} of ${_usageSummary['markets_limit']} markets used',
+                  style: TextStyle(
+                    color: isAtLimit ? Colors.orange[700] : Colors.blue[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (_usageSummary['markets_used'] as int) / (_usageSummary['markets_limit'] as int),
+                  backgroundColor: Colors.grey[300],
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isAtLimit ? Colors.orange : Colors.blue,
+                  ),
+                ),
+                if (isAtLimit) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Upgrade to create unlimited markets',
+                    style: TextStyle(
+                      color: Colors.orange[700],
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
@@ -266,6 +467,7 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           body: Column(
             children: [
               _buildSearchBar(),
+              _buildUsageSummaryCard(),
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -274,11 +476,11 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
             ],
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: _showCreateMarketDialog,
-            backgroundColor: Colors.teal,
+            onPressed: _canCreateMarkets ? _showCreateMarketDialog : _showMarketLimitReachedDialog,
+            backgroundColor: _canCreateMarkets ? Colors.teal : Colors.grey,
             foregroundColor: Colors.white,
-            icon: const Icon(Icons.add),
-            label: const Text('Create Market'),
+            icon: Icon(_canCreateMarkets ? Icons.add : Icons.lock),
+            label: Text(_canCreateMarkets ? 'Create Market' : 'Limit Reached'),
           ),
         );
       },
@@ -353,11 +555,11 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: _showCreateMarketDialog,
-            icon: const Icon(Icons.add),
-            label: const Text('Create First Market'),
+            onPressed: _canCreateMarkets ? _showCreateMarketDialog : _showMarketLimitReachedDialog,
+            icon: Icon(_canCreateMarkets ? Icons.add : Icons.lock),
+            label: Text(_canCreateMarkets ? 'Create First Market' : 'Limit Reached'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
+              backgroundColor: _canCreateMarkets ? Colors.teal : Colors.grey,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -446,32 +648,26 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (market.operatingDays.isNotEmpty) ...[
-                  const Text(
-                    'Operating Days:',
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                const Text(
+                  'Event Schedule:',
+                  style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.teal[100],
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: market.operatingDays.entries.map((entry) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.teal[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_formatOperatingDayKey(entry.key)}: ${entry.value}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.teal[800],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    )).toList(),
+                  child: Text(
+                    market.eventDisplayInfo,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.teal[800],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ],
+                ),
               ],
             ),
           ),
@@ -520,42 +716,4 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
     );
   }
 
-  String _formatOperatingDayKey(String key) {
-    // Check if this is a specific date format (contains underscores and numbers)
-    if (key.contains('_') && RegExp(r'_\d{4}_\d{1,2}_\d{1,2}$').hasMatch(key)) {
-      // Parse specific date format: "sunday_2025_7_27"
-      final parts = key.split('_');
-      if (parts.length == 4) {
-        final year = int.tryParse(parts[1]);
-        final month = int.tryParse(parts[2]);
-        final day = int.tryParse(parts[3]);
-        
-        if (year != null && month != null && day != null) {
-          final monthName = _getMonthName(month);
-          return '$monthName $day';
-        }
-      }
-    }
-    
-    // Regular recurring day format
-    return key.toUpperCase();
-  }
-
-  String _getMonthName(int month) {
-    switch (month) {
-      case 1: return 'Jan';
-      case 2: return 'Feb';
-      case 3: return 'Mar';
-      case 4: return 'Apr';
-      case 5: return 'May';
-      case 6: return 'Jun';
-      case 7: return 'Jul';
-      case 8: return 'Aug';
-      case 9: return 'Sep';
-      case 10: return 'Oct';
-      case 11: return 'Nov';
-      case 12: return 'Dec';
-      default: return 'Month';
-    }
-  }
 }

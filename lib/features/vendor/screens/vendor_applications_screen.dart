@@ -8,6 +8,9 @@ import 'package:hipop/features/vendor/models/vendor_application.dart';
 import 'package:hipop/features/vendor/services/vendor_application_service.dart';
 import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_applications_calendar.dart';
+import 'package:hipop/features/vendor/models/vendor_post.dart';
+import 'package:hipop/features/vendor/models/post_type.dart';
+import 'package:hipop/repositories/vendor_posts_repository.dart';
 
 class VendorApplicationsScreen extends StatefulWidget {
   const VendorApplicationsScreen({super.key});
@@ -254,10 +257,10 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           : TabBarView(
               controller: _tabController,
               children: [
-                _buildApplicationsList(null),
-                _buildApplicationsList(ApplicationStatus.pending),
-                _buildApplicationsList(ApplicationStatus.approved),
-                _buildApplicationsList(ApplicationStatus.rejected),
+                _buildPostApplicationsList(null),
+                _buildPostApplicationsList('pending'),
+                _buildPostApplicationsList('approved'),
+                _buildPostApplicationsList('denied'),
               ],
             ),
     );
@@ -296,9 +299,8 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
         }
 
         final applications = snapshot.data ?? [];
-        final applicationsWithDates = applications.where((app) => app.hasRequestedDates).toList();
 
-        if (applicationsWithDates.isEmpty) {
+        if (applications.isEmpty) {
           return const Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -321,7 +323,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
         }
 
         return VendorApplicationsCalendar(
-          applications: applicationsWithDates,
+          applications: applications,
           onApplicationTap: (application) {
             _showApplicationDetails(application);
           },
@@ -342,8 +344,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
             children: [
               Text('Status: ${application.status.name.toUpperCase()}'),
               const SizedBox(height: 8),
-              if (application.hasRequestedDates)
-                Text('Requested Dates: ${application.requestedDatesDisplayString}'),
               if (application.specialMessage?.isNotEmpty == true) ...[
                 const SizedBox(height: 8),
                 Text('Message: ${application.specialMessage}'),
@@ -382,7 +382,372 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     );
   }
 
-  Widget _buildApplicationsList(ApplicationStatus? filterStatus) {
+  // New method to show vendor posts as applications
+  Widget _buildPostApplicationsList(String? filterStatus) {
+    final marketId = _getCurrentMarketId();
+    
+    if (kDebugMode) {
+      print('DEBUG: Selected market ID: $marketId');
+      print('DEBUG: Filter status: $filterStatus');
+    }
+    
+    if (marketId == null) {
+      return const Center(child: Text('No market selected'));
+    }
+    
+    final repository = VendorPostsRepository();
+    
+    // Get pending posts for this market
+    return StreamBuilder<List<VendorPost>>(
+      stream: repository.getPendingMarketPosts(marketId),
+      builder: (context, snapshot) {
+        if (kDebugMode) {
+          print('DEBUG: Post Applications StreamBuilder - Connection state: ${snapshot.connectionState}');
+          print('DEBUG: Post Applications StreamBuilder - Has error: ${snapshot.hasError}');
+          if (snapshot.hasError) {
+            print('DEBUG: Post Applications StreamBuilder - Error: ${snapshot.error}');
+          }
+          print('DEBUG: Post Applications StreamBuilder - Has data: ${snapshot.hasData}');
+          if (snapshot.hasData) {
+            print('DEBUG: Post Applications StreamBuilder - Data count: ${snapshot.data!.length}');
+          }
+        }
+        
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => setState(() {}),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final posts = snapshot.data ?? [];
+        
+        // Filter posts based on the selected status
+        final filteredPosts = filterStatus == null 
+            ? posts 
+            : posts.where((post) {
+                if (filterStatus == 'pending') return post.approvalStatus?.value == 'pending';
+                if (filterStatus == 'approved') return post.approvalStatus?.value == 'approved';
+                if (filterStatus == 'denied') return post.approvalStatus?.value == 'denied';
+                return false;
+              }).toList();
+        
+        if (kDebugMode) {
+          print('DEBUG: Received ${posts.length} total posts, filtered to ${filteredPosts.length}');
+        }
+
+        if (filteredPosts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  filterStatus == 'pending' ? Icons.pending_actions : Icons.assignment,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  filterStatus == 'pending' 
+                      ? 'No pending market post applications'
+                      : 'No ${filterStatus ?? ""} applications',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Market post applications will appear here',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredPosts.length,
+          itemBuilder: (context, index) {
+            final post = filteredPosts[index];
+            return _buildPostApplicationCard(post);
+          },
+        );
+      },
+    );
+  }
+  
+  Widget _buildPostApplicationCard(VendorPost post) {
+    final isApproved = post.approvalStatus?.value == 'approved';
+    final isDenied = post.approvalStatus?.value == 'denied';
+    final isPending = post.approvalStatus?.value == 'pending';
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: isPending 
+              ? Colors.orange 
+              : isApproved 
+                  ? Colors.green 
+                  : Colors.red,
+          child: Icon(
+            isPending 
+                ? Icons.pending_actions 
+                : isApproved 
+                    ? Icons.check 
+                    : Icons.close,
+            color: Colors.white,
+          ),
+        ),
+        title: Text(
+          post.vendorName,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${_formatDateTime(post.popUpStartDateTime)} - ${_formatTime(post.popUpEndDateTime)}'),
+            if (post.vendorNotes != null && post.vendorNotes!.isNotEmpty)
+              Text(
+                'Note: ${post.vendorNotes}',
+                style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow('Location', post.location),
+                _buildDetailRow('Description', post.description),
+                if (post.vendorNotes != null && post.vendorNotes!.isNotEmpty)
+                  _buildDetailRow('Vendor Notes', post.vendorNotes!),
+                if (post.approvalNote != null && post.approvalNote!.isNotEmpty)
+                  _buildDetailRow('Organizer Notes', post.approvalNote!),
+                if (post.instagramHandle != null && post.instagramHandle!.isNotEmpty)
+                  _buildDetailRow('Instagram', '@${post.instagramHandle}'),
+                if (post.photoUrls.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Photos:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: post.photoUrls.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              post.photoUrls[index],
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                if (isPending)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => _denyPost(post),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Deny'),
+                      ),
+                      const SizedBox(width: 16),
+                      ElevatedButton(
+                        onPressed: () => _approvePost(post),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Approve'),
+                      ),
+                    ],
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isApproved ? Colors.green.shade50 : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isApproved ? Colors.green : Colors.red,
+                      ),
+                    ),
+                    child: Text(
+                      isApproved ? 'Approved' : 'Denied',
+                      style: TextStyle(
+                        color: isApproved ? Colors.green.shade700 : Colors.red.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.month}/${dateTime.day}/${dateTime.year} ${_formatTime(dateTime)}';
+  }
+  
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour == 0 ? 12 : (dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour);
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+  }
+  
+  Future<void> _approvePost(VendorPost post) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+    
+    try {
+      final repository = VendorPostsRepository();
+      await repository.approvePost(post.id, authState.user.uid);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Post approved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error approving post: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _denyPost(VendorPost post) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+    
+    // Show dialog to get denial reason
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        String reasonText = '';
+        return AlertDialog(
+          title: const Text('Deny Post Application'),
+          content: TextField(
+            onChanged: (value) => reasonText = value,
+            decoration: const InputDecoration(
+              labelText: 'Reason for denial (optional)',
+              hintText: 'Enter reason...',
+            ),
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, reasonText),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Deny'),
+            ),
+          ],
+        );
+      },
+    );
+    
+    if (reason != null) {
+      try {
+        final repository = VendorPostsRepository();
+        await repository.denyPost(post.id, authState.user.uid, reason.isEmpty ? null : reason);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Post denied'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error denying post: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+  
+  // Keep the old method for compatibility but rename it
+  Widget _buildLegacyApplicationsList(ApplicationStatus? filterStatus) {
     final marketId = _getCurrentMarketId();
     
     if (kDebugMode) {
@@ -564,14 +929,8 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                             color: Colors.grey[500],
                           ),
                         ),
-                      if (application.isEventApplication && application.hasRequestedDates)
-                        Text(
-                          'Requested Dates: ${application.requestedDatesDisplayString}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
+                      // Note: In the new 1:1 market-event system, each application is for a single market event
+                      // No need to display requested dates since the market itself has the event date
                       if (application.isMarketPermission)
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -598,9 +957,9 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                             ],
                           ),
                         )
-                      else if (application.operatingDays.isNotEmpty)
+                      else
                         Text(
-                          'Days: ${application.operatingDays.join(', ')}',
+                          'Type: ${application.isMarketPermission ? 'Permission Request' : 'Event Application'}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -811,20 +1170,12 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     if (marketId == null) return;
     
     try {
-      final now = DateTime.now();
-      
       final applications = [
         VendorApplication(
           id: '',
           marketId: marketId,
           vendorId: 'vendor_1',
-          operatingDays: ['Saturday', 'Sunday'],
-          requestedDates: [
-            now.add(const Duration(days: 7)), // Next Saturday
-            now.add(const Duration(days: 8)), // Next Sunday
-            now.add(const Duration(days: 14)), // Following Saturday
-            now.add(const Duration(days: 15)), // Following Sunday
-          ],
+          applicationType: ApplicationType.eventApplication,
           specialMessage: 'Need access to electrical outlet for display refrigerator',
           status: ApplicationStatus.pending,
           createdAt: DateTime.now().subtract(const Duration(days: 2)),
@@ -834,13 +1185,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           id: '',
           marketId: marketId,
           vendorId: 'vendor_2',
-          operatingDays: ['Wednesday', 'Saturday'],
-          requestedDates: [
-            now.add(const Duration(days: 3)), // Next Wednesday
-            now.add(const Duration(days: 7)), // Next Saturday
-            now.add(const Duration(days: 10)), // Following Wednesday
-            now.add(const Duration(days: 14)), // Following Saturday
-          ],
+          applicationType: ApplicationType.eventApplication,
           specialMessage: 'Would like corner spot for easy truck access',
           status: ApplicationStatus.approved,
           reviewedBy: 'organizer_1',
@@ -853,12 +1198,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           id: '',
           marketId: marketId,
           vendorId: 'vendor_3',
-          operatingDays: ['Friday', 'Saturday'],
-          requestedDates: [
-            now.add(const Duration(days: 5)), // Next Friday
-            now.add(const Duration(days: 6)), // Next Saturday
-            now.add(const Duration(days: 12)), // Following Friday
-          ],
+          applicationType: ApplicationType.eventApplication,
           specialMessage: null,
           status: ApplicationStatus.waitlisted,
           reviewedBy: 'organizer_1',
@@ -871,12 +1211,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           id: '',
           marketId: marketId,
           vendorId: 'vendor_4',
-          operatingDays: ['Thursday', 'Friday', 'Saturday'],
-          requestedDates: [
-            now.add(const Duration(days: 4)), // Next Thursday
-            now.add(const Duration(days: 5)), // Next Friday
-            now.add(const Duration(days: 6)), // Next Saturday
-          ],
+          applicationType: ApplicationType.eventApplication,
           specialMessage: 'Need large space for food truck and seating area',
           status: ApplicationStatus.rejected,
           reviewedBy: 'organizer_1',
@@ -889,11 +1224,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           id: '',
           marketId: marketId,
           vendorId: 'vendor_5',
-          operatingDays: ['Saturday'],
-          requestedDates: [
-            now.add(const Duration(days: 7)), // Next Saturday
-            now.add(const Duration(days: 21)), // Saturday in 3 weeks
-          ],
+          applicationType: ApplicationType.eventApplication,
           specialMessage: null,
           status: ApplicationStatus.pending,
           createdAt: DateTime.now().subtract(const Duration(hours: 8)),

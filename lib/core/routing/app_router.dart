@@ -29,7 +29,6 @@ import '../../features/vendor/screens/vendor_applications_screen.dart';
 import '../../features/vendor/screens/vendor_management_screen.dart';
 import '../../features/vendor/screens/vendor_detail_screen.dart';
 import '../../features/vendor/screens/vendor_application_status_screen.dart';
-import '../../features/vendor/screens/vendor_market_permissions_screen.dart';
 import '../../features/vendor/screens/vendor_popup_creation_screen.dart';
 import '../../features/vendor/screens/vendor_signup_screen.dart';
 import '../../features/vendor/screens/vendor_verification_pending_screen.dart';
@@ -39,6 +38,7 @@ import '../../features/vendor/screens/vendor_analytics_screen.dart';
 import '../../features/vendor/screens/vendor_premium_dashboard.dart';
 import '../../features/vendor/screens/vendor_products_management_screen.dart';
 import '../../features/vendor/screens/vendor_market_discovery_screen.dart';
+import '../../features/vendor/screens/select_market_screen.dart';
 // Organizer screens
 import '../../features/organizer/screens/organizer_dashboard.dart';
 import '../../features/organizer/screens/organizer_analytics_screen.dart';
@@ -276,11 +276,6 @@ class AppRouter {
               builder: (context, state) => const VendorApplicationStatusScreen(),
             ),
             GoRoute(
-              path: 'market-connections',
-              name: 'vendorMarketConnections',
-              builder: (context, state) => const VendorMarketConnectionsScreen(),
-            ),
-            GoRoute(
               path: 'popup-creation',
               name: 'vendorPopupCreation',
               builder: (context, state) => const VendorPopupCreationScreen(),
@@ -317,6 +312,11 @@ class AppRouter {
               path: 'products-management',
               name: 'vendorProductsManagement',
               builder: (context, state) => const VendorProductsManagementScreen(),
+            ),
+            GoRoute(
+              path: 'select-market',
+              name: 'selectMarket',
+              builder: (context, state) => const SelectMarketScreen(),
             ),
           ],
         ),
@@ -651,12 +651,12 @@ class AppRouter {
             }
             
             // Map tier to actual user type
-            String userType = 'shopper'; // default
-            if (targetTier == 'marketOrganizerPro') {
+            String userType = 'vendor'; // default to vendor since most users upgrading are vendors
+            if (targetTier == 'marketOrganizerPro' || targetTier == 'market_organizer') {
               userType = 'market_organizer';
-            } else if (targetTier == 'vendorPro') {
+            } else if (targetTier == 'vendorPro' || targetTier == 'vendor') {
               userType = 'vendor';
-            } else if (targetTier == 'shopperPro') {
+            } else if (targetTier == 'shopperPro' || targetTier == 'shopper') {
               userType = 'shopper';
             }
             
@@ -671,6 +671,11 @@ class AppRouter {
       ],
       redirect: (BuildContext context, GoRouterState state) {
         final authState = authBloc.state;
+        debugPrint('🚦 ROUTER DEBUG: Current location: ${state.matchedLocation}');
+        debugPrint('🚦 ROUTER DEBUG: Auth state type: ${authState.runtimeType}');
+        if (authState is Authenticated) {
+          debugPrint('🚦 ROUTER DEBUG: User type: ${authState.userType}');
+        }
         
         // If authenticated, redirect based on user type and verification status
         if (authState is Authenticated) {
@@ -756,6 +761,7 @@ class AppRouter {
         
         // If unauthenticated and not on auth routes or public routes, go to auth landing
         if (authState is Unauthenticated) {
+          debugPrint('🚦 ROUTER DEBUG: User is unauthenticated, checking if redirect needed');
           final publicRoutes = [
             '/auth', 
             '/login', 
@@ -770,6 +776,7 @@ class AppRouter {
           final isVendorApplication = state.matchedLocation.startsWith('/apply/');
           
           if (!publicRoutes.contains(state.matchedLocation) && !isVendorApplication) {
+            debugPrint('🚦 ROUTER DEBUG: Redirecting unauthenticated user to /auth');
             return '/auth';
           }
         }

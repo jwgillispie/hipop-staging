@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
-import '../../shared/models/user_profile.dart';
 import '../services/vendor_contact_service.dart';
+import 'post_type.dart';
 
 class VendorPost extends Equatable {
   final String id;
@@ -14,7 +14,7 @@ class VendorPost extends Equatable {
   final double? longitude;
   final String? placeId;
   final String? locationName;
-  final String? marketId; // New field for market relationship
+  final String? marketId; // @deprecated Use associatedMarketId instead
   final List<String> productListIds; // Associated product lists for this popup
   final DateTime popUpStartDateTime;
   final DateTime popUpEndDateTime;
@@ -25,6 +25,29 @@ class VendorPost extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
+  
+  // NEW FIELDS - Post Type
+  final PostType postType;
+  final String? associatedMarketId;
+  final String? associatedMarketName;
+  final String? associatedMarketLogo;
+  
+  // NEW FIELDS - Approval System
+  final ApprovalStatus? approvalStatus;
+  final DateTime? approvalRequestedAt;
+  final DateTime? approvalDecidedAt;
+  final String? approvedBy;
+  final String? approvalNote; // @deprecated Use organizerNotes instead
+  final DateTime? approvalExpiresAt;
+  
+  // NEW FIELDS - Notes Communication
+  final String? vendorNotes; // Message from vendor to organizer when submitting for approval
+  final String? organizerNotes; // Review notes from organizer to vendor
+  
+  // NEW FIELDS - Tracking
+  final int monthlyPostNumber;
+  final bool countsTowardLimit;
+  final int version;
 
   const VendorPost({
     required this.id,
@@ -46,6 +69,22 @@ class VendorPost extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.isActive = true,
+    // NEW FIELDS
+    this.postType = PostType.independent,
+    this.associatedMarketId,
+    this.associatedMarketName,
+    this.associatedMarketLogo,
+    this.approvalStatus,
+    this.approvalRequestedAt,
+    this.approvalDecidedAt,
+    this.approvedBy,
+    this.approvalNote,
+    this.approvalExpiresAt,
+    this.vendorNotes,
+    this.organizerNotes,
+    this.monthlyPostNumber = 0,
+    this.countsTowardLimit = true,
+    this.version = 2,
   });
 
   factory VendorPost.fromFirestore(DocumentSnapshot doc) {
@@ -82,6 +121,26 @@ class VendorPost extends Equatable {
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         isActive: data['isActive'] ?? true,
+        // NEW FIELDS
+        postType: data['postType'] != null 
+            ? PostType.fromString(data['postType'])
+            : (data['marketId'] != null ? PostType.market : PostType.independent),
+        associatedMarketId: data['associatedMarketId'] ?? data['marketId'], // Migration support
+        associatedMarketName: data['associatedMarketName'],
+        associatedMarketLogo: data['associatedMarketLogo'],
+        approvalStatus: data['approvalStatus'] != null 
+            ? ApprovalStatus.fromString(data['approvalStatus'])
+            : null,
+        approvalRequestedAt: (data['approvalRequestedAt'] as Timestamp?)?.toDate(),
+        approvalDecidedAt: (data['approvalDecidedAt'] as Timestamp?)?.toDate(),
+        approvedBy: data['approvedBy'],
+        approvalNote: data['approvalNote'],
+        approvalExpiresAt: (data['approvalExpiresAt'] as Timestamp?)?.toDate(),
+        vendorNotes: data['vendorNotes'],
+        organizerNotes: data['organizerNotes'],
+        monthlyPostNumber: data['monthlyPostNumber'] ?? 0,
+        countsTowardLimit: data['countsTowardLimit'] ?? true,
+        version: data['version'] ?? 1,
       );
     } catch (e) {
       rethrow;
@@ -108,6 +167,22 @@ class VendorPost extends Equatable {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isActive': isActive,
+      // NEW FIELDS
+      'postType': postType.value,
+      'associatedMarketId': associatedMarketId,
+      'associatedMarketName': associatedMarketName,
+      'associatedMarketLogo': associatedMarketLogo,
+      'approvalStatus': approvalStatus?.value,
+      'approvalRequestedAt': approvalRequestedAt != null ? Timestamp.fromDate(approvalRequestedAt!) : null,
+      'approvalDecidedAt': approvalDecidedAt != null ? Timestamp.fromDate(approvalDecidedAt!) : null,
+      'approvedBy': approvedBy,
+      'approvalNote': approvalNote,
+      'approvalExpiresAt': approvalExpiresAt != null ? Timestamp.fromDate(approvalExpiresAt!) : null,
+      'vendorNotes': vendorNotes,
+      'organizerNotes': organizerNotes,
+      'monthlyPostNumber': monthlyPostNumber,
+      'countsTowardLimit': countsTowardLimit,
+      'version': version,
     };
   }
 
@@ -131,6 +206,22 @@ class VendorPost extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isActive,
+    // NEW FIELDS
+    PostType? postType,
+    String? associatedMarketId,
+    String? associatedMarketName,
+    String? associatedMarketLogo,
+    ApprovalStatus? approvalStatus,
+    DateTime? approvalRequestedAt,
+    DateTime? approvalDecidedAt,
+    String? approvedBy,
+    String? approvalNote,
+    DateTime? approvalExpiresAt,
+    String? vendorNotes,
+    String? organizerNotes,
+    int? monthlyPostNumber,
+    bool? countsTowardLimit,
+    int? version,
   }) {
     return VendorPost(
       id: id ?? this.id,
@@ -152,6 +243,22 @@ class VendorPost extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
+      // NEW FIELDS
+      postType: postType ?? this.postType,
+      associatedMarketId: associatedMarketId ?? this.associatedMarketId,
+      associatedMarketName: associatedMarketName ?? this.associatedMarketName,
+      associatedMarketLogo: associatedMarketLogo ?? this.associatedMarketLogo,
+      approvalStatus: approvalStatus ?? this.approvalStatus,
+      approvalRequestedAt: approvalRequestedAt ?? this.approvalRequestedAt,
+      approvalDecidedAt: approvalDecidedAt ?? this.approvalDecidedAt,
+      approvedBy: approvedBy ?? this.approvedBy,
+      approvalNote: approvalNote ?? this.approvalNote,
+      approvalExpiresAt: approvalExpiresAt ?? this.approvalExpiresAt,
+      vendorNotes: vendorNotes ?? this.vendorNotes,
+      organizerNotes: organizerNotes ?? this.organizerNotes,
+      monthlyPostNumber: monthlyPostNumber ?? this.monthlyPostNumber,
+      countsTowardLimit: countsTowardLimit ?? this.countsTowardLimit,
+      version: version ?? this.version,
     );
   }
 
@@ -259,6 +366,13 @@ class VendorPost extends Equatable {
     return VendorContactService.hasContactInfo(contactInfo);
   }
 
+  // Simple getter methods for new functionality
+  bool get isMarketPost => postType == PostType.market;
+  bool get isIndependentPost => postType == PostType.independent;
+  bool get isPendingApproval => approvalStatus == ApprovalStatus.pending;
+  bool get isApproved => approvalStatus == ApprovalStatus.approved;
+  bool get isDenied => approvalStatus == ApprovalStatus.denied;
+
   @override
   List<Object?> get props => [
         id,
@@ -280,5 +394,21 @@ class VendorPost extends Equatable {
         createdAt,
         updatedAt,
         isActive,
+        // NEW FIELDS
+        postType,
+        associatedMarketId,
+        associatedMarketName,
+        associatedMarketLogo,
+        approvalStatus,
+        approvalRequestedAt,
+        approvalDecidedAt,
+        approvedBy,
+        approvalNote,
+        approvalExpiresAt,
+        vendorNotes,
+        organizerNotes,
+        monthlyPostNumber,
+        countsTowardLimit,
+        version,
       ];
 }

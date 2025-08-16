@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/user_subscription.dart';
 import '../services/subscription_service.dart';
 import '../services/stripe_service.dart';
+import '../../../blocs/auth/auth_bloc.dart';
+import '../../../blocs/auth/auth_state.dart';
 
 /// 🔒 SECURE: Subscription management screen for users
 /// 
@@ -263,7 +267,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             const SizedBox(height: 16),
             
             ElevatedButton.icon(
-              onPressed: () => _showUpgradeDialog(),
+              onPressed: () => _navigateToUpgrade(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
@@ -524,13 +528,21 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Navigate to upgrade flow
+              _navigateToUpgrade();
             },
             child: const Text('Choose Plan'),
           ),
         ],
       ),
     );
+  }
+  
+  void _navigateToUpgrade() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      // Navigate to premium upgrade flow with vendor tier (most common for subscription management)
+      context.go('/premium/upgrade?tier=vendor&userId=${authState.user.uid}');
+    }
   }
   
   Future<void> _updatePaymentMethod() async {

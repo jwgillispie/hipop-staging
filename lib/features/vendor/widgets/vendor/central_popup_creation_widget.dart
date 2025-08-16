@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hipop/features/market/models/market.dart';
-import 'package:hipop/features/market/services/market_service.dart';
-import '../../services/vendor_market_relationship_service.dart';
 
 
 class CentralPopupCreationWidget extends StatefulWidget {
@@ -19,67 +15,13 @@ class CentralPopupCreationWidget extends StatefulWidget {
 }
 
 class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget> {
-  List<Market> _approvedMarkets = [];
-  bool _isLoading = true;
-  bool _canAccessMarkets = false;
-
   @override
   void initState() {
     super.initState();
-    _loadApprovedMarkets();
-  }
-
-  Future<void> _loadApprovedMarkets() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        // Get markets the vendor has permission for
-        final approvedMarketIds = await VendorMarketRelationshipService.getApprovedMarketsForVendor(user.uid);
-        
-        // Get all markets and filter approved ones
-        final allMarkets = await MarketService.getAllActiveMarkets();
-        final approvedMarkets = allMarkets.where((market) => 
-          approvedMarketIds.contains(market.id)
-        ).toList();
-        
-        setState(() {
-          _approvedMarkets = approvedMarkets;
-          _canAccessMarkets = approvedMarkets.isNotEmpty;
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Row(
-            children: [
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                'Loading your market permissions...',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
     return Card(
       elevation: 4,
@@ -135,15 +77,11 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   Expanded(
                     child: _buildTypeOption(
                       title: 'Market-Associated',
-                      subtitle: _canAccessMarkets 
-                          ? '${_approvedMarkets.length} approved markets'
-                          : 'Request permission first',
+                      subtitle: 'Submit for market approval',
                       icon: Icons.storefront,
                       color: Colors.orange,
-                      isEnabled: _canAccessMarkets,
-                      onTap: _canAccessMarkets 
-                          ? () => context.go('/vendor/create-popup?type=market')
-                          : _showMarketPermissionDialog,
+                      isEnabled: true,
+                      onTap: () => context.go('/vendor/select-market'),
                     ),
                   ),
                 ],
@@ -161,85 +99,6 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                ),
-              ),
-            ],
-            if (_canAccessMarkets && !widget.isCompact) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.verified, 
-                         size: 16, 
-                         color: Colors.green.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'You have permission for ${_approvedMarkets.length} market${_approvedMarkets.length == 1 ? '' : 's'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/vendor/market-connections'),
-                      child: Text(
-                        'Manage',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            if (!_canAccessMarkets && !widget.isCompact) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, 
-                         size: 16, 
-                         color: Colors.blue.shade700),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Request permission to create market-associated pop-ups',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => context.go('/vendor/market-connections'),
-                      child: Text(
-                        'Browse',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ],
@@ -311,31 +170,6 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
     );
   }
 
-  void _showMarketPermissionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Request Market Permission'),
-        content: const Text(
-          'To create pop-ups associated with markets, you need permission from market organizers. '
-          'Would you like to browse markets and request permission?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.go('/vendor/market-connections');
-            },
-            child: const Text('Browse Markets'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showCreatePopupMenu(BuildContext context) {
     showModalBottomSheet(
@@ -372,17 +206,12 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   child: _buildPopupTypeCard(
                     context,
                     'Market-Associated',
-                    _canAccessMarkets ? 'Approved markets' : 'Need permission',
+                    'Submit for market approval',
                     Icons.storefront,
                     Colors.orange,
-                    isEnabled: _canAccessMarkets,
                     onTap: () {
                       Navigator.pop(context);
-                      if (_canAccessMarkets) {
-                        context.go('/vendor/create-popup?type=market');
-                      } else {
-                        context.go('/vendor/market-connections');
-                      }
+                      context.go('/vendor/select-market');
                     },
                   ),
                 ),

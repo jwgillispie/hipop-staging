@@ -57,8 +57,7 @@ class VendorMarketRelationshipService {
         marketId: marketId,
         vendorId: vendorId,
         applicationType: ApplicationType.marketPermission,
-        operatingDays: [], // Not needed for permission requests
-        requestedDates: [], // Not needed for permission requests
+        // No operating days or requested dates needed for the new system
         specialMessage: specialMessage,
         howDidYouHear: howDidYouHear,
         status: ApplicationStatus.pending,
@@ -167,7 +166,7 @@ class VendorMarketRelationshipService {
         createdBy: application.vendorId,
         approvedBy: approverId,
         approvedAt: DateTime.now(),
-        operatingDays: application.operatingDays,
+        operatingDays: [], // Operating days are now handled at the market level
         notes: application.reviewNotes,
         metadata: {
           'createdFromApplication': true,

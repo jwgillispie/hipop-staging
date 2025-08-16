@@ -28,10 +28,9 @@ void main() async {
       state: 'GA',
       latitude: 33.7490,
       longitude: -84.3880,
-      operatingDays: {
-        'saturday': '8:00 AM - 2:00 PM',
-        'sunday': '10:00 AM - 4:00 PM',
-      },
+      eventDate: DateTime.now().add(const Duration(days: 7)), // Next week
+      startTime: '8:00 AM',
+      endTime: '2:00 PM',
       description: 'Premier farmers market in downtown Atlanta featuring local vendors, fresh produce, and artisan goods.',
       isActive: true,
       createdAt: DateTime.now(),

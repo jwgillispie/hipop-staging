@@ -1082,4 +1082,73 @@ class SubscriptionService {
       return {};
     }
   }
+
+  /// Check if user can create a market (for market organizers)
+  static Future<bool> canCreateMarket(String userId, int currentMarketCount) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        // Create free subscription if none exists
+        final userProfile = await _firestore.collection('users').doc(userId).get();
+        final userType = userProfile.data()?['userType'] ?? 'shopper';
+        final newSubscription = await createFreeSubscription(userId, userType);
+        return newSubscription.isWithinLimit('markets_managed', currentMarketCount);
+      }
+
+      return subscription.isWithinLimit('markets_managed', currentMarketCount);
+    } catch (e) {
+      debugPrint('Error checking market creation ability: $e');
+      return false;
+    }
+  }
+
+  /// Get remaining markets that can be created
+  static Future<int> getRemainingMarkets(String userId, int currentMarketCount) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        // Return free tier limit
+        return 2 - currentMarketCount; // Free tier has 2 markets for organizers
+      }
+
+      final limit = subscription.getLimit('markets_managed');
+      if (limit == -1) return -1; // unlimited
+      
+      final remaining = limit - currentMarketCount;
+      return remaining < 0 ? 0 : remaining;
+    } catch (e) {
+      debugPrint('Error getting remaining markets: $e');
+      return 0;
+    }
+  }
+
+  /// Get market usage summary for a user
+  static Future<Map<String, dynamic>> getMarketUsageSummary(String userId, int currentMarketCount) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      if (subscription == null) {
+        return {
+          'markets_used': currentMarketCount,
+          'markets_limit': 2,
+          'remaining_markets': 2 - currentMarketCount,
+          'is_premium': false,
+          'can_create_more': currentMarketCount < 2,
+        };
+      }
+
+      final limit = subscription.getLimit('markets_managed');
+      final remaining = await getRemainingMarkets(userId, currentMarketCount);
+
+      return {
+        'markets_used': currentMarketCount,
+        'markets_limit': limit == -1 ? 'unlimited' : limit,
+        'remaining_markets': remaining == -1 ? 'unlimited' : remaining,
+        'is_premium': subscription.isPremium,
+        'can_create_more': subscription.isWithinLimit('markets_managed', currentMarketCount),
+      };
+    } catch (e) {
+      debugPrint('Error getting market usage summary: $e');
+      return {};
+    }
+  }
 }

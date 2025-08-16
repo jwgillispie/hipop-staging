@@ -349,14 +349,6 @@ class _VendorDashboardState extends State<VendorDashboard>
               ),
               _buildActionCard(
                 context,
-                'Market Connections',
-                'Manage market connections',
-                Icons.storefront,
-                Colors.deepOrange,
-                () => context.go('/vendor/market-connections'),
-              ),
-              _buildActionCard(
-                context,
                 'Products & Market Items',
                 'Manage your products and market assignments',
                 Icons.inventory_2,

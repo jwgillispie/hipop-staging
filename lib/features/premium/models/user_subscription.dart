@@ -311,7 +311,7 @@ class UserSubscription extends Equatable {
         };
       case 'market_organizer':
         return {
-          'markets_managed': -1, // unlimited
+          'markets_managed': 2, // Free tier organizers can manage up to 2 markets
           'events_per_month': 10,
           'vendor_communications_per_day': 50,
           'vendor_posts_per_month': 1, // organizers can create 1 vendor post per month in free tier

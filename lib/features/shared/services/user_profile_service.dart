@@ -161,9 +161,135 @@ class UserProfileService implements IUserProfileService {
   @override
   Future<void> deleteUserProfile(String userId) async {
     try {
-      await _firestore.collection(_collection).doc(userId).delete();
+      debugPrint('🗑️ Starting comprehensive account deletion for user: $userId');
+      
+      // Get user profile to understand what type of user this is
+      final profile = await getUserProfile(userId);
+      if (profile == null) {
+        debugPrint('⚠️ User profile not found, proceeding with minimal cleanup');
+      }
+      
+      // Start a batch operation for atomic deletion
+      final batch = _firestore.batch();
+      
+      // 1. Delete user profile
+      batch.delete(_firestore.collection(_collection).doc(userId));
+      debugPrint('📝 Queued user profile deletion');
+      
+      if (profile?.isMarketOrganizer == true) {
+        debugPrint('👑 User is a market organizer, performing comprehensive cleanup...');
+        
+        // 2. Delete or transfer managed markets
+        if (profile!.managedMarketIds.isNotEmpty) {
+          for (final marketId in profile.managedMarketIds) {
+            // Delete market and associated data
+            batch.delete(_firestore.collection('markets').doc(marketId));
+            debugPrint('🏪 Queued market deletion: $marketId');
+            
+            // Delete vendor applications for this market
+            final vendorApps = await _firestore
+                .collection('vendor_applications')
+                .where('marketId', isEqualTo: marketId)
+                .get();
+            
+            for (final app in vendorApps.docs) {
+              batch.delete(app.reference);
+            }
+            debugPrint('📋 Queued ${vendorApps.docs.length} vendor application deletions for market: $marketId');
+          }
+        }
+        
+        // 3. Delete managed vendors
+        final managedVendors = await _firestore
+            .collection('managed_vendors')
+            .where('organizerId', isEqualTo: userId)
+            .get();
+        
+        for (final vendor in managedVendors.docs) {
+          batch.delete(vendor.reference);
+        }
+        debugPrint('👥 Queued ${managedVendors.docs.length} managed vendor deletions');
+      }
+      
+      if (profile?.userType == 'vendor') {
+        debugPrint('🛒 User is a vendor, cleaning up vendor-specific data...');
+        
+        // 4. Delete vendor posts
+        final vendorPosts = await _firestore
+            .collection('vendor_posts')
+            .where('vendorId', isEqualTo: userId)
+            .get();
+        
+        for (final post in vendorPosts.docs) {
+          batch.delete(post.reference);
+        }
+        debugPrint('📦 Queued ${vendorPosts.docs.length} vendor post deletions');
+        
+        // 5. Delete vendor products
+        final vendorProducts = await _firestore
+            .collection('vendor_products')
+            .where('vendorId', isEqualTo: userId)
+            .get();
+        
+        for (final product in vendorProducts.docs) {
+          batch.delete(product.reference);
+        }
+        debugPrint('🛍️ Queued ${vendorProducts.docs.length} vendor product deletions');
+        
+        // 6. Delete vendor product lists
+        final productLists = await _firestore
+            .collection('vendor_product_lists')
+            .where('vendorId', isEqualTo: userId)
+            .get();
+        
+        for (final list in productLists.docs) {
+          batch.delete(list.reference);
+        }
+        debugPrint('📋 Queued ${productLists.docs.length} product list deletions');
+        
+        // 7. Delete vendor applications
+        final applications = await _firestore
+            .collection('vendor_applications')
+            .where('vendorId', isEqualTo: userId)
+            .get();
+        
+        for (final app in applications.docs) {
+          batch.delete(app.reference);
+        }
+        debugPrint('📄 Queued ${applications.docs.length} application deletions');
+      }
+      
+      // 8. Delete user feedback
+      final feedback = await _firestore
+          .collection('user_feedback')
+          .where('userId', isEqualTo: userId)
+          .get();
+      
+      for (final fb in feedback.docs) {
+        batch.delete(fb.reference);
+      }
+      debugPrint('💭 Queued ${feedback.docs.length} feedback deletions');
+      
+      // 9. Delete analytics data (if any)
+      final analytics = await _firestore
+          .collection('user_analytics')
+          .where('userId', isEqualTo: userId)
+          .get();
+      
+      for (final analytic in analytics.docs) {
+        batch.delete(analytic.reference);
+      }
+      debugPrint('📊 Queued ${analytics.docs.length} analytics deletions');
+      
+      // Execute all deletions atomically
+      debugPrint('💥 Executing batch deletion...');
+      await batch.commit();
+      
+      debugPrint('✅ Successfully deleted all user data for: $userId');
+      
     } catch (e) {
-      throw UserProfileException('Failed to delete user profile: $e');
+      debugPrint('❌ Error during account deletion: $e');
+      throw UserProfileException('Failed to delete user profile and associated data: $e');
     }
   }
 

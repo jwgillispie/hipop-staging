@@ -78,7 +78,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
         endDate,
       );
 
-      final groupedEvents = MarketCalendarService.groupEventsByDate(events);
+      final groupedEvents = _groupEventsByDate(events);
 
       setState(() {
         _markets = markets;
@@ -94,8 +94,40 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
     }
   }
 
+  // Helper method to group events by date
+  Map<DateTime, List<MarketEvent>> _groupEventsByDate(List<MarketEvent> events) {
+    final Map<DateTime, List<MarketEvent>> groupedEvents = {};
+    
+    for (final event in events) {
+      final eventDate = DateTime(
+        event.eventDate.year,
+        event.eventDate.month,
+        event.eventDate.day,
+      );
+      
+      if (groupedEvents.containsKey(eventDate)) {
+        groupedEvents[eventDate]!.add(event);
+      } else {
+        groupedEvents[eventDate] = [event];
+      }
+    }
+    
+    return groupedEvents;
+  }
+
+  // Helper method to get events for a specific day
   List<MarketEvent> _getEventsForDay(DateTime day) {
-    return MarketCalendarService.getEventsForDay(_events, day);
+    final dayKey = DateTime(day.year, day.month, day.day);
+    return _events[dayKey] ?? [];
+  }
+
+  // Helper method to get day name
+  String _getDayName(int weekday) {
+    const dayNames = [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
+      'Friday', 'Saturday', 'Sunday'
+    ];
+    return dayNames[weekday - 1];
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -161,7 +193,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                       itemCount: _markets.length,
                       itemBuilder: (context, index) {
                         final market = _markets[index];
-                        final isOpen = MarketCalendarService.isMarketCurrentlyOpen(market);
+                        final isOpen = MarketCalendarService.isMarketHappeningToday(market);
                         return _buildMarketSummaryCard(market, isOpen);
                       },
                     ),
@@ -325,24 +357,22 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${market.operatingDays.length} operating days',
+                'Single event market',
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.grey[600],
                 ),
               ),
-              if (market.operatingDays.isNotEmpty) ...[
-                const SizedBox(height: 1),
-                Text(
-                  _formatOperatingDaysDisplay(market.operatingDays),
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: Colors.grey[500],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 1),
+              Text(
+                market.eventDisplayInfo,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.grey[500],
                 ),
-              ],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -352,7 +382,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
 
   Widget _buildDayHeader(List<MarketEvent> events) {
     final selectedDate = _selectedDay!;
-    final dayName = MarketCalendarService.getDayName(selectedDate.weekday);
+    final dayName = _getDayName(selectedDate.weekday);
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -381,10 +411,9 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
   }
 
   Widget _buildEventCard(MarketEvent event) {
-    final isToday = isSameDay(event.startTime, DateTime.now());
-    final isCurrentlyOpen = isToday && MarketCalendarService.isMarketCurrentlyOpen(
-      _markets.firstWhere((m) => m.id == event.marketId)
-    );
+    final isToday = isSameDay(event.eventDate, DateTime.now());
+    final market = _markets.firstWhere((m) => m.id == event.marketId);
+    final isCurrentlyOpen = isToday && MarketCalendarService.isMarketHappeningToday(market);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -450,7 +479,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        MarketCalendarService.formatTimeRange(event.timeRange),
+                        event.timeRange,
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 14,
@@ -467,53 +496,4 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
     );
   }
 
-  String _formatOperatingDaysDisplay(Map<String, String> operatingDays) {
-    final formatted = <String>[];
-    
-    for (final key in operatingDays.keys) {
-      // Check if this is a specific date format (contains underscores and numbers)
-      if (key.contains('_') && RegExp(r'_\d{4}_\d{1,2}_\d{1,2}$').hasMatch(key)) {
-        // Parse specific date format: "sunday_2025_7_27"
-        final parts = key.split('_');
-        if (parts.length == 4) {
-          final dayName = parts[0];
-          final year = int.tryParse(parts[1]);
-          final month = int.tryParse(parts[2]);
-          final day = int.tryParse(parts[3]);
-          
-          if (year != null && month != null && day != null) {
-            final monthName = _getMonthName(month);
-            formatted.add('$monthName $day, $year');
-          } else {
-            formatted.add(dayName.toUpperCase());
-          }
-        } else {
-          formatted.add(key.toUpperCase());
-        }
-      } else {
-        // Regular recurring day format
-        formatted.add(key.toUpperCase());
-      }
-    }
-    
-    return formatted.join(', ');
-  }
-
-  String _getMonthName(int month) {
-    switch (month) {
-      case 1: return 'Jan';
-      case 2: return 'Feb';
-      case 3: return 'Mar';
-      case 4: return 'Apr';
-      case 5: return 'May';
-      case 6: return 'Jun';
-      case 7: return 'Jul';
-      case 8: return 'Aug';
-      case 9: return 'Sep';
-      case 10: return 'Oct';
-      case 11: return 'Nov';
-      case 12: return 'Dec';
-      default: return 'Month';
-    }
-  }
 }

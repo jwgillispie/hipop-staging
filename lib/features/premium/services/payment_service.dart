@@ -4,14 +4,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_subscription.dart';
 
-// Web-safe platform detection - completely avoid Platform class on web
+// Web-safe platform detection using kIsWeb and defaultTargetPlatform
 bool get isWebPlatform => kIsWeb;
 
-// For mobile platforms, we'll disable platform-specific features
-// to avoid any Platform detection issues
-bool get isIOSPlatform => false; // Always false to avoid Platform detection errors
+// Safe mobile platform detection using defaultTargetPlatform
+bool get isIOSPlatform => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-bool get isAndroidPlatform => false; // Always false to avoid Platform detection errors
+bool get isAndroidPlatform => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 /// Enhanced payment service that handles in-app Stripe payments with CardField
 class PaymentService {
@@ -39,8 +38,10 @@ class PaymentService {
 
       _isInitialized = true;
       debugPrint('✅ PaymentService initialized with Stripe');
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('❌ Failed to initialize PaymentService: $e');
+      debugPrint('📍 Error type: ${e.runtimeType}');
+      debugPrint('📍 Stack trace: $stackTrace');
       
       // Try web fallback initialization if primary method fails
       if (!isWebPlatform && !_isInitialized) {
@@ -50,8 +51,9 @@ class PaymentService {
           _isInitialized = true;
           debugPrint('✅ PaymentService initialized with web fallback');
           return;
-        } catch (fallbackError) {
+        } catch (fallbackError, fallbackStack) {
           debugPrint('❌ Web fallback initialization also failed: $fallbackError');
+          debugPrint('📍 Fallback stack: $fallbackStack');
         }
       }
       
@@ -61,13 +63,18 @@ class PaymentService {
 
   /// Initialize Stripe for web platform
   static Future<void> _initializeForWeb() async {
-    final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
-    if (publishableKey == null || publishableKey.isEmpty) {
-      throw Exception('Stripe publishable key not found in environment');
+    debugPrint('🔍 Initializing Stripe for web...');
+    
+    // For web, use hardcoded key directly (dotenv doesn't work after build)
+    // This is your live publishable key - safe to expose
+    const publishableKey = 'pk_live_51RsQNrC8FCSHt0iKEEfaV2Kd98wwFHAw0d6rcvLR7kxGzvfWuOxhaOvYOD2GRvODOR5eAQnFC7p622ech7BDGddy00IP3xtXun';
+    
+    if (publishableKey.isEmpty) {
+      throw Exception('Stripe publishable key not found');
     }
 
     Stripe.publishableKey = publishableKey;
-    debugPrint('🌐 Web platform initialization complete - merchant identifier not required');
+    debugPrint('🌐 Web platform initialization complete with live key');
   }
 
   /// Initialize Stripe for mobile platforms (iOS/Android)
@@ -150,13 +157,154 @@ class PaymentService {
     }
   }
 
-  /// Confirm payment with card details
+  /// Initialize Payment Sheet for mobile platforms
+  static Future<void> initPaymentSheet({
+    required String clientSecret,
+    required String customerEmail,
+    String? merchantDisplayName,
+  }) async {
+    if (isWebPlatform) {
+      throw PaymentException('Payment Sheet is not supported on web. Use checkout redirect instead.');
+    }
+
+    try {
+      debugPrint('📱 Initializing Payment Sheet for mobile...');
+
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: merchantDisplayName ?? 'HiPop',
+          customerEphemeralKeySecret: null, // Not needed for payment intents
+          style: ThemeMode.system,
+          billingDetails: BillingDetails(
+            email: customerEmail,
+          ),
+          appearance: const PaymentSheetAppearance(
+            primaryButton: PaymentSheetPrimaryButtonAppearance(
+              colors: PaymentSheetPrimaryButtonTheme(
+                light: PaymentSheetPrimaryButtonThemeColors(
+                  background: Color(0xFF6366F1), // Indigo color
+                  text: Color(0xFFFFFFFF),
+                  border: Color(0xFF6366F1),
+                ),
+                dark: PaymentSheetPrimaryButtonThemeColors(
+                  background: Color(0xFF6366F1),
+                  text: Color(0xFFFFFFFF),
+                  border: Color(0xFF6366F1),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      debugPrint('✅ Payment Sheet initialized successfully');
+    } catch (e) {
+      debugPrint('❌ Failed to initialize Payment Sheet: $e');
+      
+      if (e is StripeException) {
+        final errorMessage = e.error.localizedMessage ?? e.error.message ?? 'Failed to initialize payment';
+        throw PaymentException(errorMessage);
+      }
+      
+      throw PaymentException('Failed to initialize payment: ${e.toString()}');
+    }
+  }
+
+  /// Present Payment Sheet for mobile payment
+  static Future<void> presentPaymentSheet() async {
+    if (isWebPlatform) {
+      throw PaymentException('Payment Sheet is not supported on web. Use checkout redirect instead.');
+    }
+
+    try {
+      debugPrint('💳 Presenting Payment Sheet...');
+
+      final result = await Stripe.instance.presentPaymentSheet();
+      
+      debugPrint('✅ Payment Sheet completed with result: $result');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Payment Sheet error: $e');
+      
+      if (e is StripeException) {
+        final errorCode = e.error.code.name;
+        final errorMessage = e.error.localizedMessage ?? e.error.message ?? 'Payment failed';
+        
+        // Handle user cancellation
+        if (errorCode.contains('canceled') || errorCode.contains('cancelled')) {
+          throw PaymentException('Payment was cancelled');
+        }
+        
+        // Handle common error types
+        if (errorCode.contains('card_declined') || errorCode.contains('generic_decline')) {
+          throw PaymentException('Your card was declined. Please try a different card.');
+        } else if (errorCode.contains('expired_card')) {
+          throw PaymentException('Your card has expired. Please use a different card.');
+        } else if (errorCode.contains('incorrect_cvc')) {
+          throw PaymentException('Your card\'s security code is incorrect.');
+        } else if (errorCode.contains('incorrect_number') || errorCode.contains('invalid_number')) {
+          throw PaymentException('Your card number is incorrect.');
+        } else {
+          throw PaymentException(errorMessage);
+        }
+      }
+      
+      throw PaymentException('Payment failed: ${e.toString()}');
+    }
+  }
+
+  /// Complete payment flow using Payment Sheet (mobile only)
+  static Future<PaymentSheetResult> processPaymentWithSheet({
+    required String priceId,
+    required String customerEmail,
+    required String userId,
+    required String userType,
+    String? promoCode,
+    String? merchantDisplayName,
+  }) async {
+    if (isWebPlatform) {
+      throw PaymentException('Payment Sheet is not supported on web. Use checkout redirect instead.');
+    }
+
+    try {
+      debugPrint('🚀 Starting Payment Sheet flow...');
+
+      // Step 1: Create payment intent
+      final clientSecret = await createPaymentIntent(
+        priceId: priceId,
+        customerEmail: customerEmail,
+        userId: userId,
+        userType: userType,
+        promoCode: promoCode,
+      );
+
+      // Step 2: Initialize Payment Sheet
+      await initPaymentSheet(
+        clientSecret: clientSecret,
+        customerEmail: customerEmail,
+        merchantDisplayName: merchantDisplayName,
+      );
+
+      // Step 3: Present Payment Sheet
+      final result = await presentPaymentSheet();
+
+      debugPrint('✅ Payment Sheet flow completed successfully');
+      return result;
+    } catch (e) {
+      debugPrint('❌ Payment Sheet flow failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Confirm payment with card details (legacy method for CardField)
+  /// @deprecated Use Payment Sheet instead for better UX
   static Future<PaymentIntent> confirmPayment({
     required String clientSecret,
     required PaymentMethodData paymentMethodData,
   }) async {
     try {
-      debugPrint('🔄 Confirming payment...');
+      debugPrint('🔄 Confirming payment with CardField (legacy)...');
 
       final paymentIntent = await Stripe.instance.confirmPayment(
         paymentIntentClientSecret: clientSecret,

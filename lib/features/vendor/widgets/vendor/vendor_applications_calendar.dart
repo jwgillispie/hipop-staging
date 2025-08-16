@@ -36,12 +36,10 @@ class _VendorApplicationsCalendarState extends State<VendorApplicationsCalendar>
   }
 
   List<VendorApplication> _getApplicationsForDay(DateTime day) {
-    return widget.applications.where((application) {
-      if (application.hasRequestedDates) {
-        return application.requestedDates.any((date) => isSameDay(date, day));
-      }
-      return false;
-    }).toList();
+    // For the new 1:1 market-event system, we need to match applications by market's event date
+    // Since we don't have market info here, we'll return all applications for now
+    // TODO: Update this to fetch market data and compare event dates
+    return widget.applications;
   }
 
   @override

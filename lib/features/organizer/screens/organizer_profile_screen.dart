@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
+import '../../../blocs/auth/auth_event.dart';
 import '../../shared/models/user_feedback.dart';
 import '../../shared/services/user_feedback_service.dart';
+import '../../shared/services/user_profile_service.dart';
 
 class OrganizerProfileScreen extends StatefulWidget {
   const OrganizerProfileScreen({super.key});
@@ -53,6 +56,8 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
                   _buildSettingsSection(),
                   const SizedBox(height: 24),
                   _buildFeedbackSection(),
+                  const SizedBox(height: 24),
+                  _buildAccountSection(),
                 ],
               ),
             ),
@@ -114,6 +119,16 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
                   const SnackBar(content: Text('Analytics coming soon!')),
                 );
               },
+            ),
+            
+            const Divider(),
+            
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.orange[700]),
+              title: const Text('Sign Out'),
+              subtitle: const Text('Sign out of your account'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _signOut,
             ),
           ],
         ),
@@ -318,6 +333,201 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error sending feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildAccountSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Account Management',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.orange[700]),
+              title: const Text('Sign Out'),
+              subtitle: const Text('Sign out of your account'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _signOut,
+            ),
+            
+            const Divider(),
+            
+            ListTile(
+              leading: const Icon(Icons.delete_forever, color: Colors.red),
+              title: const Text('Delete Account'),
+              subtitle: const Text('Permanently delete your account and all data'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _showDeleteAccountDialog,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _signOut() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<AuthBloc>().add(LogoutEvent());
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[700],
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    final TextEditingController confirmationController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red[700]),
+            const SizedBox(width: 8),
+            const Text('Delete Account'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This action cannot be undone. Deleting your account will:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text('• Remove all your markets and events'),
+            const Text('• Delete all vendor approvals and data'),
+            const Text('• Remove all analytics and reports'),
+            const Text('• Cancel all pending applications'),
+            const SizedBox(height: 16),
+            const Text(
+              'Type "DELETE" to confirm:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: confirmationController,
+              decoration: const InputDecoration(
+                hintText: 'DELETE',
+                border: OutlineInputBorder(),
+              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (confirmationController.text.trim() == 'DELETE') {
+                Navigator.pop(context);
+                _deleteAccount();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please type "DELETE" to confirm'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Forever'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount() async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Deleting your account...'),
+            ],
+          ),
+        ),
+      );
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No user found');
+      }
+
+      final userProfileService = UserProfileService();
+      
+      // Delete user profile and associated data
+      await userProfileService.deleteUserProfile(user.uid);
+      
+      // Delete Firebase Auth account
+      await user.delete();
+      
+      // Sign out and navigate to auth
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        context.read<AuthBloc>().add(LogoutEvent());
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting account: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );

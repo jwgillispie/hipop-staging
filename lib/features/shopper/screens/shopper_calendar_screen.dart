@@ -143,10 +143,9 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
   }
 
   List<MarketEvent> _getEventsForDay(DateTime day) {
-    final events = _currentTabIndex == 0 
-        ? MarketCalendarService.getEventsForDay(_favoriteEvents, day)
-        : MarketCalendarService.getEventsForDay(_nearbyEvents, day);
-    return events;
+    final eventsMap = _currentTabIndex == 0 ? _favoriteEvents : _nearbyEvents;
+    final dayKey = DateTime(day.year, day.month, day.day);
+    return eventsMap[dayKey] ?? [];
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -381,7 +380,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
 
   Widget _buildDayHeader(List<MarketEvent> events) {
     final selectedDate = _selectedDay!;
-    final dayName = MarketCalendarService.getDayName(selectedDate.weekday);
+    final dayName = MarketCalendarService.getDayName(selectedDate);
     
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -410,7 +409,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
   }
 
   Widget _buildEventCard(MarketEvent event) {
-    final isToday = isSameDay(event.startTime, DateTime.now());
+    final isToday = isSameDay(event.eventDate, DateTime.now());
     final market = (_currentTabIndex == 0 ? _favoriteMarkets : _nearbyMarkets)
         .firstWhere((m) => m.id == event.marketId);
     final isCurrentlyOpen = isToday && MarketCalendarService.isMarketCurrentlyOpen(market);
@@ -488,7 +487,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        MarketCalendarService.formatTimeRange(event.timeRange),
+                        event.timeRange,
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 14,

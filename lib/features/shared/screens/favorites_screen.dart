@@ -10,6 +10,7 @@ import '../../vendor/models/managed_vendor.dart';
 import '../../market/services/market_service.dart';
 import '../../vendor/services/managed_vendor_service.dart';
 import '../widgets/common/loading_widget.dart';
+import '../services/url_launcher_service.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -31,6 +32,10 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     // Favorites are now automatically loaded when auth state changes in main.dart
+    // But we also need to load them when the screen first loads in case they're already loaded in bloc
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadFavorites();
+    });
   }
 
   @override
@@ -53,18 +58,26 @@ class _FavoritesScreenState extends State<FavoritesScreen>
 
     try {
       final favoritesState = context.read<FavoritesBloc>().state;
-      final vendors = <ManagedVendor>[];
       
-      for (final vendorId in favoritesState.favoriteVendorIds) {
-        try {
-          final vendor = await ManagedVendorService.getVendor(vendorId);
-          if (vendor != null) {
-            vendors.add(vendor);
-          }
-        } catch (e) {
-          // Error fetching vendor
+      if (favoritesState.favoriteVendorIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _favoriteVendors = [];
+            _isLoadingVendors = false;
+          });
         }
+        return;
       }
+      
+      // Use batch loading with concurrent requests and timeout
+      final vendorFutures = favoritesState.favoriteVendorIds.map((vendorId) => 
+        ManagedVendorService.getVendor(vendorId).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => null,
+        ).catchError((_) => null));
+      
+      final vendorResults = await Future.wait(vendorFutures);
+      final vendors = vendorResults.whereType<ManagedVendor>().toList();
 
       if (mounted) {
         setState(() {
@@ -73,10 +86,22 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         });
       }
     } catch (e) {
+      debugPrint('Error loading favorite vendors: $e');
       if (mounted) {
         setState(() {
+          _favoriteVendors = [];
           _isLoadingVendors = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading favorite vendors: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _loadFavoriteVendors,
+            ),
+          ),
+        );
       }
     }
   }
@@ -88,18 +113,26 @@ class _FavoritesScreenState extends State<FavoritesScreen>
 
     try {
       final favoritesState = context.read<FavoritesBloc>().state;
-      final markets = <Market>[];
       
-      for (final marketId in favoritesState.favoriteMarketIds) {
-        try {
-          final market = await MarketService.getMarket(marketId);
-          if (market != null) {
-            markets.add(market);
-          }
-        } catch (e) {
-          // Error fetching market
+      if (favoritesState.favoriteMarketIds.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _favoriteMarkets = [];
+            _isLoadingMarkets = false;
+          });
         }
+        return;
       }
+      
+      // Use batch loading with concurrent requests and timeout
+      final marketFutures = favoritesState.favoriteMarketIds.map((marketId) => 
+        MarketService.getMarket(marketId).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => null,
+        ).catchError((_) => null));
+      
+      final marketResults = await Future.wait(marketFutures);
+      final markets = marketResults.whereType<Market>().toList();
 
       if (mounted) {
         setState(() {
@@ -108,10 +141,22 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         });
       }
     } catch (e) {
+      debugPrint('Error loading favorite markets: $e');
       if (mounted) {
         setState(() {
+          _favoriteMarkets = [];
           _isLoadingMarkets = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading favorite markets: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _loadFavoriteMarkets,
+            ),
+          ),
+        );
       }
     }
   }
@@ -119,9 +164,11 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   @override
   Widget build(BuildContext context) {
     return BlocListener<FavoritesBloc, FavoritesState>(
-      listener: (context, state) {
-        // Reload favorites when state changes
-        _loadFavorites();
+      listener: (context, favoritesState) {
+        // Only reload if favorites have actually changed to prevent infinite loops
+        if (favoritesState.status == FavoritesStatus.loaded) {
+          _loadFavorites();
+        }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
@@ -311,6 +358,83 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   ),
                 ),
               ],
+              
+              // Contact information with clickable links
+              if (vendor.phoneNumber != null || vendor.email != null || vendor.instagramHandle != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    if (vendor.phoneNumber != null) ...[
+                      Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () => _launchPhone(vendor.phoneNumber!),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text(
+                            vendor.phoneNumber!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[700],
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (vendor.phoneNumber != null && vendor.email != null)
+                      const SizedBox(width: 16),
+                    if (vendor.email != null) ...[
+                      Icon(Icons.email, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => _launchEmail(vendor.email!),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              vendor.email!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue[700],
+                                decoration: TextDecoration.underline,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+              
+              if (vendor.instagramHandle != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _launchInstagram(vendor.instagramHandle!),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '@${vendor.instagramHandle!}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -387,7 +511,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      _getOperatingDaysText(market.operatingDays),
+                      market.eventDisplayInfo,
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],
@@ -487,17 +611,49 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     );
   }
 
-  String _getOperatingDaysText(Map<String, String> operatingDays) {
-    if (operatingDays.isEmpty) return 'No schedule';
-    
-    // Check if any entries are specific dates (contain underscores and year format)
-    final hasSpecificDates = operatingDays.keys.any((key) => 
-      key.contains('_') && RegExp(r'_\d{4}_\d{1,2}_\d{1,2}$').hasMatch(key));
-    
-    if (hasSpecificDates) {
-      return '${operatingDays.length} specific dates';
-    } else {
-      return '${operatingDays.length} days/week';
+
+  Future<void> _launchPhone(String phoneNumber) async {
+    try {
+      await UrlLauncherService.launchPhone(phoneNumber);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open phone app: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchEmail(String email) async {
+    try {
+      await UrlLauncherService.launchEmail(email);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open email app: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchInstagram(String handle) async {
+    try {
+      await UrlLauncherService.launchInstagram(handle);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open Instagram: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

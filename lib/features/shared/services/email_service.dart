@@ -84,15 +84,11 @@ class EmailService {
     }
     buffer.writeln();
 
-    // Add operating schedule if available
-    if (market.operatingDays.isNotEmpty) {
-      buffer.writeln('🗓️ Operating Schedule:');
-      market.operatingDays.forEach((day, hours) {
-        final dayName = _formatOperatingDayKey(day);
-        buffer.writeln('  $dayName: $hours');
-      });
-      buffer.writeln();
-    }
+    // Add event schedule
+    buffer.writeln('🗓️ Event Schedule:');
+    buffer.writeln('  Date: ${market.eventDisplayInfo}');
+    buffer.writeln('  Time: ${market.timeRange}');
+    buffer.writeln();
 
     if (customMessage != null && customMessage.isNotEmpty) {
       buffer.writeln('Personal Message from $organizerName:');
@@ -133,52 +129,8 @@ class EmailService {
     return buffer.toString();
   }
 
-  /// Format operating day key for display
-  static String _formatOperatingDayKey(String key) {
-    // Check if this is a specific date format (contains underscores and numbers)
-    if (key.contains('_') && RegExp(r'_\d{4}_\d{1,2}_\d{1,2}$').hasMatch(key)) {
-      // Parse specific date format: "sunday_2025_7_27"
-      final parts = key.split('_');
-      if (parts.length == 4) {
-        final year = int.tryParse(parts[1]);
-        final month = int.tryParse(parts[2]);
-        final day = int.tryParse(parts[3]);
-        
-        if (year != null && month != null && day != null) {
-          final monthName = _getMonthName(month);
-          return '$monthName $day, $year';
-        }
-      }
-    }
-    
-    // Regular recurring day format
-    return _capitalizeFirst(key);
-  }
 
-  /// Get month name from number
-  static String _getMonthName(int month) {
-    switch (month) {
-      case 1: return 'January';
-      case 2: return 'February';
-      case 3: return 'March';
-      case 4: return 'April';
-      case 5: return 'May';
-      case 6: return 'June';
-      case 7: return 'July';
-      case 8: return 'August';
-      case 9: return 'September';
-      case 10: return 'October';
-      case 11: return 'November';
-      case 12: return 'December';
-      default: return 'Month';
-    }
-  }
 
-  /// Capitalize first letter of string
-  static String _capitalizeFirst(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
-  }
 
   /// Send general support email notification
   static Future<void> sendSupportNotification({

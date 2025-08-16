@@ -52,26 +52,29 @@ Future<void> _initializeApp() async {
 
 Future<void> _initializeStripe() async {
   try {
-    final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
-    if (publishableKey != null && publishableKey.isNotEmpty) {
+    String publishableKey = '';
+    
+    // For web, use hardcoded key (dotenv doesn't work in production)
+    if (kIsWeb) {
+      // This is your live publishable key - safe to expose
+      publishableKey = 'pk_live_51RsQNrC8FCSHt0iKEEfaV2Kd98wwFHAw0d6rcvLR7kxGzvfWuOxhaOvYOD2GRvODOR5eAQnFC7p622ech7BDGddy00IP3xtXun';
+    } else {
+      // For mobile, try to load from .env
+      publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+    }
+    
+    if (publishableKey.isNotEmpty) {
       Stripe.publishableKey = publishableKey;
       
       // Set merchant identifier for Apple Pay (iOS only) - skip on web
-      if (!kIsWeb) {
-        try {
-          // Use conditional platform check to avoid web errors
-          if (defaultTargetPlatform == TargetPlatform.iOS) {
-            Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
-          }
-        } catch (e) {
-          debugPrint('⚠️ Could not set merchant identifier: $e');
-          // Continue without merchant identifier - not critical for web
-        }
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        Stripe.merchantIdentifier = dotenv.env['STRIPE_MERCHANT_IDENTIFIER'] ?? 'merchant.com.hipop';
+        // Return URL will be set in Payment Sheet parameters
       }
       
-      debugPrint('✅ Stripe initialized with publishable key');
+      debugPrint('✅ Stripe initialized successfully for ${kIsWeb ? 'web' : 'mobile'}');
     } else {
-      debugPrint('⚠️ Stripe publishable key not found in environment');
+      debugPrint('⚠️ Stripe publishable key not found');
     }
   } catch (e) {
     debugPrint('❌ Failed to initialize Stripe: $e');

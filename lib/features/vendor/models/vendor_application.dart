@@ -15,11 +15,9 @@ enum ApplicationType {
 
 class VendorApplication extends Equatable {
   final String id;
-  final String marketId;
+  final String marketId; // References the single market event
   final String vendorId; // User ID of the vendor applicant
   final ApplicationType applicationType; // Type of application: event or permission
-  final List<String> operatingDays; // Legacy: Days they want to attend this market (kept for backward compatibility)
-  final List<DateTime> requestedDates; // Specific dates they want to attend this market (for event applications)
   final String? specialMessage; // Optional message to market organizer
   final String? howDidYouHear; // How they heard about the market
   final ApplicationStatus status;
@@ -35,8 +33,6 @@ class VendorApplication extends Equatable {
     required this.marketId,
     required this.vendorId,
     this.applicationType = ApplicationType.eventApplication,
-    this.operatingDays = const [],
-    this.requestedDates = const [],
     this.specialMessage,
     this.howDidYouHear,
     this.status = ApplicationStatus.pending,
@@ -59,8 +55,6 @@ class VendorApplication extends Equatable {
         (type) => type.name == data['applicationType'],
         orElse: () => ApplicationType.eventApplication,
       ),
-      operatingDays: List<String>.from(data['operatingDays'] ?? []),
-      requestedDates: (data['requestedDates'] as List<dynamic>?)?.map((e) => (e as Timestamp).toDate()).toList() ?? [],
       specialMessage: data['specialMessage'],
       howDidYouHear: data['howDidYouHear'],
       status: ApplicationStatus.values.firstWhere(
@@ -81,8 +75,6 @@ class VendorApplication extends Equatable {
       'marketId': marketId,
       'vendorId': vendorId,
       'applicationType': applicationType.name,
-      'operatingDays': operatingDays,
-      'requestedDates': requestedDates.map((date) => Timestamp.fromDate(date)).toList(),
       'specialMessage': specialMessage,
       'howDidYouHear': howDidYouHear,
       'status': status.name,
@@ -100,8 +92,6 @@ class VendorApplication extends Equatable {
     String? marketId,
     String? vendorId,
     ApplicationType? applicationType,
-    List<String>? operatingDays,
-    List<DateTime>? requestedDates,
     String? specialMessage,
     String? howDidYouHear,
     ApplicationStatus? status,
@@ -117,8 +107,6 @@ class VendorApplication extends Equatable {
       marketId: marketId ?? this.marketId,
       vendorId: vendorId ?? this.vendorId,
       applicationType: applicationType ?? this.applicationType,
-      operatingDays: operatingDays ?? this.operatingDays,
-      requestedDates: requestedDates ?? this.requestedDates,
       specialMessage: specialMessage ?? this.specialMessage,
       howDidYouHear: howDidYouHear ?? this.howDidYouHear,
       status: status ?? this.status,
@@ -231,8 +219,6 @@ class VendorApplication extends Equatable {
         marketId,
         vendorId,
         applicationType,
-        operatingDays,
-        requestedDates,
         specialMessage,
         howDidYouHear,
         status,
@@ -244,30 +230,8 @@ class VendorApplication extends Equatable {
         metadata,
       ];
 
-  // Helper methods for requested dates
-  bool get hasRequestedDates => requestedDates.isNotEmpty;
-  
-  List<DateTime> get sortedRequestedDates {
-    final dates = List<DateTime>.from(requestedDates);
-    dates.sort();
-    return dates;
-  }
-  
-  String get requestedDatesDisplayString {
-    if (requestedDates.isEmpty) return 'No dates selected';
-    
-    final sortedDates = sortedRequestedDates;
-    if (sortedDates.length == 1) {
-      return '${sortedDates.first.month}/${sortedDates.first.day}/${sortedDates.first.year}';
-    } else if (sortedDates.length <= 3) {
-      return sortedDates.map((date) => '${date.month}/${date.day}').join(', ');
-    } else {
-      return '${sortedDates.first.month}/${sortedDates.first.day} - ${sortedDates.last.month}/${sortedDates.last.day} (${sortedDates.length} dates)';
-    }
-  }
-
   @override
   String toString() {
-    return 'VendorApplication(id: $id, marketId: $marketId, vendorId: $vendorId, requestedDates: ${requestedDates.length}, status: $status)';
+    return 'VendorApplication(id: $id, marketId: $marketId, vendorId: $vendorId, status: $status)';
   }
 }

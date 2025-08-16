@@ -853,18 +853,10 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
 
                     final posts = chipFilterSnapshot.data ?? currentAndFuturePosts;
                     
-                    // Sort markets by next operating date (earliest first)
+                    // Sort markets by event date (earliest first)
                     final sortedMarkets = List<Market>.from(markets);
                     sortedMarkets.sort((a, b) {
-                      final aNext = a.nextOperatingDate;
-                      final bNext = b.nextOperatingDate;
-                      
-                      // Markets without operating dates go to the end
-                      if (aNext == null && bNext == null) return 0;
-                      if (aNext == null) return 1;
-                      if (bNext == null) return -1;
-                      
-                      return aNext.compareTo(bNext);
+                      return a.eventDate.compareTo(b.eventDate);
                     });
                     
                     final totalCount = sortedMarkets.length + posts.length + events.length;
@@ -1362,7 +1354,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Market • ${market.operatingDays.length} days/week',
+                          'Market • ${market.eventDisplayInfo}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -1572,13 +1564,11 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     buffer.writeln('📍 Location: ${market.address}');
     buffer.writeln();
     
-    // Add schedule information if available
-    if (market.operatingDays.isNotEmpty) {
-      buffer.writeln('🗓️ Operating Schedule:');
-      market.operatingDays.entries.take(3).forEach((entry) {
-        final dayKey = entry.key.toUpperCase();
-        buffer.writeln('• $dayKey: ${entry.value}');
-      });
+    // Add event information if available
+    if (market.eventDate != null) {
+      buffer.writeln('🗓️ Event Details:');
+      buffer.writeln('• Date: ${market.eventDisplayInfo}');
+      buffer.writeln('• Hours: ${market.startTime} - ${market.endTime}');
       buffer.writeln();
     }
     

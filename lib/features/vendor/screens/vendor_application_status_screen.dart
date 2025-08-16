@@ -200,7 +200,7 @@ class _VendorApplicationStatusScreenState extends State<VendorApplicationStatusS
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Days: ${application.operatingDays.join(', ')}',
+                        'Application Type: ${application.isMarketPermission ? 'Market Permission' : 'Event Application'}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[600],
@@ -460,7 +460,7 @@ class _VendorApplicationStatusScreenState extends State<VendorApplicationStatusS
                 ),
               ),
               const SizedBox(height: 16),
-              _buildDetailRow('Operating Days', application.operatingDays.join(', ')),
+              _buildDetailRow('Application Type', application.isMarketPermission ? 'Market Permission Request' : 'Event Application'),
               if (application.specialMessage?.isNotEmpty == true)
                 _buildDetailRow('Special Message', application.specialMessage!),
               _buildDetailRow('Status', application.statusDisplayName),
@@ -579,8 +579,7 @@ class _VendorApplicationStatusScreenState extends State<VendorApplicationStatusS
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('${market.city}, ${market.state}'),
-                              if (market.operatingDays.isNotEmpty)
-                                Text('${market.operatingDays.length} days/week'),
+                              Text('Event: ${market.eventDisplayInfo}'),
                             ],
                           ),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),

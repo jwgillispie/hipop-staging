@@ -143,15 +143,12 @@ class VendorMarketDiscoveryService {
         opportunities.add('Currently seeking new vendors');
       }
 
-      // Operating days compatibility
+      // Date compatibility (in the new system, markets have specific event dates)
       if (operatingDays != null && operatingDays.isNotEmpty) {
-        final hasCompatibleDays = market.operatingDays.keys.any(
-          (day) => operatingDays.contains(day.toLowerCase())
-        );
-        if (hasCompatibleDays) {
-          relevanceScore += 10;
-          insights.add('Compatible operating schedule');
-        }
+        // For now, we can't match against operating days since markets have specific dates
+        // TODO: Update this to match against the day of week of the market's event date
+        // relevanceScore += 10;
+        // insights.add('Compatible operating schedule');
       }
 
       // Market activity and vendor count analysis

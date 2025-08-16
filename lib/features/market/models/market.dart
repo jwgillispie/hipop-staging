@@ -10,8 +10,9 @@ class Market extends Equatable {
   final double latitude;
   final double longitude;
   final String? placeId;
-  final Map<String, String> operatingDays; // {"saturday": "9AM-2PM", "sunday": "11AM-4PM"} - Legacy format
-  final List<String>? scheduleIds; // References to MarketSchedule documents
+  final DateTime eventDate; // Single specific date for this market event
+  final String startTime; // e.g., "9:00 AM"
+  final String endTime; // e.g., "2:00 PM"
   final String? description;
   final String? imageUrl;
   final bool isActive;
@@ -27,8 +28,9 @@ class Market extends Equatable {
     required this.latitude,
     required this.longitude,
     this.placeId,
-    this.operatingDays = const {},
-    this.scheduleIds,
+    required this.eventDate,
+    required this.startTime,
+    required this.endTime,
     this.description,
     this.imageUrl,
     this.isActive = true,
@@ -49,12 +51,9 @@ class Market extends Equatable {
         latitude: data['latitude']?.toDouble() ?? 0.0,
         longitude: data['longitude']?.toDouble() ?? 0.0,
         placeId: data['placeId'],
-        operatingDays: data['operatingDays'] != null 
-            ? Map<String, String>.from(data['operatingDays']) 
-            : {},
-        scheduleIds: data['scheduleIds'] != null
-            ? List<String>.from(data['scheduleIds'])
-            : null,
+        eventDate: (data['eventDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        startTime: data['startTime'] ?? '9:00 AM',
+        endTime: data['endTime'] ?? '2:00 PM',
         description: data['description'],
         imageUrl: data['imageUrl'],
         isActive: data['isActive'] ?? true,
@@ -78,8 +77,9 @@ class Market extends Equatable {
       'latitude': latitude,
       'longitude': longitude,
       'placeId': placeId,
-      'operatingDays': operatingDays,
-      if (scheduleIds != null) 'scheduleIds': scheduleIds,
+      'eventDate': Timestamp.fromDate(eventDate),
+      'startTime': startTime,
+      'endTime': endTime,
       'description': description,
       'imageUrl': imageUrl,
       'isActive': isActive,
@@ -97,8 +97,9 @@ class Market extends Equatable {
     double? latitude,
     double? longitude,
     String? placeId,
-    Map<String, String>? operatingDays,
-    List<String>? scheduleIds,
+    DateTime? eventDate,
+    String? startTime,
+    String? endTime,
     String? description,
     String? imageUrl,
     bool? isActive,
@@ -114,8 +115,9 @@ class Market extends Equatable {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       placeId: placeId ?? this.placeId,
-      operatingDays: operatingDays ?? this.operatingDays,
-      scheduleIds: scheduleIds ?? this.scheduleIds,
+      eventDate: eventDate ?? this.eventDate,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       isActive: isActive ?? this.isActive,
@@ -127,53 +129,33 @@ class Market extends Equatable {
   // Helper methods
   String get fullAddress => '$address, $city, $state';
   
-  bool get isOpenToday {
-    final today = DateTime.now().weekday;
-    final dayName = _getDayName(today);
-    return operatingDays.containsKey(dayName);
+  /// Whether this market event is happening today
+  bool get isHappeningToday {
+    final today = DateTime.now();
+    return eventDate.year == today.year &&
+           eventDate.month == today.month &&
+           eventDate.day == today.day;
   }
   
-  String? get todaysHours {
-    final today = DateTime.now().weekday;
-    final dayName = _getDayName(today);
-    return operatingDays[dayName];
+  /// Whether this market event is in the future
+  bool get isFutureEvent {
+    return eventDate.isAfter(DateTime.now());
   }
   
-  List<String> get operatingDaysList {
-    return operatingDays.keys.toList();
+  /// Whether this market event is in the past
+  bool get isPastEvent {
+    return eventDate.isBefore(DateTime.now());
   }
   
-  DateTime? get nextOperatingDate {
-    if (operatingDays.isEmpty) return null;
-    
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    // Check the next 7 days to find the next operating date
-    for (int i = 0; i < 7; i++) {
-      final checkDate = today.add(Duration(days: i));
-      final dayName = _getDayName(checkDate.weekday);
-      
-      if (operatingDays.containsKey(dayName)) {
-        return checkDate;
-      }
-    }
-    
-    return null;
+  /// Time range as a formatted string
+  String get timeRange => '$startTime - $endTime';
+  
+  /// Combined date and time information for display
+  String get eventDisplayInfo {
+    final dateStr = '${eventDate.month}/${eventDate.day}/${eventDate.year}';
+    return '$dateStr • $timeRange';
   }
   
-  String _getDayName(int weekday) {
-    switch (weekday) {
-      case 1: return 'monday';
-      case 2: return 'tuesday';
-      case 3: return 'wednesday';
-      case 4: return 'thursday';
-      case 5: return 'friday';
-      case 6: return 'saturday';
-      case 7: return 'sunday';
-      default: return '';
-    }
-  }
 
   @override
   List<Object?> get props => [
@@ -185,8 +167,9 @@ class Market extends Equatable {
         latitude,
         longitude,
         placeId,
-        operatingDays,
-        scheduleIds,
+        eventDate,
+        startTime,
+        endTime,
         description,
         imageUrl,
         isActive,
