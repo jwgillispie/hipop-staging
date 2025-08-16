@@ -64,7 +64,7 @@ class VendorMarketItemsService {
       // Enforce item limits for free users
       if (!isPremium && itemList.length > 3) {
         debugPrint('❌ Free vendor $vendorId tried to add ${itemList.length} items (limit: 3)');
-        throw Exception('Free vendors can only have 3 items per market. Upgrade to Vendor Pro for unlimited items!');
+        throw Exception('Free vendors can only have 3 items per market. Upgrade to Vendor Premium for unlimited items!');
       }
 
       // Check if entry exists

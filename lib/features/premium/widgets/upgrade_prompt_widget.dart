@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../models/user_subscription.dart';
-import '../screens/premium_onboarding_screen.dart';
 
 /// Smart upgrade prompt widget that appears contextually when users hit limits
 /// or try to access premium features
@@ -45,7 +46,7 @@ class UpgradePromptWidget extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade600, Colors.blue.shade400],
+          colors: [HiPopColors.primaryDeepSage, HiPopColors.accentMauve],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -90,7 +91,7 @@ class UpgradePromptWidget extends StatelessWidget {
           Text(
             contextMessage,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade700,
+              color: HiPopColors.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 20),
@@ -122,7 +123,7 @@ class UpgradePromptWidget extends StatelessWidget {
               children: [
                 Icon(
                   Icons.check_circle,
-                  color: Colors.green.shade600,
+                  color: HiPopColors.primaryDeepSage,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -146,15 +147,15 @@ class UpgradePromptWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
+        color: HiPopColors.primaryOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade200),
+        border: Border.all(color: HiPopColors.primaryOpacity(0.2)),
       ),
       child: Row(
         children: [
           Icon(
             Icons.local_offer,
-            color: Colors.green.shade600,
+            color: HiPopColors.primaryDeepSage,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -171,7 +172,7 @@ class UpgradePromptWidget extends StatelessWidget {
                 Text(
                   'Starting at ${recommendedTier['price']}/month',
                   style: TextStyle(
-                    color: Colors.green.shade700,
+                    color: HiPopColors.primaryDeepSage,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -194,7 +195,7 @@ class UpgradePromptWidget extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => _showUpgradeFlow(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: HiPopColors.primaryDeepSage,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -279,7 +280,7 @@ class UpgradePromptWidget extends StatelessWidget {
     switch (userType) {
       case 'vendor':
         return {
-          'title': 'Vendor Pro',
+          'title': 'Vendor Premium',
           'price': '\$29.00',
           'tier': SubscriptionTier.vendorPro,
         };
@@ -291,7 +292,7 @@ class UpgradePromptWidget extends StatelessWidget {
         };
       default:
         return {
-          'title': 'Vendor Pro',
+          'title': 'Vendor Premium',
           'price': '\$29.00',
           'tier': SubscriptionTier.vendorPro,
         };
@@ -299,15 +300,8 @@ class UpgradePromptWidget extends StatelessWidget {
   }
 
   void _showUpgradeFlow(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PremiumOnboardingScreen(
-          userId: userId,
-          userType: userType,
-        ),
-        fullscreenDialog: true,
-      ),
-    );
+    // Use GoRouter for consistent navigation
+    context.go('/premium/upgrade?tier=$userType&userId=$userId');
   }
 }
 
@@ -398,18 +392,18 @@ class UpgradeBannerWidget extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue.shade50, Colors.blue.shade100],
+          colors: [HiPopColors.surfaceSoftPink.withValues(alpha: 0.3), HiPopColors.surfacePalePink],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
+        border: Border.all(color: HiPopColors.accentMauve.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Icon(
             Icons.star,
-            color: Colors.blue.shade600,
+            color: HiPopColors.accentMauve,
             size: 24,
           ),
           const SizedBox(width: 12),
@@ -421,7 +415,7 @@ class UpgradeBannerWidget extends StatelessWidget {
                   'Upgrade to Premium',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
+                    color: HiPopColors.accentMauveDark,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -429,7 +423,7 @@ class UpgradeBannerWidget extends StatelessWidget {
                   message,
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.blue.shade700,
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
               ],
@@ -437,18 +431,9 @@ class UpgradeBannerWidget extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => PremiumOnboardingScreen(
-                  userId: userId,
-                  userType: userType,
-                ),
-                fullscreenDialog: true,
-              ),
-            ),
+            onPressed: () => context.go('/premium/upgrade?tier=$userType&userId=$userId'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: HiPopColors.primaryDeepSage,
               foregroundColor: Colors.white,
               minimumSize: const Size(80, 36),
               shape: RoundedRectangleBorder(
@@ -463,7 +448,7 @@ class UpgradeBannerWidget extends StatelessWidget {
               onPressed: onDismiss,
               icon: Icon(
                 Icons.close,
-                color: Colors.blue.shade600,
+                color: HiPopColors.accentMauve,
                 size: 20,
               ),
               constraints: const BoxConstraints(

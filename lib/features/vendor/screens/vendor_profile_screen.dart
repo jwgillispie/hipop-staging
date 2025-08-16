@@ -8,6 +8,8 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/shared/models/user_profile.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/services/user_data_deletion_service.dart';
+import 'package:hipop/core/widgets/hipop_app_bar.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 
 class VendorProfileScreen extends StatefulWidget {
@@ -279,7 +281,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         return AlertDialog(
           title: const Row(
             children: [
-              Icon(Icons.warning, color: Colors.red, size: 28),
+              Icon(Icons.warning, color: HiPopColors.errorPlum, size: 28),
               SizedBox(width: 12),
               Text('Delete Vendor Account'),
             ],
@@ -307,8 +309,8 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      border: Border.all(color: Colors.orange.shade200),
+                      color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
+                      border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -316,7 +318,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.business, color: Colors.orange.shade700, size: 20),
+                            Icon(Icons.business, color: HiPopColors.vendorAccent, size: 20),
                             const SizedBox(width: 8),
                             const Text(
                               'Vendor Data Summary',
@@ -336,19 +338,19 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    border: Border.all(color: Colors.red.shade200),
+                    color: HiPopColors.errorPlum.withValues(alpha: 0.1),
+                    border: Border.all(color: HiPopColors.errorPlum.withValues(alpha: 0.3)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error, color: Colors.red.shade700),
+                      Icon(Icons.error, color: HiPopColors.errorPlum),
                       const SizedBox(width: 8),
                       const Expanded(
                         child: Text(
                           'This action cannot be undone. All your business data will be permanently lost.',
                           style: TextStyle(
-                            color: Colors.red,
+                            color: HiPopColors.errorPlum,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -365,7 +367,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text('Delete Account'),
             ),
@@ -427,7 +429,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   child: const Text('Cancel'),
                 ),
                 TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
                   onPressed: () => _processPasswordConfirmation(
                     passwordController.text,
                     dialogContext,
@@ -495,10 +497,9 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Vendor Profile'),
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
+          appBar: HiPopAppBar(
+            title: 'Vendor Profile',
+            userRole: 'vendor',
             actions: [
               if (_isEditing)
                 TextButton(
@@ -541,18 +542,18 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: Colors.orange.shade100,
+                        backgroundColor: HiPopColors.vendorAccent.withValues(alpha: 0.2),
                         child: Icon(
                           Icons.store,
                           size: 50,
-                          color: Colors.orange.shade700,
+                          color: HiPopColors.vendorAccent,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
                         state.user.email ?? 'No email',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -567,18 +568,18 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      border: Border.all(color: Colors.red.shade200),
+                      color: HiPopColors.errorPlum.withValues(alpha: 0.1),
+                      border: Border.all(color: HiPopColors.errorPlum.withValues(alpha: 0.3)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error, color: Colors.red.shade600),
+                        Icon(Icons.error, color: HiPopColors.errorPlum),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(color: Colors.red.shade700),
+                            style: TextStyle(color: HiPopColors.errorPlumDark),
                           ),
                         ),
                       ],
@@ -590,18 +591,18 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                     padding: const EdgeInsets.all(12),
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      border: Border.all(color: Colors.green.shade200),
+                      color: HiPopColors.successGreen.withValues(alpha: 0.1),
+                      border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green.shade600),
+                        Icon(Icons.check_circle, color: HiPopColors.successGreen),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _successMessage!,
-                            style: TextStyle(color: Colors.green.shade700),
+                            style: TextStyle(color: HiPopColors.successGreenDark),
                           ),
                         ),
                       ],
@@ -783,7 +784,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: HiPopColors.vendorAccent,
                     foregroundColor: Colors.white,
                   ),
                   child: _isSaving
@@ -832,17 +833,17 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
 
         // Delete Account
         ListTile(
-          leading: const Icon(Icons.delete_forever, color: Colors.red),
+          leading: const Icon(Icons.delete_forever, color: HiPopColors.errorPlum),
           title: const Text(
             'Delete Account',
-            style: TextStyle(color: Colors.red),
+            style: TextStyle(color: HiPopColors.errorPlum),
           ),
           subtitle: _isDeleting && _deletionProgress.isNotEmpty
               ? Text(
                   _deletionProgress,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 )
               : const Text('Permanently delete your vendor account and all business data'),
@@ -852,7 +853,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Icon(Icons.arrow_forward_ios, color: Colors.red),
+              : const Icon(Icons.arrow_forward_ios, color: HiPopColors.errorPlum),
           onTap: _isDeleting ? null : _deleteAccount,
         ),
       ],
@@ -879,9 +880,9 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Add email addresses for others who should be included in market communications',
-          style: TextStyle(color: Colors.grey, fontSize: 14),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
         ),
         const SizedBox(height: 8),
         if (_ccEmails.isEmpty)
@@ -889,12 +890,12 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text(
+            child: Text(
               'No additional contacts',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           )
         else
@@ -982,9 +983,9 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Select all categories that apply to your business',
-          style: TextStyle(color: Colors.grey, fontSize: 14),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -1013,8 +1014,8 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              border: Border.all(color: Colors.green.shade200),
+              color: HiPopColors.successGreen.withValues(alpha: 0.05),
+              border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.2)),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
@@ -1024,7 +1025,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   'Selected Products (${_selectedProductCategories.length})',
                   style: TextStyle(
                     fontWeight: FontWeight.w500,
-                    color: Colors.green.shade700,
+                    color: HiPopColors.successGreenDark,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1033,7 +1034,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   runSpacing: 4,
                   children: _selectedProductCategories.map((category) => Chip(
                     label: Text(category),
-                    backgroundColor: Colors.green.shade100,
+                    backgroundColor: HiPopColors.successGreen.withValues(alpha: 0.2),
                     deleteIcon: const Icon(Icons.close, size: 18),
                     onDeleted: () {
                       setState(() {
@@ -1064,7 +1065,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           runSpacing: 8,
           children: _selectedProductCategories.map((category) => Chip(
             label: Text(category),
-            backgroundColor: Colors.green.shade100,
+            backgroundColor: HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
           )).toList(),
         ),
       ],

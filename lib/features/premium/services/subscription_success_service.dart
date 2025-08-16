@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../shared/services/user_profile_service.dart';
 import '../models/user_subscription.dart';
 import 'subscription_service.dart';
@@ -64,15 +65,52 @@ class SubscriptionSuccessService {
       }
       
       // Update subscription to active status
-      final updatedSubscription = subscription.copyWith(
-        status: SubscriptionStatus.active,
-        subscriptionStartDate: DateTime.now(),
+      // Determine the tier based on the user type
+      SubscriptionTier targetTier;
+      
+      // Get user profile to determine the correct tier
+      final userProfile = await UserProfileService().getUserProfile(userId);
+      if (userProfile != null) {
+        switch (userProfile.userType) {
+          case 'vendor':
+            targetTier = SubscriptionTier.vendorPro;
+            break;
+          case 'market_organizer':
+            targetTier = SubscriptionTier.marketOrganizerPro;
+            break;
+          case 'shopper':
+            targetTier = SubscriptionTier.shopperPro;
+            break;
+          default:
+            targetTier = SubscriptionTier.vendorPro; // Default fallback
+        }
+      } else {
+        // If we can't get user profile, use the subscription's current tier if it's not free
+        targetTier = subscription.tier == SubscriptionTier.free 
+            ? SubscriptionTier.vendorPro  // Default to vendor pro
+            : subscription.tier;
+      }
+      
+      debugPrint('🎯 Upgrading to tier: ${targetTier.name} for user type: ${userProfile?.userType}');
+      
+      // Upgrade the subscription using the proper method
+      await SubscriptionService.upgradeToTier(
+        userId,
+        targetTier,
         stripeSubscriptionId: stripeSubscriptionId,
-        updatedAt: DateTime.now(),
       );
       
-      // Save the updated subscription
-      await SubscriptionService.getUserSubscription(userId); // This would need an update method
+      // Also update the user profile with premium status
+      debugPrint('📝 Updating user profile with premium status...');
+      await UserProfileService().updateUserProfileFields(
+        userId,
+        {
+          'isPremium': true,
+          'subscriptionStatus': targetTier.name,
+          'stripeSubscriptionId': stripeSubscriptionId,
+          'subscriptionStartDate': Timestamp.fromDate(DateTime.now()),
+        },
+      );
       
       debugPrint('✅ User subscription activated successfully');
       debugPrint('🎉 Secure subscription success process complete');

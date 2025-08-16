@@ -23,7 +23,7 @@ class RemoteConfigService {
       await _remoteConfig!.setDefaults({
         _googleMapsApiKey: _fallbackApiKey,
         // Stripe Price IDs - fallback to .env values
-        'stripe_price_shopper_premium': dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '',
+        // 'stripe_price_shopper_premium': dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '',
         'stripe_price_vendor_premium': dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '',
         'stripe_price_market_organizer_premium': dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '',
         'stripe_price_enterprise': dotenv.env['STRIPE_PRICE_ENTERPRISE'] ?? '',
@@ -41,7 +41,7 @@ class RemoteConfigService {
       debugPrint('📋 Stripe Price IDs loaded:');
       debugPrint('  Vendor: ${_remoteConfig!.getString('stripe_price_vendor_premium')}');
       debugPrint('  Market Organizer: ${_remoteConfig!.getString('stripe_price_market_organizer_premium')}');
-      debugPrint('  Shopper: ${_remoteConfig!.getString('stripe_price_shopper_premium')}');
+      // debugPrint('  Shopper: ${_remoteConfig!.getString('stripe_price_shopper_premium')}');
       
       return _remoteConfig!;
     } catch (e) {
@@ -71,9 +71,9 @@ class RemoteConfigService {
       if (remoteConfig != null) {
         String key;
         switch (userType) {
-          case 'shopper':
-            key = 'stripe_price_shopper_premium';
-            break;
+          // case 'shopper':
+          //   key = 'stripe_price_shopper_premium';
+          //   break;
           case 'vendor':
             key = 'stripe_price_vendor_premium';
             break;
@@ -104,8 +104,8 @@ class RemoteConfigService {
   /// Fallback to get price ID from environment variables
   static String _getPriceIdFromEnv(String userType) {
     switch (userType) {
-      case 'shopper':
-        return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
+      // case 'shopper':
+      //   return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
       case 'vendor':
         return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
       case 'market_organizer':

@@ -76,11 +76,11 @@ class EmailService {
     buffer.writeln('We\'d like to invite you to join ${market.name} as a vendor on the HiPop platform!');
     buffer.writeln();
     buffer.writeln('Market Details:');
-    buffer.writeln('📍 ${market.name}');
-    buffer.writeln('📍 Location: ${market.address}, ${market.city}, ${market.state}');
+    buffer.writeln('${market.name}');
+    buffer.writeln('Location: ${market.address}, ${market.city}, ${market.state}');
     
     if (market.description != null && market.description!.isNotEmpty) {
-      buffer.writeln('📝 About: ${market.description}');
+      buffer.writeln('About: ${market.description}');
     }
     buffer.writeln();
 

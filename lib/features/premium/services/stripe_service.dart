@@ -166,8 +166,8 @@ class StripeService {
   /// Get price ID from environment for user type
   static String _getPriceIdForUserType(String userType) {
     switch (userType) {
-      case 'shopper':
-        return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
+      // case 'shopper':
+      //   return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
       case 'vendor':
         return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
       case 'market_organizer':
@@ -195,7 +195,7 @@ class StripeService {
       case 'vendor':
         return {
           'price': 29.00,
-          'name': 'Vendor Pro',
+          'name': 'Vendor Premium',
           'description': 'Advanced analytics, market discovery, and multi-market management',
           'features': [
             'Unlimited market applications',

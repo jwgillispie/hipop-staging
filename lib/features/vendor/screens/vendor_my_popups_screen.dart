@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/repositories/vendor_posts_repository.dart';
 import 'package:hipop/features/market/services/market_service.dart';
@@ -34,8 +35,21 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('My Pop-ups'),
-            backgroundColor: Colors.teal,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    HiPopColors.secondarySoftSage,
+                    HiPopColors.accentMauve,
+                  ],
+                ),
+              ),
+            ),
+            backgroundColor: Colors.transparent,
             foregroundColor: Colors.white,
+            elevation: 0,
             actions: [
               PopupMenuButton<String>(
                 icon: const Icon(Icons.filter_list),
@@ -143,7 +157,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => context.go('/vendor/create-popup'),
-            backgroundColor: Colors.teal,
+            backgroundColor: HiPopColors.primaryDeepSage,
             foregroundColor: Colors.white,
             icon: const Icon(Icons.add),
             label: const Text('Create Pop-up'),
@@ -163,8 +177,8 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
           _selectedFilter = filter;
         });
       },
-      selectedColor: Colors.teal.shade100,
-      checkmarkColor: Colors.teal.shade700,
+      selectedColor: HiPopColors.primaryOpacity(0.1),
+      checkmarkColor: HiPopColors.primaryDeepSage,
     );
   }
 
@@ -225,7 +239,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
               icon: const Icon(Icons.add),
               label: const Text('Create First Pop-up'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
+                backgroundColor: HiPopColors.primaryDeepSage,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
@@ -242,24 +256,24 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
     final isPast = popup.popUpEndDateTime.isBefore(now);
 
     // Determine status color and text
-    MaterialColor statusColor;
+    Color statusColor;
     String statusText;
     IconData statusIcon;
 
     if (isLive) {
-      statusColor = Colors.green;
+      statusColor = HiPopColors.successGreen;
       statusText = 'LIVE NOW';
       statusIcon = Icons.live_tv;
     } else if (isUpcoming) {
-      statusColor = Colors.blue;
+      statusColor = HiPopColors.infoBlueGray;
       statusText = 'UPCOMING';
       statusIcon = Icons.schedule;
     } else if (isPast) {
-      statusColor = Colors.grey;
+      statusColor = HiPopColors.backgroundWarmGray;
       statusText = 'ENDED';
       statusIcon = Icons.event_busy;
     } else {
-      statusColor = Colors.orange;
+      statusColor = HiPopColors.warningAmber;
       statusText = 'SCHEDULED';
       statusIcon = Icons.event;
     }
@@ -280,20 +294,20 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.shade100,
+                        color: statusColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(statusIcon, size: 14, color: statusColor.shade700),
+                          Icon(statusIcon, size: 14, color: statusColor),
                           const SizedBox(width: 4),
                           Text(
                             statusText,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: statusColor.shade700,
+                              color: statusColor,
                             ),
                           ),
                         ],
@@ -304,7 +318,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade100,
+                          color: HiPopColors.errorPlumLight.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -312,7 +326,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: Colors.red.shade700,
+                            color: HiPopColors.errorPlum,
                           ),
                         ),
                       ),
@@ -321,20 +335,20 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.purple.shade100,
+                          color: HiPopColors.accentMauve.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.storefront, size: 12, color: Colors.purple.shade700),
+                            Icon(Icons.storefront, size: 12, color: HiPopColors.accentMauve),
                             const SizedBox(width: 4),
                             Text(
                               'Market',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.purple.shade700,
+                                color: HiPopColors.accentMauve,
                               ),
                             ),
                           ],
@@ -460,8 +474,8 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                     const PopupMenuItem(
                       value: 'delete',
                       child: ListTile(
-                        leading: Icon(Icons.delete, color: Colors.red),
-                        title: Text('Delete', style: TextStyle(color: Colors.red)),
+                        leading: Icon(Icons.delete, color: HiPopColors.errorPlum),
+                        title: Text('Delete', style: TextStyle(color: HiPopColors.errorPlum)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -552,7 +566,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating pop-up: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -588,7 +602,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                 Text('Pop-up shared successfully!'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
             duration: Duration(seconds: 2),
           ),
         );
@@ -605,7 +619,7 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                 Expanded(child: Text('Failed to share pop-up: $e')),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -652,13 +666,13 @@ class _VendorMyPopupsScreenState extends State<VendorMyPopupsScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Error deleting pop-up: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: HiPopColors.errorPlum,
                     ),
                   );
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
             child: const Text('Delete'),
           ),
         ],

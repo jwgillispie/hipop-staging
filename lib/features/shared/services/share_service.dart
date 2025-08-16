@@ -52,8 +52,7 @@ class ShareService {
   /// Share the app itself for promotional purposes
   static Future<ShareResult> shareApp() async {
     try {
-      const content = '''
-🏪 Discover amazing local pop-ups and farmers markets with $_appName!
+      const content = '''Discover amazing local pop-ups and farmers markets with $_appName!
 
 $_appTagline
 
@@ -84,36 +83,36 @@ Download $_appName: $_appWebsite
     final buffer = StringBuffer();
     
     // Emoji and title
-    buffer.writeln('🎪 Pop-up Alert!');
+    buffer.writeln('Pop-up Alert!');
     buffer.writeln();
     
     // Vendor and description
-    buffer.writeln('📍 ${popup.vendorName}');
+    buffer.writeln('${popup.vendorName}');
     buffer.writeln(popup.description);
     buffer.writeln();
     
     // Location
-    buffer.writeln('📍 Location: ${popup.location}');
+    buffer.writeln('Location: ${popup.location}');
     if (marketName != null && marketName.isNotEmpty) {
-      buffer.writeln('🏪 At: $marketName');
+      buffer.writeln('At: $marketName');
     }
     buffer.writeln();
     
     // Date and time
-    buffer.writeln('🗓️ When: ${_formatDateTime(popup.popUpStartDateTime, popup.popUpEndDateTime)}');
+    buffer.writeln('When: ${_formatDateTime(popup.popUpStartDateTime, popup.popUpEndDateTime)}');
     buffer.writeln();
     
     // Status
     if (popup.isHappening) {
-      buffer.writeln('🔴 HAPPENING NOW!');
+      buffer.writeln('HAPPENING NOW!');
     } else if (popup.isUpcoming) {
-      buffer.writeln('⏰ Coming up soon!');
+      buffer.writeln('Coming up soon!');
     }
     buffer.writeln();
     
     // Instagram handle if available
     if (popup.instagramHandle != null && popup.instagramHandle!.isNotEmpty) {
-      buffer.writeln('📱 Follow: @${popup.instagramHandle}');
+      buffer.writeln('Follow: @${popup.instagramHandle}');
       buffer.writeln();
     }
     
@@ -131,15 +130,15 @@ Download $_appName: $_appWebsite
   static String _buildEventContent(Event event) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🎉 Event Alert!');
+    buffer.writeln('Event Alert!');
     buffer.writeln();
-    buffer.writeln('📍 ${event.name}');
+    buffer.writeln('${event.name}');
     if (event.description.isNotEmpty) {
       buffer.writeln(event.description);
     }
     buffer.writeln();
-    buffer.writeln('📍 Location: ${event.location}');
-    buffer.writeln('🗓️ When: ${_formatDateTime(event.startDateTime, event.endDateTime)}');
+    buffer.writeln('Location: ${event.location}');
+    buffer.writeln('When: ${_formatDateTime(event.startDateTime, event.endDateTime)}');
     buffer.writeln();
     buffer.writeln('Discovered on $_appName - $_appTagline');
     buffer.writeln('Download: $_appWebsite');
@@ -152,18 +151,18 @@ Download $_appName: $_appWebsite
   static String _buildMarketContent(Market market) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🏪 Market Discovery!');
+    buffer.writeln('Market Discovery!');
     buffer.writeln();
-    buffer.writeln('📍 ${market.name}');
+    buffer.writeln('${market.name}');
     if (market.description != null && market.description!.isNotEmpty) {
       buffer.writeln(market.description);
     }
     buffer.writeln();
-    buffer.writeln('📍 Location: ${market.address}');
+    buffer.writeln('Location: ${market.address}');
     buffer.writeln();
     
     // Add schedule information if available
-    buffer.writeln('🗓️ Visit this amazing local market!');
+    buffer.writeln('Visit this amazing local market!');
     buffer.writeln();
     
     buffer.writeln('Discovered on $_appName - $_appTagline');

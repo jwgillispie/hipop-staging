@@ -775,7 +775,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
   String _buildVendorShareContent(ManagedVendor vendor) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🛒 Check out ${vendor.businessName}!');
+    buffer.writeln('Check out ${vendor.businessName}!');
     buffer.writeln();
     
     if (vendor.description.isNotEmpty) {
@@ -783,27 +783,27 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
       buffer.writeln();
     }
     
-    buffer.writeln('📋 Categories: ${vendor.categoriesDisplay}');
+    buffer.writeln('Categories: ${vendor.categoriesDisplay}');
     
     if (vendor.products.isNotEmpty) {
-      buffer.writeln('🥬 Products: ${vendor.products.take(5).join(", ")}${vendor.products.length > 5 ? "..." : ""}');
+      buffer.writeln('Products: ${vendor.products.take(5).join(", ")}${vendor.products.length > 5 ? "..." : ""}');
     }
     
     if (vendor.phoneNumber != null) {
-      buffer.writeln('📞 Phone: ${vendor.phoneNumber}');
+      buffer.writeln('Phone: ${vendor.phoneNumber}');
     }
     
     if (vendor.email != null) {
-      buffer.writeln('📧 Email: ${vendor.email}');
+      buffer.writeln('Email: ${vendor.email}');
     }
     
     if (vendor.instagramHandle != null) {
-      buffer.writeln('📱 Instagram: @${vendor.instagramHandle}');
+      buffer.writeln('Instagram: @${vendor.instagramHandle}');
     }
     
     buffer.writeln();
     buffer.writeln('Find them at ${widget.market.name}!');
-    buffer.writeln('Shared via HiPop 🍎');
+    buffer.writeln('Shared via HiPop');
     
     return buffer.toString();
   }

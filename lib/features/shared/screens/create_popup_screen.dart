@@ -19,6 +19,7 @@ import '../../vendor/models/vendor_product_list.dart';
 import '../../premium/services/subscription_service.dart';
 import '../services/real_time_analytics_service.dart';
 import 'dart:io';
+import '../../../core/theme/hipop_colors.dart';
 
 class CreatePopUpScreen extends StatefulWidget {
   final IVendorPostsRepository postsRepository;
@@ -516,7 +517,21 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.editingPost != null ? 'Edit Pop-Up' : 'Create Pop-Up'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                HiPopColors.secondarySoftSage,
+                HiPopColors.accentMauve,
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           if (_isLoading)
             const Padding(
@@ -600,10 +615,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _remainingPosts == 1 ? Colors.orange.shade100 : Colors.blue.shade50,
+              color: _remainingPosts == 1 ? HiPopColors.warningAmber.withValues(alpha: 0.1) : HiPopColors.infoBlueGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: _remainingPosts == 1 ? Colors.orange.shade300 : Colors.blue.shade200,
+                color: _remainingPosts == 1 ? HiPopColors.warningAmber : HiPopColors.infoBlueGray,
               ),
             ),
             child: Text(
@@ -611,7 +626,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                 ? '⚠️ Last post this month' 
                 : '📊 $_remainingPosts posts remaining this month',
               style: TextStyle(
-                color: _remainingPosts == 1 ? Colors.orange.shade700 : Colors.blue.shade700,
+                color: _remainingPosts == 1 ? HiPopColors.warningAmberDark : HiPopColors.infoBlueGrayDark,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -757,9 +772,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
         borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade50,
+        color: HiPopColors.surfacePalePink,
       ),
       child: Row(
         children: [
@@ -872,9 +887,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
+        color: HiPopColors.successGreenLight.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.shade200),
+        border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,12 +899,12 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade100,
+                  color: HiPopColors.successGreenLight.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.storefront,
-                  color: Colors.green.shade700,
+                  color: HiPopColors.successGreen,
                   size: 24,
                 ),
               ),
@@ -961,19 +976,19 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.orange.shade50,
+              color: HiPopColors.warningAmber.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.orange.shade700),
+                const Icon(Icons.info_outline, size: 16, color: HiPopColors.warningAmber),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
+                  child: const Text(
                     'This post will be submitted for market organizer approval',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.orange.shade700,
+                      color: HiPopColors.warningAmber,
                     ),
                   ),
                 ),
@@ -988,9 +1003,16 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   Widget _buildProductListSelectionWidget() {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
         borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
+        color: HiPopColors.surfacePalePink,
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -999,7 +1021,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(Icons.inventory_2, color: Colors.blue[600]),
+                const Icon(Icons.inventory_2, color: HiPopColors.primaryDeepSage),
                 const SizedBox(width: 12),
                 const Text(
                   'Product Lists (Optional)',
@@ -1067,11 +1089,18 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                       child: Container(
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isSelected ? Colors.blue : Colors.grey.shade300,
+                            color: isSelected ? HiPopColors.primaryDeepSage : HiPopColors.lightBorder,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(8),
-                          color: isSelected ? Colors.blue.shade50 : Colors.white,
+                          color: isSelected ? HiPopColors.primaryDeepSage.withValues(alpha: 0.1) : Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: HiPopColors.lightShadow.withValues(alpha: 0.05),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
                         padding: const EdgeInsets.all(12),
                         child: Column(
@@ -1085,16 +1114,16 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: isSelected ? Colors.blue[800] : Colors.black87,
+                                      color: isSelected ? HiPopColors.primaryDeepSageDark : Colors.black87,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 if (isSelected)
-                                  Icon(
+                                  const Icon(
                                     Icons.check_circle,
-                                    color: Colors.blue[600],
+                                    color: HiPopColors.primaryDeepSage,
                                     size: 16,
                                   ),
                               ],
@@ -1154,13 +1183,20 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
               borderRadius: BorderRadius.circular(12),
-              color: Colors.white,
+              color: HiPopColors.surfacePalePink,
+              boxShadow: [
+                BoxShadow(
+                  color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                Icon(Icons.play_arrow, color: Colors.green[600]),
+                Icon(Icons.play_arrow, color: HiPopColors.primaryDeepSage),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1203,13 +1239,20 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
               borderRadius: BorderRadius.circular(12),
-              color: Colors.white,
+              color: HiPopColors.surfacePalePink,
+              boxShadow: [
+                BoxShadow(
+                  color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                Icon(Icons.stop, color: Colors.red[600]),
+                Icon(Icons.stop, color: HiPopColors.accentDustyPlum),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1573,14 +1616,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.orange.shade400,
-            Colors.amber.shade500,
+            HiPopColors.warningAmber,
+            HiPopColors.warningAmberLight,
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.shade200,
+            color: HiPopColors.warningAmber.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2392,7 +2435,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('You\'ve reached your monthly limit of $monthlyLimit posts. Upgrade to $productName for unlimited posts.'),
-              backgroundColor: Colors.orange,
+              backgroundColor: HiPopColors.warningAmber,
               action: SnackBarAction(
                 label: 'Upgrade',
                 textColor: Colors.white,

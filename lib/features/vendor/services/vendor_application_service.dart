@@ -21,10 +21,10 @@ class VendorApplicationService {
       debugPrint('DEBUG: Application Type: ${application.applicationType.name}');
       
       final docRef = await _applicationsCollection.add(application.toFirestore());
-      debugPrint('✅ Vendor application submitted with ID: ${docRef.id}');
+      debugPrint('SUCCESS: Vendor application submitted with ID: ${docRef.id}');
       return docRef.id;
     } catch (e) {
-      debugPrint('❌ Error submitting vendor application: $e');
+      debugPrint('ERROR: Error submitting vendor application: $e');
       throw Exception('Failed to submit application: $e');
     }
   }
@@ -294,7 +294,7 @@ class VendorApplicationService {
         // Also create ManagedVendor record so vendor appears in vendor management
         debugPrint('🔄 Starting ManagedVendor creation for permission application: ${application.id}');
         await _createManagedVendorFromApplication(application, reviewerId);
-        debugPrint('✅ Application $applicationId approved - VendorMarketRelationship and ManagedVendor created');
+        debugPrint('SUCCESS: Application $applicationId approved - VendorMarketRelationship and ManagedVendor created');
       } else {
         // Create ManagedVendor record for event applications
         await _createManagedVendorFromApplication(application, reviewerId);
@@ -519,11 +519,11 @@ class VendorApplicationService {
 
       // Create the ManagedVendor record
       debugPrint('🔄 Calling ManagedVendorService.createVendor for: ${managedVendor.businessName}');
-      debugPrint('📊 ManagedVendor data: marketId=${managedVendor.marketId}, isPermissionBased=${managedVendor.metadata['isPermissionBased']}');
+      debugPrint('INFO: ManagedVendor data: marketId=${managedVendor.marketId}, isPermissionBased=${managedVendor.metadata['isPermissionBased']}');
 
       final createdVendorId = await ManagedVendorService.createVendor(managedVendor);
 
-      debugPrint('✅ ManagedVendor created from application: ${application.id} with ID: $createdVendorId');
+      debugPrint('SUCCESS: ManagedVendor created from application: ${application.id} with ID: $createdVendorId');
     } catch (e) {
       debugPrint('Error creating ManagedVendor from application: $e');
       throw Exception('Failed to create vendor profile: $e');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class VendorOnboardingScreen extends StatefulWidget {
   const VendorOnboardingScreen({super.key});
@@ -54,7 +55,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.orange.shade50,
+      backgroundColor: HiPopColors.surfacePalePink.withValues(alpha: 0.5),
       body: SafeArea(
         child: Column(
           children: [
@@ -66,8 +67,8 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   Expanded(
                     child: LinearProgressIndicator(
                       value: (_currentPage + 1) / _totalPages,
-                      backgroundColor: Colors.orange.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
+                      backgroundColor: HiPopColors.vendorAccent.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -75,7 +76,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                     onPressed: _skipOnboarding,
                     child: Text(
                       'Skip',
-                      style: TextStyle(color: Colors.orange.shade700),
+                      style: TextStyle(color: HiPopColors.vendorAccentDark),
                     ),
                   ),
                 ],
@@ -112,8 +113,8 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                       child: OutlinedButton(
                         onPressed: _previousPage,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange.shade700,
-                          side: BorderSide(color: Colors.orange.shade300),
+                          foregroundColor: HiPopColors.vendorAccentDark,
+                          side: BorderSide(color: HiPopColors.vendorAccent.withValues(alpha: 0.4)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: const Text('Previous'),
@@ -124,7 +125,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade600,
+                        backgroundColor: HiPopColors.vendorAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -149,13 +150,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.orange.shade100,
+              color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.storefront,
               size: 80,
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -163,7 +164,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             'Welcome to HiPop!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -171,7 +172,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Text(
             'You\'re now a Vendor! Let us show you how to grow your business and connect with customers at local markets.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -181,13 +182,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade200),
+              border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.lightbulb_outline,
-                  color: Colors.amber.shade600,
+                  color: HiPopColors.warningAmber,
                   size: 24,
                 ),
                 const SizedBox(height: 12),
@@ -195,7 +196,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   'What you\'ll learn:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade800,
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -205,7 +206,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   '• Managing your product listings\n'
                   '• Tracking sales and analytics\n'
                   '• Growing your vendor business',
-                  style: TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 14, color: HiPopColors.lightTextSecondary),
                 ),
               ],
             ),
@@ -224,13 +225,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.blue.shade100,
+              color: HiPopColors.infoBlueGray.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.event,
               size: 70,
-              color: Colors.blue.shade700,
+              color: HiPopColors.infoBlueGrayDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -238,7 +239,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             'Create Popup Events',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -246,7 +247,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Text(
             'Share your popup events with the community. Let customers know when and where to find you.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -258,7 +259,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.shade100,
+                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -270,21 +271,21 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   Icons.location_on,
                   'Set Your Location',
                   'Add precise location details for customers',
-                  Colors.red,
+                  HiPopColors.errorPlum,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.schedule,
                   'Schedule Your Time',
                   'Set date, time, and duration',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.description,
                   'Describe Your Offerings',
                   'Tell customers what to expect',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
               ],
             ),
@@ -293,13 +294,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.amber.shade50,
+              color: HiPopColors.warningAmber.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber.shade200),
+              border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.star, color: Colors.amber.shade600, size: 20),
+                Icon(Icons.star, color: HiPopColors.warningAmber, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -309,14 +310,14 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                         'Free: 3 popup posts',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.amber.shade700,
+                          color: HiPopColors.warningAmberDark,
                           fontSize: 12,
                         ),
                       ),
                       Text(
                         'Pro: Unlimited popup posts',
                         style: TextStyle(
-                          color: Colors.amber.shade700,
+                          color: HiPopColors.warningAmberDark,
                           fontSize: 12,
                         ),
                       ),
@@ -340,13 +341,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: HiPopColors.successGreen.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.assignment,
               size: 70,
-              color: Colors.green.shade700,
+              color: HiPopColors.successGreen,
             ),
           ),
           const SizedBox(height: 40),
@@ -354,7 +355,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             'Apply to Markets',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -362,7 +363,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Text(
             'Find and apply to farmers markets in your area. Get accepted to regular market slots for consistent business.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -374,7 +375,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.shade100,
+                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -386,21 +387,21 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   Icons.search,
                   'Discover Markets',
                   'Browse available farmers markets',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.send,
                   'Submit Applications',
                   'Apply with your vendor profile',
-                  Colors.purple,
+                  HiPopColors.accentMauve,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.notifications,
                   'Track Status',
                   'Get notified about application updates',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
               ],
             ),
@@ -409,20 +410,20 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.tips_and_updates, color: Colors.blue.shade600, size: 20),
+                Icon(Icons.tips_and_updates, color: HiPopColors.infoBlueGray, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Tip: Complete your vendor profile to increase acceptance rates!',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue.shade700,
+                      color: HiPopColors.infoBlueGrayDark,
                     ),
                   ),
                 ),
@@ -443,13 +444,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.purple.shade100,
+              color: HiPopColors.accentMauve.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.inventory,
               size: 70,
-              color: Colors.purple.shade700,
+              color: HiPopColors.accentMauve,
             ),
           ),
           const SizedBox(height: 40),
@@ -457,7 +458,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             'Manage Products',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -465,7 +466,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Text(
             'Showcase your products to customers. Add photos, descriptions, and pricing to attract buyers.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -477,7 +478,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.shade100,
+                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -489,21 +490,21 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   Icons.add_photo_alternate,
                   'Add Product Photos',
                   'Showcase your items with images',
-                  Colors.pink,
+                  HiPopColors.accentDustyRose,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.description,
                   'Product Descriptions',
                   'Detailed info and pricing',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.category,
                   'Organize by Category',
                   'Group similar products together',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
               ],
             ),
@@ -515,9 +516,9 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: HiPopColors.surfacePalePink.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
+                    border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     children: [
@@ -525,14 +526,14 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                         'Free',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade700,
+                          color: HiPopColors.vendorAccentDark,
                           fontSize: 14,
                         ),
                       ),
                       Text(
                         '3 products',
                         style: TextStyle(
-                          color: Colors.orange.shade600,
+                          color: HiPopColors.vendorAccent,
                           fontSize: 12,
                         ),
                       ),
@@ -545,24 +546,24 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: HiPopColors.successGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
+                    border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     children: [
                       Text(
-                        'Vendor Pro',
+                        'Vendor Premium',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: HiPopColors.successGreen,
                           fontSize: 14,
                         ),
                       ),
                       Text(
                         'Unlimited products',
                         style: TextStyle(
-                          color: Colors.green.shade600,
+                          color: HiPopColors.successGreen,
                           fontSize: 12,
                         ),
                       ),
@@ -586,13 +587,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.teal.shade100,
+              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.analytics,
               size: 70,
-              color: Colors.teal.shade700,
+              color: HiPopColors.primaryDeepSage,
             ),
           ),
           const SizedBox(height: 40),
@@ -600,7 +601,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             'Track Your Success',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -608,7 +609,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Text(
             'Monitor your business performance with detailed analytics on sales, customer engagement, and market applications.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -620,7 +621,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.shade100,
+                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -632,21 +633,21 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   Icons.trending_up,
                   'Sales Tracking',
                   'Monitor revenue and transactions',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.people,
                   'Customer Insights',
                   'See who\'s engaging with your business',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.assessment,
                   'Market Performance',
                   'Track application success rates',
-                  Colors.purple,
+                  HiPopColors.accentMauve,
                 ),
               ],
             ),
@@ -655,20 +656,20 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.purple.shade50,
+              color: HiPopColors.accentMauve.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.purple.shade200),
+              border: Border.all(color: HiPopColors.accentMauve.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.workspace_premium, color: Colors.purple.shade600, size: 20),
+                Icon(Icons.workspace_premium, color: HiPopColors.accentMauve, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Vendor Pro includes advanced analytics dashboard with detailed insights',
+                    'Vendor Premium includes advanced analytics dashboard with detailed insights',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.purple.shade700,
+                      color: HiPopColors.accentMauve,
                     ),
                   ),
                 ),
@@ -689,13 +690,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.orange.shade100,
+              color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.rocket_launch,
               size: 80,
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -703,7 +704,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             'You\'re Ready to Sell!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -711,7 +712,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Text(
             'You now know how to grow your vendor business with HiPop. Let\'s set up your first popup event!',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -723,7 +724,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.orange.shade100,
+                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -733,7 +734,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               children: [
                 Icon(
                   Icons.checklist,
-                  color: Colors.orange.shade600,
+                  color: HiPopColors.vendorAccent,
                   size: 32,
                 ),
                 const SizedBox(height: 16),
@@ -741,7 +742,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   'Quick Start Checklist',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade800,
+                    color: HiPopColors.lightTextPrimary,
                     fontSize: 16,
                   ),
                 ),
@@ -758,20 +759,20 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: HiPopColors.successGreen.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.shade200),
+              border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.tips_and_updates, color: Colors.green.shade600, size: 20),
+                Icon(Icons.tips_and_updates, color: HiPopColors.successGreen, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Consider upgrading to Vendor Pro for unlimited posts and advanced analytics!',
+                    'Consider upgrading to Vendor Premium for unlimited posts and advanced analytics!',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.green.shade700,
+                      color: HiPopColors.successGreen,
                     ),
                   ),
                 ),
@@ -803,15 +804,16 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: HiPopColors.lightTextSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -831,13 +833,13 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           Icon(
             Icons.check_circle_outline,
             size: 16,
-            color: Colors.orange.shade600,
+            color: HiPopColors.vendorAccent,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 14, color: HiPopColors.darkTextPrimary),
             ),
           ),
         ],

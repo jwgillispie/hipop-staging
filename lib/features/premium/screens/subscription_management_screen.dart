@@ -6,6 +6,8 @@ import '../services/subscription_service.dart';
 import '../services/stripe_service.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 /// 🔒 SECURE: Subscription management screen for users
 /// 
@@ -59,7 +61,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading subscription data: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -69,10 +71,9 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Manage Subscription'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+      appBar: HiPopAppBar(
+        title: 'Manage Subscription',
+        userRole: 'vendor',
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
@@ -107,7 +108,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               children: [
                 Icon(
                   isActive ? Icons.check_circle : Icons.cancel,
-                  color: isActive ? Colors.green : Colors.red,
+                  color: isActive ? HiPopColors.successGreen : HiPopColors.errorPlum,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
@@ -138,7 +139,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                     Text(
                       _getPlanDescription(subscription),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -166,13 +167,13 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isActive ? Colors.green.shade100 : Colors.red.shade100,
+                color: isActive ? HiPopColors.successGreen.withValues(alpha: 0.1) : HiPopColors.errorPlum.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 isActive ? 'Active' : _getStatusText(subscription),
                 style: TextStyle(
-                  color: isActive ? Colors.green.shade800 : Colors.red.shade800,
+                  color: isActive ? HiPopColors.successGreenDark : HiPopColors.errorPlumDark,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -184,7 +185,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 child: Text(
                   'Started: ${_formatDate(subscription!.subscriptionStartDate!)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -217,19 +218,19 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  color: HiPopColors.successGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.all_inclusive, color: Colors.green.shade700),
+                    Icon(Icons.all_inclusive, color: HiPopColors.successGreen),
                     const SizedBox(width: 12),
                     Text(
                       'Unlimited Access',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.green.shade700,
+                        color: HiPopColors.successGreen,
                       ),
                     ),
                   ],
@@ -295,7 +296,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             Text(
               '$used / $limit',
               style: TextStyle(
-                color: isAtLimit ? Colors.red : Colors.grey[600],
+                color: isAtLimit ? HiPopColors.errorPlum : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -304,9 +305,9 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         const SizedBox(height: 6),
         LinearProgressIndicator(
           value: percentage,
-          backgroundColor: Colors.grey[300],
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           valueColor: AlwaysStoppedAnimation<Color>(
-            isAtLimit ? Colors.red : Theme.of(context).colorScheme.primary,
+            isAtLimit ? HiPopColors.errorPlum : HiPopColors.primaryDeepSage,
           ),
         ),
       ],
@@ -361,7 +362,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           Expanded(
             child: Text(
               value,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ),
         ],
@@ -386,7 +387,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             
             if (_subscription?.tier == SubscriptionTier.free)
               ListTile(
-                leading: const Icon(Icons.upgrade, color: Colors.green),
+                leading: Icon(Icons.upgrade, color: HiPopColors.successGreen),
                 title: const Text('Upgrade to Premium'),
                 subtitle: const Text('Unlock unlimited features'),
                 trailing: const Icon(Icons.arrow_forward_ios),
@@ -429,10 +430,10 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               // Pause Subscription
               if (_subscription?.status == SubscriptionStatus.active)
                 ListTile(
-                  leading: Icon(Icons.pause, color: Colors.orange.shade600),
+                  leading: Icon(Icons.pause, color: HiPopColors.warningAmber),
                   title: Text(
                     'Pause Subscription',
-                    style: TextStyle(color: Colors.orange.shade600),
+                    style: TextStyle(color: HiPopColors.warningAmber),
                   ),
                   subtitle: const Text('Temporarily pause your subscription'),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -444,10 +445,10 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               
               // Cancel Subscription
               ListTile(
-                leading: Icon(Icons.cancel, color: Colors.red.shade600),
+                leading: Icon(Icons.cancel, color: HiPopColors.errorPlum),
                 title: Text(
                   'Cancel Subscription',
-                  style: TextStyle(color: Colors.red.shade600),
+                  style: TextStyle(color: HiPopColors.errorPlum),
                 ),
                 subtitle: const Text('End your premium subscription'),
                 trailing: const Icon(Icons.arrow_forward_ios),
@@ -583,7 +584,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Payment method update completed'),
-              backgroundColor: Colors.green,
+              backgroundColor: HiPopColors.successGreen,
             ),
           );
           
@@ -601,7 +602,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating payment method: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -657,7 +658,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -681,7 +682,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                     const SizedBox(height: 8),
                     Text(
                       offer['description'],
-                      style: TextStyle(color: Colors.grey[700]),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -691,7 +692,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 'Still want to cancel?',
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -788,12 +789,12 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             // Cancel at period end (recommended)
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.green[300]!),
+                border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(8),
-                color: Colors.green[50],
+                color: HiPopColors.successGreen.withValues(alpha: 0.1),
               ),
               child: ListTile(
-                leading: Icon(Icons.schedule, color: Colors.green[700]),
+                leading: Icon(Icons.schedule, color: HiPopColors.successGreen),
                 title: const Text(
                   'Cancel at period end',
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -805,7 +806,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                     const Text('Recommended • No immediate loss of features'),
                   ],
                 ),
-                trailing: const Icon(Icons.check_circle, color: Colors.green),
+                trailing: Icon(Icons.check_circle, color: HiPopColors.successGreen),
                 onTap: () => Navigator.pop(context, 'end_of_period'),
               ),
             ),
@@ -815,12 +816,12 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             // Cancel immediately with prorated refund
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.orange[300]!),
+                border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(8),
-                color: Colors.orange[50],
+                color: HiPopColors.warningAmber.withValues(alpha: 0.1),
               ),
               child: ListTile(
-                leading: Icon(Icons.money_off, color: Colors.orange[700]),
+                leading: Icon(Icons.money_off, color: HiPopColors.warningAmber),
                 title: const Text(
                   'Cancel immediately',
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -838,7 +839,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               'You will lose access to:',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
@@ -847,7 +848,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 padding: const EdgeInsets.only(left: 16, top: 4),
                 child: Text(
                   '• $feature',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
                 ),
               ),
             ),
@@ -856,7 +857,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 padding: const EdgeInsets.only(left: 16, top: 4),
                 child: Text(
                   '• And ${_getFeaturesList().length - 3} more...',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14),
                 ),
               ),
           ],
@@ -987,7 +988,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                   ? 'Subscription cancelled. Refund will be processed within 5-10 business days.'
                   : 'Subscription will be cancelled at the end of your billing period. You\'ll retain access until then.',
               ),
-              backgroundColor: Colors.green,
+              backgroundColor: HiPopColors.successGreen,
               duration: const Duration(seconds: 5),
             ),
           );
@@ -1008,7 +1009,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error cancelling subscription: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
             action: SnackBarAction(
               label: 'Retry',
               onPressed: () => _executeCancellation(cancellationType, feedback),
@@ -1089,7 +1090,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading billing history: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -1111,7 +1112,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               return ListTile(
                 leading: Icon(
                   invoice['status'] == 'paid' ? Icons.check_circle : Icons.pending,
-                  color: invoice['status'] == 'paid' ? Colors.green : Colors.orange,
+                  color: invoice['status'] == 'paid' ? HiPopColors.successGreen : HiPopColors.warningAmber,
                 ),
                 title: Text('\$${(invoice['amount'] / 100).toStringAsFixed(2)}'),
                 subtitle: Text(
@@ -1165,7 +1166,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Invoice download started'),
-              backgroundColor: Colors.green,
+              backgroundColor: HiPopColors.successGreen,
             ),
           );
         }
@@ -1179,7 +1180,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error downloading invoice: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -1246,7 +1247,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Subscription paused for $daysCount days'),
-              backgroundColor: Colors.green,
+              backgroundColor: HiPopColors.successGreen,
             ),
           );
           
@@ -1264,7 +1265,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error pausing subscription: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }

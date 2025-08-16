@@ -12,6 +12,7 @@ import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class VendorDashboard extends StatefulWidget {
   const VendorDashboard({super.key});
@@ -45,7 +46,7 @@ class _VendorDashboardState extends State<VendorDashboard>
     if (!mounted) return;
     
     final authState = context.read<AuthBloc>().state;
-    debugPrint('🔄 Checking premium access - Auth state: ${authState.runtimeType}');
+    debugPrint('Checking premium access - Auth state: ${authState.runtimeType}');
     
     if (authState is Authenticated) {
       try {
@@ -62,16 +63,16 @@ class _VendorDashboardState extends State<VendorDashboard>
                           userProfile?.stripeSubscriptionId?.isNotEmpty == true);
         
         debugPrint('');
-        debugPrint('🔍 ========= PREMIUM ACCESS CHECK =========');
-        debugPrint('👤 User ID: ${authState.user.uid}');
-        debugPrint('📧 User Email: ${authState.user.email}');
-        debugPrint('✅ Has Premium Access: $hasAccess');
-        debugPrint('💎 Profile isPremium: ${userProfile?.isPremium}');
-        debugPrint('📋 Subscription Status: ${userProfile?.subscriptionStatus}');
-        debugPrint('🔑 Stripe Sub ID: ${userProfile?.stripeSubscriptionId}');
-        debugPrint('🏪 Stripe Customer ID: ${userProfile?.stripeCustomerId}');
-        debugPrint('⏰ Timestamp: ${DateTime.now()}');
-        debugPrint('🔍 ===================================');
+        debugPrint('========= PREMIUM ACCESS CHECK =========');
+        debugPrint('User ID: ${authState.user.uid}');
+        debugPrint('User Email: ${authState.user.email}');
+        debugPrint('Has Premium Access: $hasAccess');
+        debugPrint('Profile isPremium: ${userProfile?.isPremium}');
+        debugPrint('Subscription Status: ${userProfile?.subscriptionStatus}');
+        debugPrint('Stripe Sub ID: ${userProfile?.stripeSubscriptionId}');
+        debugPrint('Stripe Customer ID: ${userProfile?.stripeCustomerId}');
+        debugPrint('Timestamp: ${DateTime.now()}');
+        debugPrint('===================================');
         debugPrint('');
         
         if (mounted) {
@@ -82,10 +83,10 @@ class _VendorDashboardState extends State<VendorDashboard>
         }
       } catch (e) {
         debugPrint('');
-        debugPrint('❌ ========= PREMIUM ACCESS ERROR =========');
-        debugPrint('💥 Error: $e');
-        debugPrint('📍 Stack trace: ${StackTrace.current}');
-        debugPrint('❌ ===================================');
+        debugPrint('========= PREMIUM ACCESS ERROR =========');
+        debugPrint('Error: $e');
+        debugPrint('Stack trace: ${StackTrace.current}');
+        debugPrint('===================================');
         debugPrint('');
         
         if (mounted) {
@@ -96,7 +97,7 @@ class _VendorDashboardState extends State<VendorDashboard>
         }
       }
     } else {
-      debugPrint('⚠️  User not authenticated - resetting premium access');
+      debugPrint('WARNING: User not authenticated - resetting premium access');
       if (mounted) {
         setState(() {
           _hasPremiumAccess = false;
@@ -131,8 +132,21 @@ class _VendorDashboardState extends State<VendorDashboard>
         return Scaffold(
           appBar: AppBar(
             title: const Text('Vendor Dashboard'),
-            backgroundColor: Colors.orange,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    HiPopColors.secondarySoftSage,
+                    HiPopColors.accentMauve,
+                  ],
+                ),
+              ),
+            ),
+            backgroundColor: Colors.transparent,
             foregroundColor: Colors.white,
+            elevation: 0,
             actions: [
               if (_isCheckingPremium) ...[
                 const Padding(
@@ -182,7 +196,7 @@ class _VendorDashboardState extends State<VendorDashboard>
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => context.go('/vendor/popup-creation'),
-            backgroundColor: Colors.orange,
+            backgroundColor: HiPopColors.primaryDeepSage,
             child: const Icon(Icons.add, color: Colors.white),
           ),
         );
@@ -208,18 +222,18 @@ class _VendorDashboardState extends State<VendorDashboard>
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: _isCheckingPremium 
-                      ? Colors.blue.shade50
+                      ? HiPopColors.infoBlueGrayLight.withValues(alpha: 0.1)
                       : _hasPremiumAccess 
-                        ? Colors.green.shade50 
-                        : Colors.grey.shade50,
+                        ? HiPopColors.successGreenLight.withValues(alpha: 0.1) 
+                        : HiPopColors.surfacePalePink,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: _isCheckingPremium 
-                        ? Colors.blue
+                        ? HiPopColors.infoBlueGray
                         : _hasPremiumAccess 
-                          ? Colors.green 
-                          : Colors.grey,
-                      width: 1,
+                          ? HiPopColors.successGreen 
+                          : HiPopColors.lightBorder,
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
@@ -235,13 +249,13 @@ class _VendorDashboardState extends State<VendorDashboard>
                           'Checking Premium Access...',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue,
+                            color: HiPopColors.infoBlueGray,
                           ),
                         ),
                       ] else ...[
                         Icon(
                           _hasPremiumAccess ? Icons.diamond : Icons.info_outline,
-                          color: _hasPremiumAccess ? Colors.green : Colors.grey,
+                          color: _hasPremiumAccess ? HiPopColors.successGreen : HiPopColors.lightTextSecondary,
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -250,7 +264,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                             : 'Premium Access: NOT ACTIVE',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: _hasPremiumAccess ? Colors.green.shade700 : Colors.grey.shade700,
+                            color: _hasPremiumAccess ? HiPopColors.successGreenDark : HiPopColors.lightTextSecondary,
                           ),
                         ),
                       ],
@@ -265,9 +279,9 @@ class _VendorDashboardState extends State<VendorDashboard>
                       children: [
                         Row(
                           children: [
-                            const CircleAvatar(
-                              backgroundColor: Colors.orange,
-                              child: Icon(Icons.store, color: Colors.white),
+                            CircleAvatar(
+                              backgroundColor: HiPopColors.vendorAccent,
+                              child: const Icon(Icons.store, color: Colors.white),
                             ),
                             const SizedBox(width: 12),
                             Column(
@@ -318,7 +332,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Create Pop-up',
                 'Independent or market events',
                 Icons.add_business,
-                Colors.orange,
+                HiPopColors.vendorAccent,
                 () => context.go('/vendor/popup-creation'),
               ),
               _buildActionCard(
@@ -326,7 +340,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'My Pop-ups',
                 'View and manage your pop-ups',
                 Icons.event_available,
-                Colors.teal,
+                HiPopColors.primaryDeepSage,
                 () => context.go('/vendor/my-popups'),
               ),
               // TEMPORARILY HIDDEN: Vendor Applications (only showing permissions for now)
@@ -343,7 +357,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Market Discovery',
                 'Find markets seeking vendors',
                 Icons.search,
-                Colors.amber,
+                HiPopColors.premiumGold,
                 () => context.go('/vendor/market-discovery'),
                 isPremium: !_hasPremiumAccess,
               ),
@@ -352,7 +366,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Products & Market Items',
                 'Manage your products and market assignments',
                 Icons.inventory_2,
-                Colors.brown,
+                HiPopColors.accentDustyPlum,
                 () => context.go('/vendor/products-management'),
               ),
               _buildActionCard(
@@ -360,7 +374,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Profile',
                 'Edit your vendor profile',
                 Icons.person,
-                Colors.purple,
+                HiPopColors.accentMauve,
                 () => context.go('/vendor/profile'),
               ),
               _buildActionCard(
@@ -368,7 +382,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Sales Tracker',
                 'Track daily sales & revenue',
                 Icons.attach_money,
-                Colors.green,
+                HiPopColors.successGreen,
                 () => context.go('/vendor/sales-tracker'),
               ),
               _buildActionCard(
@@ -376,7 +390,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Analytics',
                 'View performance insights',
                 Icons.analytics,
-                Colors.deepPurple,
+                HiPopColors.accentMauveDark,
                 () => context.go('/vendor/analytics'),
               ),
             ]),
@@ -438,7 +452,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                   ElevatedButton(
                     onPressed: () => context.go('/vendor/create-popup'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.primaryDeepSage,
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Create Pop-up'),

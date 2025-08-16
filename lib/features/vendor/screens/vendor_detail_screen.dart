@@ -902,9 +902,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   String _buildVendorShareContent(ManagedVendor vendor) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🏪 Vendor Spotlight!');
+    buffer.writeln('Vendor Spotlight!');
     buffer.writeln();
-    buffer.writeln('📍 ${vendor.businessName}');
+    buffer.writeln('${vendor.businessName}');
     if (vendor.description.isNotEmpty) {
       buffer.writeln(vendor.description);
     }
@@ -912,7 +912,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     
     // Add products if available
     if (vendor.products.isNotEmpty) {
-      buffer.writeln('🛍️ Products: ${vendor.products.take(3).join(', ')}');
+      buffer.writeln('Products: ${vendor.products.take(3).join(', ')}');
       if (vendor.products.length > 3) {
         buffer.writeln('...and ${vendor.products.length - 3} more!');
       }
@@ -921,10 +921,10 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     
     // Add contact info if available
     if (vendor.phoneNumber != null && vendor.phoneNumber!.isNotEmpty) {
-      buffer.writeln('📞 ${vendor.phoneNumber}');
+      buffer.writeln('Phone: ${vendor.phoneNumber}');
     }
     if (vendor.instagramHandle != null && vendor.instagramHandle!.isNotEmpty) {
-      buffer.writeln('📱 @${vendor.instagramHandle}');
+      buffer.writeln('Instagram: @${vendor.instagramHandle}');
     }
     buffer.writeln();
     

@@ -78,7 +78,19 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.vendorPost.vendorName),
-        backgroundColor: Colors.orange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF6F9686), // Soft Sage
+                Color(0xFF946C7E), // Mauve
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         actions: [
           FavoriteButton.post(

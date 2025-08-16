@@ -126,7 +126,7 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
         });
 
         String message = _isNotifying 
-            ? '🔔 ${hasFeature ? 'Notifications on for' : 'Saved'} ${widget.vendorName}' 
+            ? '${hasFeature ? 'Notifications on for' : 'Saved'} ${widget.vendorName}' 
             : '🔕 ${hasFeature ? 'Notifications off for' : 'Removed'} ${widget.vendorName}';
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -205,7 +205,7 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('✅ Vendor saved! You can save vendors for free.'),
+            const Text('Vendor saved! You can save vendors for free.'),
             const SizedBox(height: 16),
             const Text(
               'Upgrade to Shopper Premium (\$4/month) for notifications:',

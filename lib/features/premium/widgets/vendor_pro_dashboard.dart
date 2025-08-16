@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 /// Vendor Pro specific dashboard component
 class VendorProDashboard extends StatelessWidget {
@@ -36,7 +37,7 @@ class VendorProDashboard extends StatelessWidget {
             'Growth Score',
             '${summary['growthScore']?.toStringAsFixed(1) ?? '0.0'}',
             Icons.trending_up,
-            Colors.green,
+            HiPopColors.successGreen,
           ),
         ),
         const SizedBox(width: 12),
@@ -46,7 +47,7 @@ class VendorProDashboard extends StatelessWidget {
             'CAC/CLV Ratio',
             '1:${(summary['clvRatio'] ?? 3.2).toStringAsFixed(1)}',
             Icons.people,
-            Colors.blue,
+            HiPopColors.infoBlueGray,
           ),
         ),
         const SizedBox(width: 12),
@@ -56,7 +57,7 @@ class VendorProDashboard extends StatelessWidget {
             'Profit Margin',
             '${(summary['profitMargin'] ?? 0.35 * 100).toStringAsFixed(1)}%',
             Icons.attach_money,
-            Colors.purple,
+            HiPopColors.accentMauve,
           ),
         ),
       ],
@@ -125,21 +126,21 @@ class VendorProDashboard extends StatelessWidget {
                   child: _buildMetricItem(
                     'Revenue Growth',
                     '${((growthMetrics['revenueGrowthRate'] ?? 0.12) * 100).toStringAsFixed(1)}%',
-                    Colors.green,
+                    HiPopColors.successGreen,
                   ),
                 ),
                 Expanded(
                   child: _buildMetricItem(
                     'Customer Growth',
                     '${((growthMetrics['customerGrowthRate'] ?? 0.18) * 100).toStringAsFixed(1)}%',
-                    Colors.blue,
+                    HiPopColors.infoBlueGray,
                   ),
                 ),
                 Expanded(
                   child: _buildMetricItem(
                     'Market Share',
                     '${((growthMetrics['marketShareGrowth'] ?? 0.08) * 100).toStringAsFixed(1)}%',
-                    Colors.orange,
+                    HiPopColors.premiumGold,
                   ),
                 ),
               ],

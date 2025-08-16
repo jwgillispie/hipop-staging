@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class AuthLandingScreen extends StatelessWidget {
   const AuthLandingScreen({super.key});
@@ -12,7 +13,7 @@ class AuthLandingScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.orange, Colors.deepOrange],
+            colors: [HiPopColors.primaryDeepSage, HiPopColors.secondarySoftSage],
           ),
         ),
         child: SafeArea(
@@ -30,7 +31,7 @@ class AuthLandingScreen extends StatelessWidget {
                     size: 28,
                   ),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
                     padding: const EdgeInsets.all(12),
                   ),
                   tooltip: 'Legal Documents',
@@ -52,11 +53,11 @@ class AuthLandingScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
+                Text(
                   'Connect shoppers with local pop-up vendors',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.white70,
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -75,8 +76,8 @@ class AuthLandingScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.go('/login?type=shopper'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.shopperAccent,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -97,8 +98,8 @@ class AuthLandingScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.go('/login?type=vendor'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.vendorAccent,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -119,8 +120,8 @@ class AuthLandingScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.go('/login?type=market_organizer'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.green,
+                      backgroundColor: HiPopColors.organizerAccent,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -139,9 +140,9 @@ class AuthLandingScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85)),
                     ),
                     GestureDetector(
                       onTap: () => _showSignupOptions(context),
@@ -170,7 +171,7 @@ class AuthLandingScreen extends StatelessWidget {
   void _showSignupOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: HiPopColors.lightBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -179,11 +180,12 @@ class AuthLandingScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Sign up as:',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.lightTextPrimary,
               ),
             ),
             const SizedBox(height: 24),
@@ -195,7 +197,7 @@ class AuthLandingScreen extends StatelessWidget {
                   context.go('/signup?type=shopper');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: HiPopColors.shopperAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -220,7 +222,7 @@ class AuthLandingScreen extends StatelessWidget {
                   context.go('/signup?type=vendor');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: HiPopColors.vendorAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -245,7 +247,7 @@ class AuthLandingScreen extends StatelessWidget {
                   context.go('/signup?type=market_organizer');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: HiPopColors.organizerAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

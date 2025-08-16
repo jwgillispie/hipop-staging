@@ -1138,9 +1138,9 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   String _buildVendorPostShareContent(VendorPost post) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🎪 Pop-up Event Alert!');
+    buffer.writeln('Pop-up Event Alert!');
     buffer.writeln();
-    buffer.writeln('🛒 ${post.vendorName}');
+    buffer.writeln('${post.vendorName}');
     
     if (post.description.isNotEmpty) {
       buffer.writeln();
@@ -1148,19 +1148,19 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     }
     
     buffer.writeln();
-    buffer.writeln('📅 ${_formatPostDateTime(post.popUpStartDateTime)} - ${_formatTime(post.popUpEndDateTime)}');
+    buffer.writeln('Date/Time: ${_formatPostDateTime(post.popUpStartDateTime)} - ${_formatTime(post.popUpEndDateTime)}');
     
     if (post.locationName != null && post.locationName!.isNotEmpty) {
-      buffer.writeln('📍 ${post.locationName}');
+      buffer.writeln('Location: ${post.locationName}');
     }
     
     if (post.instagramHandle != null && post.instagramHandle!.isNotEmpty) {
-      buffer.writeln('📱 @${post.instagramHandle}');
+      buffer.writeln('Instagram: @${post.instagramHandle}');
     }
     
     buffer.writeln();
     buffer.writeln('Don\'t miss out on fresh local products!');
-    buffer.writeln('Shared via HiPop 🍎');
+    buffer.writeln('Shared via HiPop');
     
     return buffer.toString();
   }
@@ -1553,26 +1553,26 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   String _buildMarketShareContent(Market market) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🏪 Market Discovery!');
+    buffer.writeln('Market Discovery!');
     buffer.writeln();
-    buffer.writeln('📍 ${market.name}');
+    buffer.writeln('${market.name}');
     if (market.description != null && market.description!.isNotEmpty) {
       buffer.writeln();
       buffer.writeln(market.description);
     }
     buffer.writeln();
-    buffer.writeln('📍 Location: ${market.address}');
+    buffer.writeln('Location: ${market.address}');
     buffer.writeln();
     
     // Add event information if available
     if (market.eventDate != null) {
-      buffer.writeln('🗓️ Event Details:');
+      buffer.writeln('Event Details:');
       buffer.writeln('• Date: ${market.eventDisplayInfo}');
       buffer.writeln('• Hours: ${market.startTime} - ${market.endTime}');
       buffer.writeln();
     }
     
-    buffer.writeln('🛒 Visit this amazing local market!');
+    buffer.writeln('Visit this amazing local market!');
     buffer.writeln();
     
     buffer.writeln('Discovered on HiPop - Find local markets & pop-ups');

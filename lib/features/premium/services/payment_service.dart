@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -179,18 +180,18 @@ class PaymentService {
           billingDetails: BillingDetails(
             email: customerEmail,
           ),
-          appearance: const PaymentSheetAppearance(
+          appearance: PaymentSheetAppearance(
             primaryButton: PaymentSheetPrimaryButtonAppearance(
               colors: PaymentSheetPrimaryButtonTheme(
                 light: PaymentSheetPrimaryButtonThemeColors(
-                  background: Color(0xFF6366F1), // Indigo color
-                  text: Color(0xFFFFFFFF),
-                  border: Color(0xFF6366F1),
+                  background: const Color(0xFF6366F1), // Indigo color
+                  text: const Color(0xFFFFFFFF),
+                  border: const Color(0xFF6366F1),
                 ),
                 dark: PaymentSheetPrimaryButtonThemeColors(
-                  background: Color(0xFF6366F1),
-                  text: Color(0xFFFFFFFF),
-                  border: Color(0xFF6366F1),
+                  background: const Color(0xFF6366F1),
+                  text: const Color(0xFFFFFFFF),
+                  border: const Color(0xFF6366F1),
                 ),
               ),
             ),
@@ -220,10 +221,9 @@ class PaymentService {
     try {
       debugPrint('💳 Presenting Payment Sheet...');
 
-      final result = await Stripe.instance.presentPaymentSheet();
+      await Stripe.instance.presentPaymentSheet();
       
-      debugPrint('✅ Payment Sheet completed with result: $result');
-      return result;
+      debugPrint('✅ Payment Sheet completed successfully');
     } catch (e) {
       debugPrint('❌ Payment Sheet error: $e');
       
@@ -255,7 +255,7 @@ class PaymentService {
   }
 
   /// Complete payment flow using Payment Sheet (mobile only)
-  static Future<PaymentSheetResult> processPaymentWithSheet({
+  static Future<void> processPaymentWithSheet({
     required String priceId,
     required String customerEmail,
     required String userId,
@@ -287,10 +287,9 @@ class PaymentService {
       );
 
       // Step 3: Present Payment Sheet
-      final result = await presentPaymentSheet();
+      await presentPaymentSheet();
 
       debugPrint('✅ Payment Sheet flow completed successfully');
-      return result;
     } catch (e) {
       debugPrint('❌ Payment Sheet flow failed: $e');
       rethrow;

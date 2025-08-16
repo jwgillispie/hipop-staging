@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class OrganizerOnboardingScreen extends StatefulWidget {
   const OrganizerOnboardingScreen({super.key});
@@ -54,7 +55,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.green.shade50,
+      backgroundColor: HiPopColors.surfacePalePink.withValues(alpha: 0.3),
       body: SafeArea(
         child: Column(
           children: [
@@ -66,8 +67,8 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   Expanded(
                     child: LinearProgressIndicator(
                       value: (_currentPage + 1) / _totalPages,
-                      backgroundColor: Colors.green.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade600),
+                      backgroundColor: HiPopColors.organizerAccent.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.organizerAccent),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -75,7 +76,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                     onPressed: _skipOnboarding,
                     child: Text(
                       'Skip',
-                      style: TextStyle(color: Colors.green.shade700),
+                      style: TextStyle(color: HiPopColors.organizerAccentDark),
                     ),
                   ),
                 ],
@@ -112,8 +113,8 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                       child: OutlinedButton(
                         onPressed: _previousPage,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.green.shade700,
-                          side: BorderSide(color: Colors.green.shade300),
+                          foregroundColor: HiPopColors.organizerAccentDark,
+                          side: BorderSide(color: HiPopColors.organizerAccent.withValues(alpha: 0.4)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: const Text('Previous'),
@@ -124,7 +125,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade600,
+                        backgroundColor: HiPopColors.organizerAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -149,13 +150,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.storefront,
               size: 80,
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -163,7 +164,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'Welcome to HiPop!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -171,7 +172,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Text(
             'You\'re now a Market Organizer! Let us show you how to manage your farmers market with ease.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -181,13 +182,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.shade200),
+              border: Border.all(color: HiPopColors.organizerAccent.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.lightbulb_outline,
-                  color: Colors.amber.shade600,
+                  color: HiPopColors.warningAmber,
                   size: 24,
                 ),
                 const SizedBox(height: 12),
@@ -195,7 +196,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   'What you\'ll learn:',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -205,7 +206,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   '• Viewing analytics and insights\n'
                   '• Using the market calendar\n'
                   '• Getting started with your first market',
-                  style: TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 14, color: HiPopColors.lightTextSecondary),
                 ),
               ],
             ),
@@ -224,13 +225,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.teal.shade100,
+              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.storefront,
               size: 70,
-              color: Colors.teal.shade700,
+              color: HiPopColors.primaryDeepSage,
             ),
           ),
           const SizedBox(height: 40),
@@ -238,7 +239,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'Market Management',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -246,7 +247,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Text(
             'Create and manage your farmers markets with detailed information, operating schedules, and location data.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -258,7 +259,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -270,21 +271,21 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   Icons.add_location,
                   'Add Market Details',
                   'Name, address, and description',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.schedule,
                   'Set Operating Hours',
                   'Days and times your market is open',
-                  Colors.orange,
+                  HiPopColors.vendorAccent,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.visibility,
                   'Make It Public',
                   'Shoppers can discover your market',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
               ],
             ),
@@ -303,13 +304,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.orange.shade100,
+              color: HiPopColors.vendorAccent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.assignment_turned_in,
               size: 70,
-              color: Colors.orange.shade700,
+              color: HiPopColors.vendorAccentDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -317,7 +318,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'Vendor Connections',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -325,7 +326,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Text(
             'Manage vendor connections with ease. Share application links and review connections in one place.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -337,7 +338,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -349,21 +350,21 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   Icons.share,
                   'Share Application Links',
                   'Send vendors a direct link to apply',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.rate_review,
                   'Review Applications',
                   'Approve, reject, or waitlist vendors',
-                  Colors.purple,
+                  HiPopColors.accentMauve,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.notifications,
                   'Get Notified',
                   'Receive new applications instantly',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
               ],
             ),
@@ -372,20 +373,20 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.tips_and_updates, color: Colors.blue.shade600, size: 20),
+                Icon(Icons.tips_and_updates, color: HiPopColors.infoBlueGray, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Tip: The application form collects all vendor info automatically - no paper forms needed!',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue.shade700,
+                      color: HiPopColors.infoBlueGrayDark,
                     ),
                   ),
                 ),
@@ -406,13 +407,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.analytics,
               size: 70,
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -420,7 +421,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'Analytics Dashboard',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -428,7 +429,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Text(
             'Track your market\'s performance with analytics. Upgrade to Market Organizer Pro (\$69/month) for advanced insights, vendor directory, and unlimited features.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -440,7 +441,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -452,21 +453,21 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   Icons.trending_up,
                   'Vendor Metrics',
                   'Active, pending, and approved vendors',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.download,
                   'Export Data',
                   'Download reports for offline analysis',
-                  Colors.purple,
+                  HiPopColors.accentMauve,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.workspace_premium,
                   'Vendor Directory (Pro)',
                   'Search & filter all vendors with premium',
-                  Colors.amber,
+                  HiPopColors.warningAmber,
                 ),
               ],
             ),
@@ -478,7 +479,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.shade50,
+                    color: HiPopColors.successGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -488,14 +489,14 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green.shade700,
+                          color: HiPopColors.organizerAccentDark,
                         ),
                       ),
                       Text(
                         'Active Vendors',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.green.shade600,
+                          color: HiPopColors.organizerAccent,
                         ),
                       ),
                     ],
@@ -507,7 +508,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -517,14 +518,14 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.orange.shade700,
+                          color: HiPopColors.vendorAccentDark,
                         ),
                       ),
                       Text(
                         'Pending Apps',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.orange.shade600,
+                          color: HiPopColors.vendorAccent,
                         ),
                       ),
                     ],
@@ -547,13 +548,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.teal.shade100,
+              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.calendar_today,
               size: 70,
-              color: Colors.teal.shade700,
+              color: HiPopColors.primaryDeepSage,
             ),
           ),
           const SizedBox(height: 40),
@@ -561,7 +562,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'Market Calendar',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -569,7 +570,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Text(
             'Visualize your market schedules and operating days in an easy-to-read calendar format.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -581,7 +582,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -593,21 +594,21 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   Icons.event,
                   'Operating Schedule',
                   'See all your market operating days',
-                  Colors.blue,
+                  HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.schedule,
                   'Real-time Status',
                   'Know which markets are open now',
-                  Colors.green,
+                  HiPopColors.successGreen,
                 ),
                 const Divider(),
                 _buildFeatureItem(
                   Icons.calendar_view_month,
                   'Monthly View',
                   'Plan ahead with calendar overview',
-                  Colors.purple,
+                  HiPopColors.accentMauve,
                 ),
               ],
             ),
@@ -618,7 +619,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: HiPopColors.lightBorder),
             ),
             child: Column(
               children: [
@@ -628,7 +629,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                       width: 12,
                       height: 12,
                       decoration: const BoxDecoration(
-                        color: Colors.green,
+                        color: HiPopColors.successGreen,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -643,7 +644,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                       width: 12,
                       height: 12,
                       decoration: const BoxDecoration(
-                        color: Colors.orange,
+                        color: HiPopColors.vendorAccent,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -668,13 +669,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.rocket_launch,
               size: 80,
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
           ),
           const SizedBox(height: 40),
@@ -682,7 +683,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             'You\'re All Set!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+              color: HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -690,7 +691,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Text(
             'You now know how to manage your farmers market with HiPop. Let\'s create your first market!',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.green.shade700,
+              color: HiPopColors.organizerAccentDark,
             ),
             textAlign: TextAlign.center,
           ),
@@ -702,7 +703,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.green.shade100,
+                  color: HiPopColors.organizerAccent.withValues(alpha: 0.15),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -712,7 +713,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               children: [
                 Icon(
                   Icons.checklist,
-                  color: Colors.green.shade600,
+                  color: HiPopColors.organizerAccent,
                   size: 32,
                 ),
                 const SizedBox(height: 16),
@@ -720,7 +721,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   'Quick Start Checklist',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green.shade800,
+                    color: HiPopColors.lightTextPrimary,
                     fontSize: 16,
                   ),
                 ),
@@ -738,20 +739,20 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.support_agent, color: Colors.blue.shade600, size: 20),
+                Icon(Icons.support_agent, color: HiPopColors.infoBlueGray, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Need help? You can always replay this onboarding from the settings menu.',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue.shade700,
+                      color: HiPopColors.infoBlueGrayDark,
                     ),
                   ),
                 ),
@@ -783,15 +784,16 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
                 Text(
                   description,
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: HiPopColors.lightTextSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -811,13 +813,13 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           Icon(
             Icons.check_circle_outline,
             size: 16,
-            color: Colors.green.shade600,
+            color: HiPopColors.organizerAccent,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 14, color: HiPopColors.darkTextPrimary),
             ),
           ),
         ],

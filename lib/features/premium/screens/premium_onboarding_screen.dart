@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../models/user_subscription.dart';
-import '../services/subscription_service.dart';
 import '../services/staging_test_service.dart';
 import '../services/payment_service.dart';
-import 'stripe_checkout_screen.dart';
 import '../widgets/stripe_payment_form.dart';
 
 /// Premium onboarding screen that guides users through tier selection and setup
@@ -31,7 +29,6 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   Map<String, dynamic>? _selectedPlan;
   SubscriptionPricing? _selectedPricing;
   bool _isProcessing = false;
-  String? _errorMessage;
   bool _useRealPayments = true; // ENABLED for real payments!
 
   @override
@@ -63,11 +60,20 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: HiPopColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Upgrade to Premium'),
+        title: Text(
+          'Upgrade to Premium',
+          style: TextStyle(
+            color: HiPopColors.lightTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        iconTheme: IconThemeData(
+          color: HiPopColors.lightTextPrimary,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {
@@ -97,7 +103,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
               ),
-              child: const Text('Back'),
+              child: Text(
+                'Back',
+                style: TextStyle(
+                  color: HiPopColors.primaryDeepSage,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
         ],
       ),
@@ -133,7 +145,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 2),
               height: 4,
               decoration: BoxDecoration(
-                color: index <= _currentPage ? Colors.blue : Colors.grey.shade300,
+                color: index <= _currentPage ? HiPopColors.primaryDeepSage : HiPopColors.backgroundWarmGray.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -152,13 +164,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: HiPopColors.primaryOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.rocket_launch,
               size: 80,
-              color: Colors.blue.shade600,
+              color: HiPopColors.primaryDeepSage,
             ),
           ),
           const SizedBox(height: 32),
@@ -167,6 +179,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: HiPopColors.lightTextPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -174,7 +187,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             _getWelcomeDescription(),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
+              color: HiPopColors.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 48),
@@ -206,10 +219,10 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.green.shade50,
+            color: HiPopColors.primaryOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: Colors.green.shade600, size: 24),
+          child: Icon(icon, color: HiPopColors.primaryDeepSage, size: 24),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -218,16 +231,17 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: HiPopColors.lightTextPrimary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 description,
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: HiPopColors.lightTextSecondary,
                   fontSize: 14,
                 ),
               ),
@@ -248,13 +262,14 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'Choose Your Plan',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: HiPopColors.lightTextPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Select the plan that best fits your business needs',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
+              color: HiPopColors.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 32),
@@ -290,10 +305,10 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected ? Colors.blue : Colors.grey.shade300,
+                color: isSelected ? HiPopColors.primaryDeepSage : HiPopColors.backgroundWarmGray.withValues(alpha: 0.3),
                 width: isSelected ? 2 : 1,
               ),
-              color: isSelected ? Colors.blue.shade50 : Colors.white,
+              color: isSelected ? HiPopColors.primaryOpacity(0.05) : Colors.white,
             ),
             child: Stack(
               children: [
@@ -304,7 +319,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.orange,
+                        color: HiPopColors.warningAmber,
                         borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(8),
                           bottomRight: Radius.circular(8),
@@ -332,13 +347,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                             tierData['title'],
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: isSelected ? Colors.blue.shade700 : null,
+                              color: isSelected ? HiPopColors.primaryDeepSage : HiPopColors.lightTextPrimary,
                             ),
                           ),
                           if (isSelected)
                             Icon(
                               Icons.check_circle,
-                              color: Colors.blue.shade600,
+                              color: HiPopColors.primaryDeepSage,
                               size: 24,
                             ),
                         ],
@@ -347,7 +362,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                       Text(
                         tierData['description'],
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: HiPopColors.lightTextSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -359,14 +374,14 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                             tierData['price'],
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Colors.green.shade600,
+                              color: HiPopColors.primaryDeepSage,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             '/month',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: HiPopColors.lightTextSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -375,9 +390,10 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                       const SizedBox(height: 16),
                       Text(
                         'Key Features:',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
+                          color: HiPopColors.lightTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -388,27 +404,30 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                             children: [
                               Icon(
                                 Icons.check,
-                                color: Colors.green.shade600,
+                                color: HiPopColors.primaryDeepSage,
                                 size: 16,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   feature,
-                                  style: const TextStyle(fontSize: 13),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: HiPopColors.lightTextSecondary,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ).toList()),
+                      )),
                       if ((tierData['features'] as List<String>).length > 4)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             '+${(tierData['features'] as List<String>).length - 4} more features',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: HiPopColors.lightTextTertiary,
                               fontSize: 12,
                               fontStyle: FontStyle.italic,
                             ),
@@ -431,7 +450,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         return [
           {
             'tier': SubscriptionTier.vendorPro,
-            'title': 'Vendor Pro',
+            'title': 'Vendor Premium',
             'price': '\$29.00',
             'description': 'Perfect for growing food vendors and artisans',
             'recommended': true,
@@ -503,7 +522,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         return [
           {
             'tier': SubscriptionTier.vendorPro,
-            'title': 'Vendor Pro',
+            'title': 'Vendor Premium',
             'price': '\$29.00',
             'description': 'Great for individual vendors',
             'features': [
@@ -531,13 +550,14 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             '${_selectedPlan!['title']} Features',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: HiPopColors.lightTextPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Here\'s what you\'ll get with your ${_selectedPlan!['title']} subscription:',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
+              color: HiPopColors.lightTextSecondary,
             ),
           ),
           const SizedBox(height: 32),
@@ -550,7 +570,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.shade200,
+                    color: HiPopColors.backgroundWarmGray.withValues(alpha: 0.2),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -561,12 +581,12 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: HiPopColors.primaryOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       _getFeatureIcon(feature),
-                      color: Colors.green.shade600,
+                      color: HiPopColors.primaryDeepSage,
                       size: 20,
                     ),
                   ),
@@ -577,16 +597,17 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                       children: [
                         Text(
                           feature,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
+                            color: HiPopColors.lightTextPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           _getFeatureDescription(feature),
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: HiPopColors.lightTextSecondary,
                             fontSize: 14,
                           ),
                         ),
@@ -596,26 +617,26 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                 ],
               ),
             ),
-          ).toList(),
+          ),
           const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.info,
-                  color: Colors.blue.shade600,
+                  color: HiPopColors.accentMauve,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'You can cancel anytime. Your subscription will remain active until the end of your billing period.',
                     style: TextStyle(
-                      color: Colors.blue.shade700,
+                      color: HiPopColors.lightTextPrimary,
                       fontSize: 14,
                     ),
                   ),
@@ -752,7 +773,6 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
               setState(() {
                 _currentPage = 4; // Go to success page
                 _isProcessing = false;
-                _errorMessage = null;
               });
               _pageController.animateToPage(
                 4,
@@ -768,198 +788,21 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           debugPrint('❌ Payment error received: $error');
           if (mounted) {
             setState(() {
-              _errorMessage = error;
               _isProcessing = false;
             });
+            // Show error in a snackbar or dialog
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(error),
+                backgroundColor: HiPopColors.errorPlum,
+              ),
+            );
           }
         },
       ),
     );
   }
 
-  Widget _buildStagingPaymentPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.science, color: Colors.orange.shade600),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'STAGING MODE: This is a test payment that will simulate subscription activation.',
-                    style: TextStyle(
-                      color: Colors.orange.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Complete Your Subscription',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 32),
-          if (_selectedPlan != null) ...[
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.shade200,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Subscription Summary',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Plan:', style: TextStyle(color: Colors.grey.shade600)),
-                      Text(
-                        _selectedPlan!['title'],
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Billing:', style: TextStyle(color: Colors.grey.shade600)),
-                      Text(
-                        'Monthly',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total:',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${_selectedPlan!['price']}/month',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error, color: Colors.red.shade600),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red.shade700),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: Builder(
-                builder: (context) {
-                  debugPrint('🔄 Button build - _isProcessing: $_isProcessing');
-                  return ElevatedButton(
-                    onPressed: _isProcessing ? null : _processSubscription,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isProcessing
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        _useRealPayments 
-                          ? 'Subscribe Now - ${_selectedPlan!['price']}/month'
-                          : 'Test Subscribe - ${_selectedPlan!['price']}/month',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                  );
-                }
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'By subscribing, you agree to our Terms of Service and Privacy Policy. You can cancel anytime from your account settings.',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildSuccessPage() {
     return Padding(
@@ -970,13 +813,13 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: HiPopColors.primaryOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.check_circle,
               size: 80,
-              color: Colors.green.shade600,
+              color: HiPopColors.primaryDeepSage,
             ),
           ),
           const SizedBox(height: 32),
@@ -984,7 +827,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'Welcome to Premium!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
+              color: HiPopColors.primaryDeepSage,
             ),
             textAlign: TextAlign.center,
           ),
@@ -992,7 +835,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           Text(
             'Your ${_selectedPlan?['title']} subscription is now active. You can start exploring all the premium features right away.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
+              color: HiPopColors.lightTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -1049,7 +892,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: HiPopColors.backgroundWarmGray.withValues(alpha: 0.2),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -1064,6 +907,10 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                 ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: HiPopColors.primaryDeepSage,
+                  side: BorderSide(color: HiPopColors.primaryDeepSage),
+                ),
                 child: const Text('Previous'),
               ),
             ),
@@ -1073,7 +920,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             child: ElevatedButton(
               onPressed: _getNextButtonAction(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: HiPopColors.primaryDeepSage,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -1141,79 +988,6 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
     }
   }
 
-  Future<void> _processSubscription() async {
-    if (_selectedTier == null || _selectedPlan == null) return;
-
-    setState(() {
-      _isProcessing = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Get user email for checkout session
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser?.email == null) {
-        throw Exception('User email is required for subscription');
-      }
-
-      debugPrint('Processing subscription for ${_selectedPlan!['title']}');
-      
-      // Check if we should use real payments
-      if (_useRealPayments) {
-        debugPrint('💳 Using REAL Stripe checkout');
-        
-        // Navigate to Stripe checkout screen for real payments
-        if (mounted) {
-          final result = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StripeCheckoutScreen(
-                userId: widget.userId,
-                userType: widget.userType,
-                selectedTier: _selectedTier!,
-              ),
-            ),
-          );
-          
-          // If payment was successful, navigate to success
-          if (result == true && mounted) {
-            _pageController.animateToPage(
-              3, // Success page
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          }
-        }
-      } else {
-        debugPrint('🧪 [STAGING] Using test payment flow');
-        // Simulate payment processing delay for realistic UX
-        await Future.delayed(const Duration(seconds: 2));
-        
-        // Use staging test service for controlled testing
-        await StagingTestService.simulatePremiumUpgrade(
-          userId: widget.userId,
-          userType: widget.userType,
-          specificTier: _selectedTier!,
-        );
-      }
-      
-      // Navigate to success page and reset processing state
-      setState(() {
-        _isProcessing = false;
-      });
-      
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-      
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Payment failed: ${e.toString()}';
-        _isProcessing = false;
-      });
-    }
-  }
 
   String _getWelcomeTitle() {
     switch (widget.userType) {
@@ -1229,11 +1003,11 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   String _getWelcomeDescription() {
     switch (widget.userType) {
       case 'market_organizer':
-        return 'Unlock powerful vendor recruitment tools, market analytics, and advanced features designed to help you build thriving farmers markets.';
+        return 'Unlock powerful vendor recruitment tools, market analytics, and advanced features designed to help you build thriving markets.';
       case 'vendor':
-        return 'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed as a vendor in farmers markets.';
+        return 'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed as a vendor for your pop-ps.';
       default:
-        return 'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed in the farmers market ecosystem.';
+        return 'Unlock powerful analytics, growth insights, and advanced features designed to help you succeed in the market ecosystem.';
     }
   }
 

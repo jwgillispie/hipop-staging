@@ -10,6 +10,10 @@ import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/premium/widgets/vendor_premium_dashboard_components.dart';
+import 'package:hipop/core/widgets/hipop_app_bar.dart';
+import 'package:hipop/core/widgets/metric_card.dart';
+import 'package:hipop/core/widgets/premium_upgrade_card.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class VendorAnalyticsScreen extends StatefulWidget {
   const VendorAnalyticsScreen({super.key});
@@ -184,33 +188,10 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: Row(
-              children: [
-                const Text('Analytics Dashboard'),
-                const Spacer(),
-                if (_hasPremiumAccess) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade600,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'PRO',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            backgroundColor: Colors.orange,
-            foregroundColor: Colors.white,
-            elevation: 0,
+          appBar: HiPopAppBar(
+            title: 'Analytics Dashboard',
+            userRole: 'vendor',
+            showPremiumBadge: _hasPremiumAccess,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -267,12 +248,15 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  VendorPremiumDashboardComponents.buildPremiumHeader(
-                    context,
-                    title: 'Vendor Pro Analytics',
-                    subtitle: 'Track your market performance and application analytics',
-                  ),
-                  const SizedBox(height: 24),
+                  // Only show premium header for non-premium users
+                  if (!_hasPremiumAccess) ...[
+                    VendorPremiumDashboardComponents.buildPremiumHeader(
+                      context,
+                      title: 'Vendor Premium Analytics',
+                      subtitle: 'Track your market performance and application analytics',
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                   _buildBasicOverviewSection(analytics, posts),
                   const SizedBox(height: 24),
                   _buildPostPerformanceSection(posts),
@@ -340,41 +324,35 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
           'Basic Overview',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.orange[700],
+            color: HiPopColors.vendorAccent,
           ),
         ),
         const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.2,
-          children: [
-            _buildBasicMetricCard(
-              'Total Views',
-              '${analytics['totalViews'] ?? 0}',
-              Icons.visibility,
-              Colors.blue,
+        MetricCardGrid(
+          cards: [
+            MetricCard(
+              title: 'Total Views',
+              value: '${analytics['totalViews'] ?? 0}',
+              icon: Icons.visibility,
+              type: MetricType.info,
             ),
-            _buildBasicMetricCard(
-              'Total Favorites',
-              '${analytics['totalFavorites'] ?? 0}',
-              Icons.favorite,
-              Colors.red,
+            MetricCard(
+              title: 'Total Favorites',
+              value: '${analytics['totalFavorites'] ?? 0}',
+              icon: Icons.favorite,
+              type: MetricType.error,
             ),
-            _buildBasicMetricCard(
-              'Active Pop-ups',
-              '$activePosts',
-              Icons.event_available,
-              Colors.green,
+            MetricCard(
+              title: 'Active Pop-ups',
+              value: '$activePosts',
+              icon: Icons.event_available,
+              type: MetricType.active,
             ),
-            _buildBasicMetricCard(
-              'Happening Now',
-              '$happeningNow',
-              Icons.play_circle_fill,
-              Colors.orange,
+            MetricCard(
+              title: 'Happening Now',
+              value: '$happeningNow',
+              icon: Icons.play_circle_fill,
+              type: MetricType.happening,
             ),
           ],
         ),
@@ -403,7 +381,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
             Text(
               title,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),
@@ -430,21 +408,21 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
                 Icon(
                   Icons.analytics_outlined,
                   size: 64,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'No Analytics Data Yet',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[700],
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Start creating pop-ups to see your analytics here!',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -478,7 +456,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
           'Post Performance',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.orange[700],
+            color: HiPopColors.vendorAccent,
           ),
         ),
         const SizedBox(height: 16),
@@ -510,10 +488,10 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: post.isHappening 
-                        ? Colors.green 
+                        ? HiPopColors.successGreen 
                         : post.isUpcoming 
-                            ? Colors.orange 
-                            : Colors.grey,
+                            ? HiPopColors.accentMauve 
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -534,7 +512,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
             const SizedBox(height: 8),
             Text(
               post.description,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -548,7 +526,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
                 Text(
                   post.formattedDateTime,
                   style: TextStyle(
-                    color: Colors.grey[500],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     fontSize: 12,
                   ),
                 ),
@@ -563,12 +541,12 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   Widget _buildPerformanceMetric(IconData icon, String value, String label) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
         const SizedBox(width: 4),
         Text(
           '$value $label',
           style: TextStyle(
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
         ),
@@ -592,7 +570,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
           'Popular Locations',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.orange[700],
+            color: HiPopColors.vendorAccent,
           ),
         ),
         const SizedBox(height: 16),
@@ -613,7 +591,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Row(
                             children: [
-                              Icon(Icons.location_on, color: Colors.orange[600]),
+                              Icon(Icons.location_on, color: HiPopColors.vendorAccent),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -627,13 +605,13 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange[100],
+                                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   '${entry.value} pop-ups',
                                   style: TextStyle(
-                                    color: Colors.orange[700],
+                                    color: HiPopColors.vendorAccent,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -656,20 +634,20 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(icon, size: 48, color: Colors.grey[400]),
+            Icon(icon, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               title,
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(color: Colors.grey[500]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -679,6 +657,8 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   }
 
   Widget _buildPremiumOnlyMessage() {
+    final theme = Theme.of(context);
+    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -688,37 +668,37 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: HiPopColors.premiumGold.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.orange.shade300),
+                border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
               ),
               child: Icon(
                 Icons.analytics,
                 size: 64,
-                color: Colors.orange[700],
+                color: HiPopColors.premiumGold,
               ),
             ),
             const SizedBox(height: 24),
             Text(
               'Analytics Dashboard',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.orange[800],
+                color: HiPopColors.premiumGoldDark,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              'Track your application performance with Vendor Pro (\$29/month).',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[700],
+              'Track your application performance with Vendor Premium (\$29/month).',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               'Get analytics on market applications, post views, and engagement tracking.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
               textAlign: TextAlign.center,
             ),

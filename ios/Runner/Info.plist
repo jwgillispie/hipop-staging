@@ -68,6 +68,14 @@
 				<string>hipop</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>stripe-payment</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>stripe-payment-return</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

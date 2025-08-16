@@ -109,11 +109,11 @@ class _VendorMarketItemsEditScreenState extends State<VendorMarketItemsEditScree
           children: [
             Icon(Icons.diamond, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Upgrade to Vendor Pro'),
+            Text('Upgrade to Vendor Premium'),
           ],
         ),
         content: const Text(
-          'Free vendors can only add up to 3 items per market.\n\nUpgrade to Vendor Pro (\$29/month) for unlimited items, plus analytics and market discovery features!',
+          'Free vendors can only add up to 3 items per market.\n\nUpgrade to Vendor Premium (\$29/month) for unlimited items, plus analytics and market discovery features!',
         ),
         actions: [
           TextButton(
@@ -265,7 +265,7 @@ class _VendorMarketItemsEditScreenState extends State<VendorMarketItemsEditScree
                 if (!_isPremium) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Upgrade to Vendor Pro for unlimited items per market',
+                    'Upgrade to Vendor Premium for unlimited items per market',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,

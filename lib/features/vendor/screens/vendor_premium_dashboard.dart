@@ -9,6 +9,7 @@ import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/vendor/screens/vendor_sales_tracker_screen.dart';
 import 'package:hipop/features/vendor/screens/vendor_analytics_screen.dart';
 import 'package:hipop/features/premium/widgets/vendor_premium_dashboard_components.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class VendorPremiumDashboard extends StatefulWidget {
   const VendorPremiumDashboard({super.key});
@@ -104,13 +105,26 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(Icons.diamond, color: Colors.amber),
+            Icon(Icons.diamond, color: HiPopColors.premiumGold),
             SizedBox(width: 8),
             Text('Vendor Pro Dashboard'),
           ],
         ),
-        backgroundColor: Colors.green.shade700,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                HiPopColors.secondarySoftSage,
+                HiPopColors.accentMauve,
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

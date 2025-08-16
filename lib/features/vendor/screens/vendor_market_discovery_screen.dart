@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../market/models/market.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
@@ -197,7 +198,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -218,19 +219,19 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: HiPopColors.infoBlueGrayLight.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
+                border: Border.all(color: HiPopColors.infoBlueGrayLight.withValues(alpha: 0.2)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.language, color: Colors.blue.shade600),
+                  Icon(Icons.language, color: HiPopColors.infoBlueGray),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Visit market website or contact organizer directly',
                       style: TextStyle(
-                        color: Colors.blue.shade700,
+                        color: HiPopColors.infoBlueGrayDark,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -242,7 +243,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
             Text(
               'We\'ll save this market to your interests so you can easily find it later.',
               style: TextStyle(
-                color: Colors.grey[600],
+                color: HiPopColors.lightTextSecondary,
                 fontSize: 14,
               ),
             ),
@@ -276,12 +277,12 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Application saved for ${market.name}. Contact the market organizer to complete your application.'),
-                  backgroundColor: Colors.green,
+                  backgroundColor: HiPopColors.successGreen,
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: const Color(0xFF558B6E), // Deep Sage
               foregroundColor: Colors.white,
             ),
             child: const Text('Apply'),
@@ -300,7 +301,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${market.name} saved to your interested markets'),
-          backgroundColor: Colors.green,
+          backgroundColor: HiPopColors.successGreen,
         ),
       );
     } catch (e) {
@@ -311,19 +312,19 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: HiPopColors.surfacePalePink.withValues(alpha: 0.3),
       appBar: AppBar(
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
+                color: HiPopColors.accentMauve.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.diamond,
-                color: Colors.amber[700],
+                color: HiPopColors.accentMauve,
                 size: 20,
               ),
             ),
@@ -333,10 +334,10 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _remainingApplications > 0 ? Colors.green.shade100 : Colors.red.shade100,
+                  color: _remainingApplications > 0 ? HiPopColors.successGreenLight.withValues(alpha: 0.1) : HiPopColors.errorPlumLight.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _remainingApplications > 0 ? Colors.green.shade300 : Colors.red.shade300,
+                    color: _remainingApplications > 0 ? HiPopColors.successGreenLight.withValues(alpha: 0.3) : HiPopColors.errorPlumLight.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -345,7 +346,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     Icon(
                       Icons.send,
                       size: 14,
-                      color: _remainingApplications > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                      color: _remainingApplications > 0 ? HiPopColors.successGreenDark : HiPopColors.errorPlumDark,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -353,7 +354,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                           ? 'Unlimited' 
                           : '$_remainingApplications left',
                       style: TextStyle(
-                        color: _remainingApplications > 0 ? Colors.green.shade700 : Colors.red.shade700,
+                        color: _remainingApplications > 0 ? HiPopColors.successGreenDark : HiPopColors.errorPlumDark,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -364,14 +365,26 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
             ],
           ],
         ),
-        backgroundColor: Colors.orange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF6F9686), // Soft Sage
+                Color(0xFF946C7E), // Mauve
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: !_hasPremiumAccess
-          ? _buildUpgradePrompt()
-          : _isLoading
-              ? const LoadingWidget(message: 'Discovering markets for you...')
+      body: _isLoading
+          ? const LoadingWidget(message: 'Checking premium access...')
+          : !_hasPremiumAccess
+              ? _buildUpgradePrompt()
               : _error != null
                   ? ErrorDisplayWidget(
                       title: 'Discovery Error',
@@ -402,29 +415,29 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.amber.withValues(alpha: 0.1),
+              color: HiPopColors.accentMauve.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.amber.shade300),
+              border: Border.all(color: HiPopColors.accentMauveLight),
             ),
             child: Icon(
               Icons.diamond,
               size: 64,
-              color: Colors.amber[700],
+              color: HiPopColors.accentMauve,
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            'Upgrade to Vendor Pro',
+            'Upgrade to Vendor Premium',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange[800],
+              color: HiPopColors.accentMauve,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'Market Discovery helps you find markets actively looking for vendors like you.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey[700],
+              color: HiPopColors.lightTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -456,7 +469,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                       children: [
                         Icon(
                           Icons.check_circle,
-                          color: Colors.green[600],
+                          color: HiPopColors.successGreen,
                           size: 20,
                         ),
                         const SizedBox(width: 12),
@@ -485,7 +498,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: const Color(0xFF558B6E), // Deep Sage
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -498,7 +511,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   Icon(Icons.diamond),
                   const SizedBox(width: 8),
                   const Text(
-                    'Upgrade to Vendor Pro - \$29/month',
+                    'Upgrade to Vendor Premium - \$29/month',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -523,28 +536,28 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
 
   Widget _buildFiltersSection() {
     return Container(
-      color: Colors.white,
+      color: HiPopColors.lightSurface,
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Search bar
-          HiPopTextField(
-            controller: _searchController,
-            labelText: 'Search markets by name or location',
-            hintText: 'e.g., "Downtown Farmers Market"',
-            prefixIcon: const Icon(Icons.search),
-            onChanged: (_) => _performDiscovery(),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      _performDiscovery();
-                    },
-                  )
-                : null,
-          ),
-          const SizedBox(height: 16),
+          // Search bar - commented out for now
+          // HiPopTextField(
+          //   controller: _searchController,
+          //   labelText: 'Search markets by name or location',
+          //   hintText: 'e.g., "Downtown Farmers Market"',
+          //   prefixIcon: const Icon(Icons.search),
+          //   onChanged: (_) => _performDiscovery(),
+          //   suffixIcon: _searchController.text.isNotEmpty
+          //       ? IconButton(
+          //           icon: const Icon(Icons.clear),
+          //           onPressed: () {
+          //             _searchController.clear();
+          //             _performDiscovery();
+          //           },
+          //         )
+          //       : null,
+          // ),
+          // const SizedBox(height: 16),
           
           // Filter chips
           SingleChildScrollView(
@@ -615,8 +628,8 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       selected: isSelected,
       onSelected: onTap != null ? (_) => onTap() : null,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      selectedColor: Colors.orange.withValues(alpha: 0.2),
-      checkmarkColor: Colors.orange[700],
+      selectedColor: HiPopColors.primaryDeepSage.withValues(alpha: 0.2),
+      checkmarkColor: HiPopColors.primaryDeepSage,
     );
   }
 
@@ -653,7 +666,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                             child: Text(
                               result.market.fullAddress,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
+                                color: HiPopColors.lightTextSecondary,
                               ),
                             ),
                           ),
@@ -666,19 +679,19 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: HiPopColors.successGreenLight.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.shade300),
+                      border: Border.all(color: HiPopColors.successGreenLight.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.trending_up, size: 14, color: Colors.green.shade700),
+                        Icon(Icons.trending_up, size: 14, color: HiPopColors.successGreenDark),
                         const SizedBox(width: 4),
                         Text(
                           'Recruiting',
                           style: TextStyle(
-                            color: Colors.green.shade700,
+                            color: HiPopColors.successGreenDark,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -712,7 +725,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   _buildMetricChip(
                     Icons.attach_money,
                     '\$${result.estimatedFees!.dailyBoothFee.toStringAsFixed(0)}/day',
-                    Colors.orange,
+                    HiPopColors.warningAmber,
                   ),
               ],
             ),
@@ -727,13 +740,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.lightbulb, size: 16, color: Colors.amber[700]),
+                      Icon(Icons.lightbulb, size: 16, color: HiPopColors.warningAmber),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           insight,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[700],
+                            color: HiPopColors.lightTextSecondary,
                           ),
                         ),
                       ),
@@ -748,13 +761,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.trending_up, size: 16, color: Colors.green[600]),
+                      Icon(Icons.trending_up, size: 16, color: HiPopColors.successGreen),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           opportunity,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[700],
+                            color: HiPopColors.lightTextSecondary,
                           ),
                         ),
                       ),
@@ -773,8 +786,8 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   child: OutlinedButton(
                     onPressed: () => _showMarketDetails(result),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      side: const BorderSide(color: Colors.orange),
+                      foregroundColor: HiPopColors.primaryDeepSage,
+                      side: BorderSide(color: HiPopColors.primaryDeepSage),
                     ),
                     child: const Text('View Details'),
                   ),
@@ -784,7 +797,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   child: ElevatedButton(
                     onPressed: () => _applyToMarket(result.market),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.primaryDeepSage,
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Apply Now'),
@@ -834,20 +847,20 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
             Icon(
               Icons.search_off,
               size: 80,
-              color: Colors.grey[400],
+              color: HiPopColors.lightTextDisabled,
             ),
             const SizedBox(height: 16),
             Text(
               'No Markets Found',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.lightTextSecondary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Try adjusting your search filters or expanding your search area.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
+                color: HiPopColors.lightTextTertiary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -878,9 +891,9 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: HiPopColors.lightSurface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -889,7 +902,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: HiPopColors.lightBorder,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -910,7 +923,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                       Text(
                         result.market.fullAddress,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
+                          color: HiPopColors.lightTextSecondary,
                         ),
                       ),
                       
@@ -944,7 +957,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                                 'Date:',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.grey[700],
+                                  color: HiPopColors.lightTextSecondary,
                                 ),
                               ),
                             ),
@@ -965,7 +978,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                                 'Time:',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.grey[700],
+                                  color: HiPopColors.lightTextSecondary,
                                 ),
                               ),
                             ),
@@ -1002,7 +1015,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                             _applyToMarket(result.market);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
+                            backgroundColor: HiPopColors.primaryDeepSage,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -1268,19 +1281,19 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
+                        color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.amber.shade300),
+                        border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.diamond, size: 12, color: Colors.amber.shade700),
+                          Icon(Icons.diamond, size: 12, color: HiPopColors.accentMauve),
                           const SizedBox(width: 2),
                           Text(
                             'Premium',
                             style: TextStyle(
-                              color: Colors.amber.shade700,
+                              color: HiPopColors.accentMauve,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1335,7 +1348,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     child: Text(
                       '${market.name} • ${market.city}, ${market.state}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+                        color: HiPopColors.lightTextSecondary,
                       ),
                     ),
                   ),
@@ -1368,7 +1381,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                   _buildMetricChip(
                     Icons.category,
                     '${post.categories.length} categories',
-                    Colors.green,
+                    HiPopColors.successGreen,
                   ),
                   const SizedBox(width: 8),
                   if (post.requirements.boothFee != null)
@@ -1377,7 +1390,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                       post.requirements.boothFee == 0 
                         ? 'Free' 
                         : '\$${post.requirements.boothFee!.toStringAsFixed(0)}',
-                      Colors.orange,
+                      HiPopColors.warningAmber,
                     ),
                   if (result.applicationDeadline != null) ...[
                     const SizedBox(width: 8),
@@ -1400,13 +1413,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+                        Icon(Icons.check_circle, size: 16, color: HiPopColors.successGreen),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             reason,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[700],
+                              color: HiPopColors.lightTextSecondary,
                             ),
                           ),
                         ),
@@ -1421,13 +1434,13 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.lightbulb, size: 16, color: Colors.amber[700]),
+                        Icon(Icons.lightbulb, size: 16, color: HiPopColors.warningAmber),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             opportunity,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[700],
+                              color: HiPopColors.lightTextSecondary,
                             ),
                           ),
                         ),
@@ -1457,7 +1470,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     child: ElevatedButton(
                       onPressed: () => _respondToVendorPost(result),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: HiPopColors.accentMauve,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Respond'),
@@ -1499,9 +1512,9 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          decoration: BoxDecoration(
+            color: HiPopColors.lightSurface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [
@@ -1510,7 +1523,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: HiPopColors.lightBorder,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1532,7 +1545,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                       Text(
                         '${result.market.name} • ${result.market.city}, ${result.market.state}',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
+                          color: HiPopColors.lightTextSecondary,
                         ),
                       ),
                       
@@ -1560,7 +1573,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                         children: result.post.categories.map((category) => 
                           Chip(
                             label: Text(_formatCategoryName(category)),
-                            backgroundColor: Colors.deepPurple.shade50,
+                            backgroundColor: HiPopColors.accentMauve.withValues(alpha: 0.1),
                           ),
                         ).toList(),
                       ),
@@ -1606,7 +1619,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                             _respondToVendorPost(result);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
+                            backgroundColor: HiPopColors.accentMauve,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
@@ -1655,7 +1668,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Your response has been sent to ${result.market.name}!'),
-                  backgroundColor: Colors.green,
+                  backgroundColor: HiPopColors.successGreen,
                 ),
               );
             }
@@ -1667,7 +1680,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -1685,7 +1698,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.warning, color: Colors.orange[700]),
+            Icon(Icons.warning, color: HiPopColors.warningAmber),
             const SizedBox(width: 8),
             const Text('Application Limit Reached'),
           ],
@@ -1695,16 +1708,16 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Pro for unlimited applications.',
+              'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Premium for unlimited applications.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: HiPopColors.warningAmberLight.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
+                border: Border.all(color: HiPopColors.warningAmberLight.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1725,7 +1738,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
                       children: [
-                        Icon(Icons.check, size: 16, color: Colors.green[600]),
+                        Icon(Icons.check, size: 16, color: HiPopColors.primaryDeepSage),
                         const SizedBox(width: 8),
                         Expanded(child: Text(benefit)),
                       ],
@@ -1747,7 +1760,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               context.go('/premium/upgrade?tier=vendor&userId=${user.uid}');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: const Color(0xFF558B6E), // Deep Sage
               foregroundColor: Colors.white,
             ),
             child: const Text('Upgrade to Pro'),

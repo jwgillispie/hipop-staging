@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../../blocs/subscription/subscription_bloc.dart';
 import '../../../blocs/subscription/subscription_state.dart';
 import '../../../blocs/subscription/subscription_event.dart';
@@ -273,7 +274,7 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
           children: [
             CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.orange.shade600,
+              color: HiPopColors.premiumGold,
             ),
             const SizedBox(height: 12),
             Text(
@@ -337,8 +338,8 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             colors: [
-              Colors.orange.shade50,
-              Colors.orange.shade100.withValues(alpha: 0.5),
+              HiPopColors.surfaceSoftPink.withValues(alpha: 0.5),
+              HiPopColors.surfacePalePink.withValues(alpha: 0.7),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -353,12 +354,12 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.15),
+                  color: HiPopColors.premiumGold.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   isUsageLimitIssue ? Icons.speed : Icons.diamond,
-                  color: Colors.orange.shade700,
+                  color: HiPopColors.premiumGoldDark,
                   size: 48,
                 ),
               ),
@@ -372,7 +373,7 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.orange,
+                  color: HiPopColors.premiumGold,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -444,7 +445,7 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
                         _navigateToUpgrade();
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade600,
+                        backgroundColor: HiPopColors.primaryDeepSage,
                         foregroundColor: Colors.white,
                         elevation: 4,
                         shape: RoundedRectangleBorder(
@@ -499,7 +500,7 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
               Container(
                 padding: const EdgeInsets.all(2),
                 decoration: const BoxDecoration(
-                  color: Colors.green,
+                  color: HiPopColors.successGreen,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -556,12 +557,12 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade100,
+                color: HiPopColors.successGreenLight.withValues(alpha: 0.3),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.check_circle,
-                color: Colors.green.shade600,
+                color: HiPopColors.successGreen,
                 size: 48,
               ),
             ),
@@ -647,7 +648,7 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
 
   void _navigateToUpgrade() {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    context.go('/premium/onboarding?userId=$userId&userType=vendor');
+    context.go('/premium/upgrade?tier=vendor&userId=$userId');
   }
 
   String _getFeatureDisplayName(String featureName) {

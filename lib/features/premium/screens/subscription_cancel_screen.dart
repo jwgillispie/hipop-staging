@@ -98,7 +98,7 @@ class SubscriptionCancelScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => context.go('/premium/onboarding'),
+                onPressed: () => context.go('/premium/upgrade'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,

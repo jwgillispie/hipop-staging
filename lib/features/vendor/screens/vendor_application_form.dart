@@ -9,6 +9,7 @@ import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/widgets/date_selection_calendar.dart';
 import 'package:hipop/features/premium/services/subscription_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:go_router/go_router.dart';
 
 class VendorApplicationForm extends StatefulWidget {
@@ -206,9 +207,21 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Apply to Market'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                HiPopColors.secondarySoftSage,
+                HiPopColors.accentMauve,
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: _loadingData 
           ? const Center(child: CircularProgressIndicator())
@@ -697,7 +710,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
           ),
           const SizedBox(height: 12),
           Text(
-            'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Pro for unlimited applications and advanced business tools.',
+            'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Premium for unlimited applications and advanced business tools.',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 14,
@@ -750,15 +763,15 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                 child: ElevatedButton(
                   onPressed: () => _navigateToUpgrade(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.purple.shade700,
+                    backgroundColor: HiPopColors.surfacePalePink,
+                    foregroundColor: HiPopColors.accentMauve,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   child: const Text(
-                    'Upgrade to Vendor Pro',
+                    'Upgrade to Vendor Premium',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -887,7 +900,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Starting at \$29/month. Cancel anytime. 30-day free trial available.',
+                        'Starting at \$29/month. Cancel anytime. 30-day money back guarantee.',
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontSize: 12,
@@ -914,7 +927,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
               backgroundColor: Colors.purple.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Upgrade to Vendor Pro'),
+            child: const Text('Upgrade to Vendor Premium'),
           ),
         ],
       ),
@@ -947,7 +960,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Pro for unlimited applications and powerful business tools.',
+                'You\'ve reached your monthly limit of 5 market applications. Upgrade to Vendor Premium for unlimited applications and powerful business tools.',
               ),
               const SizedBox(height: 20),
               Container(
@@ -1013,7 +1026,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Starting at \$29/month. Cancel anytime. 30-day free trial available.',
+                        'Starting at \$29/month. Cancel anytime. 30-day money back guarantee.',
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontSize: 12,
@@ -1040,7 +1053,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
               backgroundColor: Colors.purple.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Upgrade to Vendor Pro'),
+            child: const Text('Upgrade to Vendor Premium'),
           ),
         ],
       ),

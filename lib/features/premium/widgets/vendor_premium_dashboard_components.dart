@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
-/// Reusable premium dashboard components for consistent Vendor Pro UI/UX
+/// Reusable premium dashboard components for consistent Vendor Premium UI/UX
 /// Ensures $29/month value proposition is clearly demonstrated
 class VendorPremiumDashboardComponents {
   
@@ -16,15 +17,15 @@ class VendorPremiumDashboardComponents {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.green.shade700, Colors.green.shade500],
+        gradient: const LinearGradient(
+          colors: [HiPopColors.secondarySoftSage, HiPopColors.accentMauve],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withValues(alpha: 0.3),
+            color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -39,7 +40,7 @@ class VendorPremiumDashboardComponents {
               children: [
                 const Icon(
                   Icons.diamond,
-                  color: Colors.amber,
+                  color: HiPopColors.premiumGold,
                   size: 28,
                 ),
                 const SizedBox(width: 12),
@@ -56,7 +57,7 @@ class VendorPremiumDashboardComponents {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.amber.shade600,
+                      color: HiPopColors.premiumGold,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -129,14 +130,14 @@ class VendorPremiumDashboardComponents {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
+                        color: HiPopColors.premiumGoldLight.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade300),
+                        border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.5)),
                       ),
-                      child: Text(
+                      child: const Text(
                         'PRO',
                         style: TextStyle(
-                          color: Colors.amber.shade700,
+                          color: HiPopColors.premiumGoldDark,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -213,13 +214,13 @@ class VendorPremiumDashboardComponents {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: trend.startsWith('+') ? Colors.green.shade50 : Colors.red.shade50,
+                      color: trend.startsWith('+') ? HiPopColors.successGreenLight.withValues(alpha: 0.2) : HiPopColors.errorPlumLight.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       trend,
                       style: TextStyle(
-                        color: trend.startsWith('+') ? Colors.green.shade700 : Colors.red.shade700,
+                        color: trend.startsWith('+') ? HiPopColors.successGreenDark : HiPopColors.errorPlum,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -284,7 +285,7 @@ class VendorPremiumDashboardComponents {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [Colors.orange.shade50, Colors.orange.shade100],
+            colors: [HiPopColors.surfaceSoftPink.withValues(alpha: 0.5), HiPopColors.surfacePalePink],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -299,30 +300,30 @@ class VendorPremiumDashboardComponents {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.2),
+                      color: HiPopColors.accentMauve.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.diamond,
-                      color: Colors.orange,
+                      color: HiPopColors.accentMauve,
                       size: 28,
                     ),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
                     child: Text(
-                      'Unlock Vendor Pro Features',
+                      'Unlock Vendor Premium Features',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.orange,
+                        color: HiPopColors.accentMauve,
                       ),
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade600,
+                      color: HiPopColors.primaryDeepSage,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(
@@ -343,7 +344,7 @@ class VendorPremiumDashboardComponents {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -365,8 +366,8 @@ class VendorPremiumDashboardComponents {
                     Container(
                       margin: const EdgeInsets.only(top: 2),
                       padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
+                      decoration: BoxDecoration(
+                        color: HiPopColors.primaryDeepSage,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -381,7 +382,7 @@ class VendorPremiumDashboardComponents {
                         feature,
                         style: const TextStyle(
                           fontSize: 14,
-                          color: Colors.black87,
+                          color: HiPopColors.lightTextPrimary,
                           height: 1.4,
                         ),
                       ),
@@ -395,7 +396,7 @@ class VendorPremiumDashboardComponents {
                   '+ ${defaultFeatures.length - 6} more premium features',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: HiPopColors.lightTextTertiary,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -407,10 +408,10 @@ class VendorPremiumDashboardComponents {
                   onPressed: () {
                     // Navigate to upgrade flow
                     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-                    context.go('/premium/onboarding?userId=$userId&userType=vendor');
+                    context.go('/premium/upgrade?tier=vendor&userId=$userId');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
+                    backgroundColor: HiPopColors.primaryDeepSage,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
@@ -419,7 +420,7 @@ class VendorPremiumDashboardComponents {
                     elevation: 4,
                   ),
                   child: const Text(
-                    'Upgrade to Vendor Pro',
+                    'Upgrade to Vendor Premium',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -433,7 +434,7 @@ class VendorPremiumDashboardComponents {
                   'Cancel anytime • 30-day money back guarantee',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.black54,
+                    color: HiPopColors.lightTextSecondary,
                   ),
                 ),
               ),
@@ -498,7 +499,7 @@ class VendorPremiumDashboardComponents {
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Grow Your Business with Vendor Pro',
+                    'Grow Your Business with Vendor Premium',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -510,7 +511,7 @@ class VendorPremiumDashboardComponents {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Vendor Pro users report 40% more revenue and 60% better market opportunities compared to free users. Invest \$29/month to unlock professional vendor growth tools.',
+              'Vendor Premium users report 40% more revenue and 60% better market opportunities compared to free users. Invest \$29/month to unlock professional vendor growth tools.',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.white,
@@ -630,7 +631,7 @@ class VendorPremiumDashboardComponents {
                             subtitle,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey.shade600,
+                              color: HiPopColors.lightTextTertiary,
                             ),
                           ),
                       ],
@@ -681,7 +682,7 @@ class VendorPremiumDashboardComponents {
                             return Text(
                               '${value.toInt()}',
                               style: TextStyle(
-                                color: Colors.grey.shade600,
+                                color: HiPopColors.lightTextTertiary,
                                 fontSize: 10,
                               ),
                             );
@@ -698,7 +699,7 @@ class VendorPremiumDashboardComponents {
                               return Text(
                                 '${value.toInt() + 1}',
                                 style: TextStyle(
-                                  color: Colors.grey.shade600,
+                                  color: HiPopColors.lightTextTertiary,
                                   fontSize: 10,
                                 ),
                               );
@@ -814,7 +815,7 @@ class VendorPremiumDashboardComponents {
                           subtitle,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: HiPopColors.lightTextTertiary,
                           ),
                         ),
                     ],
@@ -981,7 +982,7 @@ class VendorPremiumDashboardComponents {
                           '$current${limit > 0 ? '/$limit' : ''}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: HiPopColors.lightTextTertiary,
                           ),
                         ),
                       ],

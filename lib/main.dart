@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter/foundation.dart';
 import 'core/config/firebase_options.dart';
+import 'core/theme/hipop_theme.dart';
 import 'repositories/auth_repository.dart';
 import 'repositories/vendor_posts_repository.dart';
 import 'repositories/favorites_repository.dart';
@@ -45,7 +46,7 @@ Future<void> _initializeApp() async {
     // Initialize Analytics with consent
     await _initializeAnalytics();
   } catch (e) {
-    debugPrint('⚠️ Initialization warning: $e');
+    debugPrint('WARNING: Initialization warning: $e');
     // Continue with app startup even if some services fail
   }
 }
@@ -72,12 +73,12 @@ Future<void> _initializeStripe() async {
         // Return URL will be set in Payment Sheet parameters
       }
       
-      debugPrint('✅ Stripe initialized successfully for ${kIsWeb ? 'web' : 'mobile'}');
+      debugPrint('SUCCESS: Stripe initialized successfully for ${kIsWeb ? 'web' : 'mobile'}');
     } else {
-      debugPrint('⚠️ Stripe publishable key not found');
+      debugPrint('WARNING: Stripe publishable key not found');
     }
   } catch (e) {
-    debugPrint('❌ Failed to initialize Stripe: $e');
+    debugPrint('ERROR: Failed to initialize Stripe: $e');
     // Continue without Stripe rather than crash the app
   }
 }
@@ -101,9 +102,9 @@ Future<void> _initializeAnalytics() async {
     // Initialize analytics service and request consent
     await RealTimeAnalyticsService.initialize();
     await RealTimeAnalyticsService.requestTrackingConsent();
-    debugPrint('✅ Analytics initialized with consent');
+    debugPrint('SUCCESS: Analytics initialized with consent');
   } catch (e) {
-    debugPrint('⚠️ Analytics initialization failed: $e');
+    debugPrint('WARNING: Analytics initialization failed: $e');
     // Continue without analytics rather than crash the app
   }
 }
@@ -156,10 +157,9 @@ class HiPopApp extends StatelessWidget {
               child: MaterialApp.router(
                 title: 'HiPop - STAGING',
                 debugShowCheckedModeBanner: false,
-                theme: ThemeData(
-                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
-                  useMaterial3: true,
-                ),
+                theme: HiPopTheme.lightTheme,
+                darkTheme: HiPopTheme.darkTheme,
+                themeMode: ThemeMode.system,
                 builder: (context, child) {
                   return Banner(
                     message: 'STAGING',

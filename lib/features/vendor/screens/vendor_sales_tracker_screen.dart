@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math';
+import 'package:hipop/core/widgets/hipop_app_bar.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 import '../models/vendor_sales_data.dart';
 import '../services/vendor_sales_service.dart';
@@ -214,7 +216,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_existingSalesData != null ? 'Sales data updated!' : 'Sales data saved!'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
         
@@ -230,19 +232,17 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: HiPopColors.errorPlum),
     );
   }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sales Tracker'),
+      appBar: HiPopAppBar(
+        title: 'Sales Tracker',
+        userRole: 'vendor',
         centerTitle: true,
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -342,7 +342,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   Widget _buildDateSelector() {
     return Card(
       child: ListTile(
-        leading: const Icon(Icons.calendar_today, color: Colors.blue),
+        leading: Icon(Icons.calendar_today, color: HiPopColors.vendorAccent),
         title: const Text('Sales Date'),
         subtitle: Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}'),
         trailing: const Icon(Icons.chevron_right),
@@ -367,13 +367,13 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     return Card(
       child: _loadingMarkets
           ? const ListTile(
-              leading: Icon(Icons.location_on, color: Colors.green),
+              leading: Icon(Icons.location_on, color: HiPopColors.vendorAccent),
               title: Text('Market'),
               subtitle: Text('Loading markets...'),
               trailing: CircularProgressIndicator(),
             )
           : ListTile(
-              leading: const Icon(Icons.location_on, color: Colors.green),
+              leading: Icon(Icons.location_on, color: HiPopColors.vendorAccent),
               title: const Text('Market'),
               subtitle: Text(_getSelectedMarketName() ?? 'Select a market'),
               trailing: const Icon(Icons.chevron_right),
@@ -626,14 +626,14 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.orange.shade300),
+              border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
             ),
             child: Icon(
               Icons.attach_money,
               size: 64,
-              color: Colors.orange[700],
+              color: HiPopColors.primaryDeepSage,
             ),
           ),
           const SizedBox(height: 24),
@@ -641,22 +641,22 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
             'Sales Tracker',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.orange[800],
+              color: HiPopColors.vendorAccentDark,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            'Revenue tracking is a premium feature exclusively available to Vendor Pro subscribers.',
+            'Revenue tracking is a premium feature exclusively available to Vendor Premium subscribers.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey[700],
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            'Upgrade to track your sales, revenue, commissions, and gain insights into your business performance.',
+            'Upgrade to track your sales, revenue, and gain insights into your business performance.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
@@ -667,9 +667,35 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     );
   }
 
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: const Color(0xFF558B6E), // Deep Sage
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF558B6E), // Deep Sage
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPremiumPrompt() {
     return Card(
-      color: Colors.orange.shade50,
+      color: const Color(0xFFF1C8DB), // Soft Pink
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -680,23 +706,23 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.2),
+                    color: const Color(0xFF946C7E).withValues(alpha: 0.2), // Mauve
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.attach_money,
-                    color: Colors.orange,
+                    color: Color(0xFF946C7E), // Mauve
                     size: 24,
                   ),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
                   child: Text(
-                    'Unlock Vendor Pro Sales Tracking',
+                    'Unlock Vendor Premium Sales Tracking',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange,
+                      color: Color(0xFF558B6E), // Deep Sage
                     ),
                   ),
                 ),
@@ -704,22 +730,22 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
             ),
             const SizedBox(height: 16),
             const Text(
-              'Upgrade to Vendor Pro (\$29/month) to unlock:',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              'Upgrade to Vendor Premium (\$29/month) to unlock:',
+              style: TextStyle(
+                fontSize: 16, 
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF558B6E), // Deep Sage
+              ),
             ),
             const SizedBox(height: 12),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('💰 Revenue & commission tracking'),
-                SizedBox(height: 4),
-                Text('📊 Sales performance analytics'),
-                SizedBox(height: 4),
-                Text('📈 Market-by-market revenue insights'),
-                SizedBox(height: 4),
-                Text('🧾 Transaction history & reporting'),
-                SizedBox(height: 4),
-                Text('📱 Mobile-optimized data entry'),
+                _buildFeatureItem(Icons.attach_money, 'Revenue & commission tracking'),
+                _buildFeatureItem(Icons.analytics, 'Sales performance analytics'),
+                _buildFeatureItem(Icons.trending_up, 'Market-by-market revenue insights'),
+                _buildFeatureItem(Icons.history, 'Transaction history & reporting'),
+                _buildFeatureItem(Icons.phone_android, 'Mobile-optimized data entry'),
               ],
             ),
             const SizedBox(height: 20),
@@ -734,7 +760,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                   featureDisplayName: 'Sales Tracking',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: const Color(0xFF558B6E), // Deep Sage
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -742,7 +768,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                   ),
                 ),
                 child: const Text(
-                  'Upgrade to Vendor Pro',
+                  'Upgrade to Vendor Premium',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

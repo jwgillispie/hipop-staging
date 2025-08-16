@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../../blocs/subscription/subscription_bloc.dart';
 import '../../../blocs/subscription/subscription_state.dart';
 import '../../../blocs/subscription/subscription_event.dart';
@@ -166,7 +167,7 @@ class PremiumAccessControls {
       builder: (context, value, child) {
         return Container(
           decoration: BoxDecoration(
-            color: Colors.green.shade600.withValues(alpha: value * 0.9),
+            color: HiPopColors.primaryDeepSage.withValues(alpha: value * 0.9),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Center(
@@ -648,7 +649,7 @@ class PremiumAccessControls {
 
   static void _navigateToUpgrade(BuildContext context, String userType) {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-    context.go('/premium/onboarding?userId=$userId&userType=$userType');
+    context.go('/premium/upgrade?tier=$userType&userId=$userId');
   }
 
   static void _navigateToSubscriptionManagement(BuildContext context) {

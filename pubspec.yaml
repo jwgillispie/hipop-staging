@@ -89,6 +89,7 @@ dependencies:
   
   # Cryptographic functions
   crypto: ^3.0.3
+  google_fonts: ^6.3.0
 
 dev_dependencies:
   flutter_test:

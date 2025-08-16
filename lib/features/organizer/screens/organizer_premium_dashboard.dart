@@ -272,10 +272,10 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     final features = [
       '🎯 Unlimited "Looking for Vendors" Posts - Create targeted posts that appear in vendor market discovery',
       '📈 Vendor Response Management - View and manage vendor inquiries and applications',
-      '📊 Post Performance Analytics - Track views, responses, and conversion rates for your posts',
-      '🔍 Smart Vendor Matching - Your posts are automatically matched to relevant vendors',
-      '📱 Integrated Discovery - Seamless integration with vendor premium discovery features',
-      '💼 Basic Market Analytics - Track vendor count and market stats',
+      'Post Performance Analytics - Track views, responses, and conversion rates for your posts',
+      'Smart Vendor Matching - Your posts are automatically matched to relevant vendors',
+      'Integrated Discovery - Seamless integration with vendor premium discovery features',
+      'Basic Market Analytics - Track vendor count and market stats',
     ];
 
     return Column(

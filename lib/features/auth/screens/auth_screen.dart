@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
@@ -67,7 +68,7 @@ class _AuthScreenState extends State<AuthScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: HiPopColors.errorPlum,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -93,11 +94,11 @@ class _AuthScreenState extends State<AuthScreen> {
           }
         },
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.orange, Colors.deepOrange],
+              colors: _getGradientColors(),
             ),
           ),
           child: SafeArea(
@@ -147,7 +148,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ? Icons.business
                   : Icons.shopping_bag,
           size: 64,
-          color: widget.userType == 'market_organizer' ? Colors.green : Colors.orange,
+          color: _getUserTypeColor(),
         ),
         const SizedBox(height: 16),
         Text(
@@ -265,7 +266,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: ElevatedButton(
             onPressed: isLoading ? null : _submitForm,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: _getUserTypeColor(),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -314,8 +315,8 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             TextSpan(
               text: _isLogin ? 'Sign Up' : 'Sign In',
-              style: const TextStyle(
-                color: Colors.orange,
+              style: TextStyle(
+                color: _getUserTypeColor(),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -323,5 +324,27 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     );
+  }
+
+  Color _getUserTypeColor() {
+    switch (widget.userType) {
+      case 'vendor':
+        return HiPopColors.vendorAccent;
+      case 'market_organizer':
+        return HiPopColors.organizerAccent;
+      default:
+        return HiPopColors.shopperAccent;
+    }
+  }
+
+  List<Color> _getGradientColors() {
+    switch (widget.userType) {
+      case 'vendor':
+        return [HiPopColors.vendorAccent, HiPopColors.vendorAccentDark];
+      case 'market_organizer':
+        return [HiPopColors.organizerAccent, HiPopColors.organizerAccentDark];
+      default:
+        return [HiPopColors.shopperAccent, HiPopColors.shopperAccentDark];
+    }
   }
 }

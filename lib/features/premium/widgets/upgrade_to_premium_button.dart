@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../services/stripe_service.dart';
 
 
@@ -45,8 +46,8 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
                 Row(
                   children: [
                     Icon(
-                      Icons.star,
-                      color: Colors.amber,
+                      Icons.diamond,
+                      color: HiPopColors.premiumGold,
                       size: 28,
                     ),
                     const SizedBox(width: 8),
@@ -61,7 +62,7 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.green,
+                        color: HiPopColors.primaryDeepSage,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
@@ -89,7 +90,7 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
                       children: [
                         Icon(
                           Icons.check_circle,
-                          color: Colors.green,
+                          color: HiPopColors.primaryDeepSage,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -120,7 +121,7 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : () => _handleUpgrade(authState.user),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.primaryDeepSage,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -188,9 +189,9 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 Welcome to Premium!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('🎉 Welcome to Premium!'),
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
       }

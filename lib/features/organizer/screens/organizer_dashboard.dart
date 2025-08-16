@@ -60,9 +60,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         final userProfile = await userProfileService.getUserProfile(authState.user.uid);
         
         final hasAccess = userProfile?.isPremium ?? false;
-        debugPrint('🔍 Organizer Premium access check: $hasAccess');
-        debugPrint('🔍 Organizer User profile isPremium: ${userProfile?.isPremium}');
-        debugPrint('🔍 Organizer User subscription status: ${userProfile?.subscriptionStatus}');
+        debugPrint('Organizer Premium access check: $hasAccess');
+        debugPrint('Organizer User profile isPremium: ${userProfile?.isPremium}');
+        debugPrint('Organizer User subscription status: ${userProfile?.subscriptionStatus}');
         
         if (mounted) {
           setState(() {
@@ -71,7 +71,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           });
         }
       } catch (e) {
-        debugPrint('❌ Error checking organizer premium access: $e');
+        debugPrint('ERROR: Error checking organizer premium access: $e');
         if (mounted) {
           setState(() {
             _hasPremiumAccess = false;

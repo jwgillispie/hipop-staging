@@ -8,6 +8,7 @@ import 'package:hipop/features/vendor/models/managed_vendor.dart';
 import 'package:hipop/features/vendor/services/managed_vendor_service.dart';
 import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_form_dialog.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 
 class VendorManagementScreen extends StatefulWidget {
@@ -513,7 +514,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                           Text(
                             'Contact: ${vendor.contactName}',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 14,
                             ),
                           ),
@@ -521,7 +522,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                           Text(
                             vendor.description,
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 14,
                             ),
                             maxLines: 2,
@@ -537,7 +538,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: vendor.isActive ? Colors.green[100] : Colors.grey[200],
+                        color: vendor.isActive ? HiPopColors.successGreen.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
@@ -546,14 +547,14 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                           Icon(
                             vendor.isActive ? Icons.check_circle : Icons.pause_circle,
                             size: 16,
-                            color: vendor.isActive ? Colors.green[800] : Colors.grey[600],
+                            color: vendor.isActive ? HiPopColors.successGreenDark : Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             vendor.isActive ? 'Active' : 'Inactive',
                             style: TextStyle(
                               fontSize: 12,
-                              color: vendor.isActive ? Colors.green[800] : Colors.grey[600],
+                              color: vendor.isActive ? HiPopColors.successGreenDark : Theme.of(context).colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import '../services/payment_service.dart';
 import '../services/premium_error_handler.dart';
 import '../services/stripe_service.dart';
@@ -31,6 +32,7 @@ class StripePaymentForm extends StatefulWidget {
 class _StripePaymentFormState extends State<StripePaymentForm> {
   bool _isProcessing = false;
   String? _errorMessage;
+  bool _cardComplete = false;
   final TextEditingController _couponController = TextEditingController();
   String? _appliedCoupon;
   bool _couponValidated = false;
@@ -115,9 +117,9 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
       : 'Failed to initialize payment system. Please restart the app and try again.';
   }
 
-  Future<void> _handleMobilePayment() async {
-    if (_isProcessing) {
-      debugPrint('⚠️ Payment blocked - already processing');
+  Future<void> _handlePayment() async {
+    if (_isProcessing || !_cardComplete) {
+      debugPrint('⚠️ Payment blocked - processing: $_isProcessing, card complete: $_cardComplete');
       return;
     }
 
@@ -127,28 +129,41 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
     });
 
     try {
-      debugPrint('📱 Starting Payment Sheet flow...');
-      
-      // Use the Payment Sheet flow from PaymentService
-      await PaymentService.processPaymentWithSheet(
-        priceId: widget.priceId,
-        customerEmail: widget.userEmail,
+      debugPrint('💳 Starting payment process...');
+      // Step 1: Create payment intent on the server
+      final clientSecret = await PaymentService.createPaymentIntent(
         userId: widget.userId,
+        priceId: widget.priceId,
         userType: widget.userType,
-        promoCode: _appliedCoupon,
-        merchantDisplayName: 'HiPop',
+        customerEmail: widget.userEmail,
       );
 
-      // If we get here, payment was successful
-      debugPrint('✅ Payment Sheet completed successfully');
+      // Step 2: Confirm payment with Stripe
+      final paymentIntent = await Stripe.instance.confirmPayment(
+        paymentIntentClientSecret: clientSecret,
+        data: PaymentMethodParams.card(
+          paymentMethodData: PaymentMethodData(
+            billingDetails: BillingDetails(
+              email: widget.userEmail,
+            ),
+          ),
+        ),
+      );
+
+      // Check payment status
+      if (paymentIntent.status != PaymentIntentsStatus.Succeeded) {
+        throw Exception('Payment was not successful: ${paymentIntent.status}');
+      }
+
+      // Step 3: If we get here, payment was successful
+      // The cloud function webhook will handle subscription creation
       widget.onSuccess();
-    } on PaymentException catch (e) {
-      debugPrint('❌ Payment error: ${e.message}');
+    } on StripeException catch (e) {
       setState(() {
-        _errorMessage = e.message;
+        _errorMessage = _getStripeErrorMessage(e);
         _isProcessing = false;
       });
-      widget.onError(e.message);
+      widget.onError(_errorMessage!);
     } on PremiumError catch (e) {
       setState(() {
         _errorMessage = e.userMessage;
@@ -173,6 +188,36 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
     }
   }
 
+  String _getStripeErrorMessage(StripeException e) {
+    // Check the actual failure code enum
+    if (e.error.code == FailureCode.Failed) {
+      return e.error.message ?? 'Payment failed. Please try again';
+    } else if (e.error.code == FailureCode.Canceled) {
+      return 'Payment was canceled';
+    } else if (e.error.code == FailureCode.Timeout) {
+      return 'Payment timed out. Please try again';
+    }
+    
+    // Check for declined card reasons
+    if (e.error.declineCode != null) {
+      switch (e.error.declineCode) {
+        case 'insufficient_funds':
+          return 'Insufficient funds';
+        case 'lost_card':
+        case 'stolen_card':
+          return 'This card has been reported lost or stolen';
+        case 'expired_card':
+          return 'Your card has expired';
+        case 'incorrect_cvc':
+          return 'Incorrect security code';
+        case 'card_declined':
+        default:
+          return e.error.message ?? 'Your card was declined';
+      }
+    }
+    
+    return e.error.message ?? 'Payment failed. Please try again';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -260,7 +305,7 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
         if (!kIsWeb) ...[
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _isProcessing ? null : _handleMobilePayment,
+            onPressed: (_isProcessing || !_cardComplete) ? null : _handlePayment,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -302,92 +347,43 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
   }
 
   Widget _buildCardInputField() {
+    // For web, we need to handle CardField differently to avoid Platform._operatingSystem error
     if (kIsWeb) {
-      // On web, use redirect to Stripe Checkout
+      // On web, use a simpler approach or Stripe's web-specific implementation
       return Container(
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade400),
           borderRadius: BorderRadius.circular(8),
           color: Colors.white,
         ),
-        child: _buildWebCardInput(),
+        child: Column(
+          children: [
+            // Use Stripe's web card element or fallback UI
+            _buildWebCardInput(),
+          ],
+        ),
       );
     } else {
-      // On mobile platforms, use Payment Sheet (no card input needed)
-      return _buildMobilePaymentInfo();
-    }
-  }
-
-  Widget _buildMobilePaymentInfo() {
-    // For mobile, show Payment Sheet info instead of card input
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.payment, color: Colors.blue.shade700, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Secure Payment',
-                style: TextStyle(
-                  color: Colors.blue.shade700,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Your payment will be processed securely using Stripe\'s native payment system. You can pay with any card, Apple Pay, or Google Pay.',
-            style: TextStyle(
-              color: Colors.blue.shade600,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildPaymentMethodIcon(Icons.credit_card, 'Cards'),
-              _buildPaymentMethodIcon(Icons.apple, 'Apple Pay'),
-              _buildPaymentMethodIcon(Icons.android, 'Google Pay'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodIcon(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
+      // On mobile platforms, use the standard CardField
+      return CardField(
+        enablePostalCode: true,
+        onCardChanged: (card) {
+          setState(() {
+            _errorMessage = null;
+            _cardComplete = card?.complete ?? false;
+          });
+        },
+        decoration: InputDecoration(
+          labelText: 'Card Details',
+          hintText: 'Enter your card information',
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
           ),
-          child: Icon(icon, size: 24, color: Colors.grey.shade600),
+          filled: true,
+          fillColor: Colors.white,
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
-    );
+      );
+    }
   }
 
   Widget _buildWebCardInput() {

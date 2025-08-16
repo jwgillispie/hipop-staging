@@ -57,17 +57,25 @@ class _HiPopTextFieldState extends State<HiPopTextField> {
       maxLines: widget.maxLines,
       textCapitalization: widget.textCapitalization,
       autofocus: widget.autofocus,
-      style: const TextStyle(fontSize: 16, color: Colors.black87),
+      style: TextStyle(
+        fontSize: 16,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
       decoration: InputDecoration(
         labelText: widget.labelText,
-        labelStyle: TextStyle(color: Colors.grey[700]),
+        labelStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         hintText: widget.hintText,
-        hintStyle: TextStyle(color: Colors.grey[500]),
+        hintStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+        ),
         prefixIcon: widget.prefixIcon,
         suffixIcon: widget.obscureText
             ? IconButton(
                 icon: Icon(
                   _obscureText ? Icons.visibility : Icons.visibility_off,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 onPressed: () {
                   setState(() {
@@ -79,40 +87,42 @@ class _HiPopTextFieldState extends State<HiPopTextField> {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).colorScheme.outline,
             width: 1,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).colorScheme.outline,
             width: 1,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: Theme.of(context).primaryColor,
+            color: Theme.of(context).colorScheme.primary,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.error,
             width: 2,
           ),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: Colors.red,
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.error,
             width: 2,
           ),
         ),
         filled: true,
-        fillColor: widget.enabled ? Colors.grey.shade50 : Colors.grey.shade100,
+        fillColor: widget.enabled 
+            ? const Color(0xFFF3D2E1).withValues(alpha: 0.3) // Pale Pink with opacity
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );

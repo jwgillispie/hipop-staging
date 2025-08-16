@@ -12,6 +12,7 @@ import '../models/vendor_market_product_assignment.dart';
 import '../models/vendor_product_list.dart';
 import '../services/vendor_product_service.dart';
 import '../../market/models/market.dart';
+import '../../../core/theme/hipop_colors.dart';
 import '../../market/services/market_service.dart';
 import '../../vendor/services/vendor_application_service.dart';
 import '../../shared/models/user_feedback.dart';
@@ -132,7 +133,19 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     return Scaffold(
       appBar: AppBar(
         title: const Text('Products & Market Items'),
-        backgroundColor: Colors.orange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF6F9686), // Soft Sage
+                Color(0xFF946C7E), // Mauve
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
@@ -196,7 +209,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                 icon: const Icon(Icons.add),
                 label: const Text('Add Product'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: HiPopColors.primaryDeepSage,
                   foregroundColor: Colors.white,
                 ),
               ),
@@ -272,10 +285,10 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                             product.imageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.image, color: Colors.grey),
+                                const Icon(Icons.image, color: HiPopColors.backgroundWarmGray),
                           ),
                         )
-                      : const Icon(Icons.inventory, color: Colors.grey),
+                      : const Icon(Icons.inventory, color: HiPopColors.backgroundWarmGray),
                 ),
                 const SizedBox(width: AppConstants.mediumSpacing),
                 
@@ -293,8 +306,8 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       const SizedBox(height: 4),
                       Text(
                         product.category,
-                        style: TextStyle(
-                          color: Colors.orange[700],
+                        style: const TextStyle(
+                          color: HiPopColors.primaryDeepSage,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -323,7 +336,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       product.displayPrice,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.green[700],
+                        color: HiPopColors.successGreenDark,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -333,13 +346,13 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                         IconButton(
                           onPressed: () => _showEditProductDialog(product),
                           icon: const Icon(Icons.edit, size: 20),
-                          color: Colors.blue,
+                          color: HiPopColors.infoBlueGray,
                           tooltip: 'Edit Product',
                         ),
                         IconButton(
                           onPressed: () => _showDeleteProductDialog(product),
                           icon: const Icon(Icons.delete, size: 20),
-                          color: Colors.red,
+                          color: HiPopColors.errorPlum,
                           tooltip: 'Delete Product',
                         ),
                       ],
@@ -360,8 +373,8 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                     tag,
                     style: const TextStyle(fontSize: 10),
                   ),
-                  backgroundColor: Colors.blue[50],
-                  side: BorderSide(color: Colors.blue[200]!),
+                  backgroundColor: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
+                  side: BorderSide(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 )).toList(),
               ),
@@ -377,18 +390,18 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                     margin: const EdgeInsets.only(top: 8),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.orange[50],
+                      color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.orange[200]!),
+                      border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: Colors.orange[700]),
+                        Icon(Icons.info_outline, size: 16, color: HiPopColors.warningAmberDark),
                         const SizedBox(width: 8),
                         Text(
                           'Not assigned to any markets yet',
                           style: TextStyle(
-                            color: Colors.orange[700],
+                            color: HiPopColors.warningAmberDark,
                             fontSize: 12,
                           ),
                         ),
@@ -401,18 +414,18 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green[50],
+                    color: HiPopColors.successGreenLight.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.green[200]!),
+                    border: Border.all(color: HiPopColors.successGreenLight.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.store, size: 16, color: Colors.green[700]),
+                      Icon(Icons.store, size: 16, color: HiPopColors.successGreenDark),
                       const SizedBox(width: 8),
                       Text(
                         'Available in ${assignments.length} market${assignments.length == 1 ? '' : 's'}',
                         style: TextStyle(
-                          color: Colors.green[700],
+                          color: HiPopColors.successGreenDark,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -702,7 +715,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
       child: ExpansionTile(
-        leading: const Icon(Icons.store, color: Colors.orange),
+        leading: const Icon(Icons.store, color: HiPopColors.primaryDeepSage),
         title: Text(
           market.name,
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -724,7 +737,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                     icon: const Icon(Icons.add),
                     label: const Text('Assign Products'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.primaryDeepSage,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -776,7 +789,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           Text(
             assignment.availabilityStatus,
             style: TextStyle(
-              color: assignment.isAvailable ? Colors.green[700] : Colors.red[700],
+              color: assignment.isAvailable ? HiPopColors.successGreenDark : HiPopColors.errorPlumDark,
               fontSize: 12,
             ),
           ),
@@ -808,7 +821,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             value: 'remove',
             child: Row(
               children: [
-                Icon(Icons.remove, size: 16, color: Colors.red),
+                Icon(Icons.remove, size: 16, color: HiPopColors.errorPlum),
                 SizedBox(width: 8),
                 Text('Remove'),
               ],
@@ -866,7 +879,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                   icon: const Icon(Icons.feedback),
                   label: const Text('Send Feedback'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
+                    backgroundColor: HiPopColors.infoBlueGray,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -882,13 +895,13 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
       child: ListTile(
-        leading: Icon(icon, color: Colors.orange),
+        leading: Icon(icon, color: HiPopColors.primaryDeepSage),
         title: Text(title),
         trailing: Text(
           value,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: Colors.orange,
+            color: HiPopColors.primaryDeepSage,
           ),
         ),
       ),
@@ -931,9 +944,16 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                 // Header
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: const BorderRadius.only(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        HiPopColors.primaryDeepSage,
+                        HiPopColors.secondarySoftSage,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
                     ),
@@ -1137,7 +1157,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                                 uploadedImageUrl,
                               ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
+                            backgroundColor: HiPopColors.primaryDeepSage,
                             foregroundColor: Colors.white,
                           ),
                           child: Text(isEditing ? 'Update Product' : 'Create Product'),
@@ -1188,7 +1208,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: HiPopColors.infoBlueGray,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Add'),
@@ -1209,18 +1229,18 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               onDeleted: () {
                 setState(() => tags.remove(tag));
               },
-              backgroundColor: Colors.blue[50],
-              side: BorderSide(color: Colors.blue[200]!),
+              backgroundColor: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
+              side: BorderSide(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
             )).toList(),
           ),
         ],
         if (tags.length >= 10)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
+            child: const Text(
               'Maximum 10 tags allowed',
               style: TextStyle(
-                color: Colors.orange[600],
+                color: HiPopColors.warningAmber,
                 fontSize: 12,
               ),
             ),
@@ -1310,7 +1330,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                   ? 'Product "${savedProduct.name}" updated successfully!'
                   : 'Product "${savedProduct.name}" created successfully!',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
 
@@ -1344,12 +1364,12 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.upgrade,
-                color: Colors.orange[700],
+                color: HiPopColors.warningAmber,
                 size: 24,
               ),
             ),
@@ -1377,18 +1397,18 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: HiPopColors.premiumGold.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
+                border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Upgrade to Vendor Pro (\$29/month) to unlock:',
+                  const Text(
+                    'Upgrade to Vendor Premium (\$29/month) to unlock:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
+                      color: HiPopColors.warningAmber,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1413,12 +1433,12 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Premium upgrade flow would open here'),
-                  backgroundColor: Colors.blue,
+                  backgroundColor: HiPopColors.infoBlueGray,
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: HiPopColors.primaryDeepSage,
               foregroundColor: Colors.white,
             ),
             child: const Text('Upgrade Now'),
@@ -1437,7 +1457,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           children: [
             Icon(
               Icons.error_outline,
-              color: Colors.red[600],
+              color: HiPopColors.errorPlumDark,
               size: 24,
             ),
             const SizedBox(width: 12),
@@ -1477,13 +1497,13 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
+                color: HiPopColors.premiumGold.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[200]!),
+                border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.warning, color: Colors.orange, size: 20),
+                  Icon(Icons.warning, color: HiPopColors.warningAmber, size: 20),
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -1507,7 +1527,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               await _deleteProduct(product);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: HiPopColors.errorPlum,
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
@@ -1533,7 +1553,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Product "${product.name}" deleted successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
 
@@ -1545,7 +1565,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting product: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -1736,11 +1756,11 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.blue[100],
+              backgroundColor: HiPopColors.infoBlueGray.withValues(alpha: 0.2),
               child: Text(
                 product.name[0].toUpperCase(),
                 style: TextStyle(
-                  color: Colors.blue[800],
+                  color: HiPopColors.infoBlueGrayDark,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1759,7 +1779,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             ),
             trailing: IconButton(
               onPressed: () => _removeProductFromList(list, product),
-              icon: const Icon(Icons.remove_circle, color: Colors.red),
+              icon: const Icon(Icons.remove_circle, color: HiPopColors.errorPlum),
               tooltip: 'Remove from list',
             ),
           ),
@@ -1774,20 +1794,20 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, size: 64, color: Colors.green[400]),
+            Icon(Icons.check_circle, size: 64, color: HiPopColors.successGreenLight),
             const SizedBox(height: 16),
             Text(
               'All Products Added',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.green[600],
+                color: HiPopColors.successGreenDark,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
               'All your products are already in this list!',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: HiPopColors.backgroundWarmGray),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1804,11 +1824,11 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: Colors.green[100],
+              backgroundColor: HiPopColors.successGreenLight.withValues(alpha: 0.2),
               child: Text(
                 product.name[0].toUpperCase(),
                 style: TextStyle(
-                  color: Colors.green[800],
+                  color: HiPopColors.successGreenDark,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1830,7 +1850,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: HiPopColors.successGreen,
                 foregroundColor: Colors.white,
               ),
             ),
@@ -1899,7 +1919,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Successfully assigned ${assignments.length}/${list.productCount} products from "${list.name}" to ${market.name}'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
         _loadInitialData(); // Refresh data
@@ -1909,7 +1929,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error assigning list to market: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -1947,7 +1967,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Deleted "${list.name}"'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
         _loadInitialData(); // Refresh data
@@ -1957,7 +1977,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting list: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -2072,7 +2092,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(existingList != null ? 'List updated!' : 'List created!'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
         _loadInitialData(); // Refresh data
@@ -2100,12 +2120,12 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.upgrade,
-                color: Colors.orange[700],
+                color: HiPopColors.warningAmber,
                 size: 24,
               ),
             ),
@@ -2133,18 +2153,18 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: HiPopColors.premiumGold.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
+                border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Upgrade to Vendor Pro (\$29/month) to unlock:',
+                  const Text(
+                    'Upgrade to Vendor Premium (\$29/month) to unlock:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.orange[700],
+                      color: HiPopColors.warningAmber,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -2169,12 +2189,12 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Premium upgrade flow would open here'),
-                  backgroundColor: Colors.blue,
+                  backgroundColor: HiPopColors.infoBlueGray,
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: HiPopColors.primaryDeepSage,
               foregroundColor: Colors.white,
             ),
             child: const Text('Upgrade Now'),
@@ -2280,7 +2300,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               _submitFeedback(selectedCategory, title, description);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: HiPopColors.infoBlueGray,
               foregroundColor: Colors.white,
             ),
             child: const Text('Send Feedback'),
@@ -2331,7 +2351,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Thank you for your feedback! We\'ll review it soon.'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
       }
@@ -2340,7 +2360,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error sending feedback: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -2369,7 +2389,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Added "${product.name}" to "${list.name}"'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
 
@@ -2386,7 +2406,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error adding product to list: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -2411,7 +2431,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Removed "${product.name}" from "${list.name}"'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
 
@@ -2428,7 +2448,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error removing product from list: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }

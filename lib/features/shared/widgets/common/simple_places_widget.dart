@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/places_service.dart';
+import '../../../../core/theme/hipop_colors.dart';
 
 class SimplePlacesWidget extends StatefulWidget {
   final Function(PlaceDetails?) onLocationSelected;
@@ -149,7 +150,7 @@ class _SimplePlacesWidgetState extends State<SimplePlacesWidget> {
                   decoration: InputDecoration(
                     hintText: 'Search for a location...',
                     hintStyle: TextStyle(color: Colors.grey[600]),
-                    prefixIcon: const Icon(Icons.location_on, color: Colors.orange),
+                    prefixIcon: const Icon(Icons.location_on, color: HiPopColors.primaryDeepSage),
                     suffixIcon: _controller.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, color: Colors.grey),
@@ -186,7 +187,7 @@ class _SimplePlacesWidgetState extends State<SimplePlacesWidget> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _performDirectSearch,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: HiPopColors.primaryDeepSage,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(
@@ -240,20 +241,20 @@ class _SimplePlacesWidgetState extends State<SimplePlacesWidget> {
                 return ListTile(
                   leading: Icon(
                     item['icon'] as IconData,
-                    color: item['isDirect'] ? Colors.blue : Colors.orange,
+                    color: item['isDirect'] ? HiPopColors.infoBlueGray : HiPopColors.primaryDeepSage,
                   ),
                   title: Text(
                     item['title'],
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
-                      color: item['isDirect'] ? Colors.blue[700] : Colors.black,
+                      color: item['isDirect'] ? HiPopColors.infoBlueGrayDark : Colors.black,
                     ),
                   ),
                   subtitle: item['subtitle'] != null && item['subtitle'].isNotEmpty
                       ? Text(
                           item['subtitle'],
                           style: TextStyle(
-                            color: item['isDirect'] ? Colors.blue[600] : Colors.grey[700],
+                            color: item['isDirect'] ? HiPopColors.infoBlueGray : Colors.grey[700],
                           ),
                         )
                       : null,
@@ -262,7 +263,7 @@ class _SimplePlacesWidgetState extends State<SimplePlacesWidget> {
                   trailing: Icon(
                     item['isDirect'] ? Icons.search : Icons.north_west,
                     size: 16,
-                    color: item['isDirect'] ? Colors.blue[400] : Colors.grey[400],
+                    color: item['isDirect'] ? HiPopColors.infoBlueGrayLight : Colors.grey[400],
                   ),
                 );
               },

@@ -172,7 +172,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.orange,
+              color: const Color(0xFF946C7E), // Mauve
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -284,11 +284,12 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
           height: canAddMore ? 80 : 100, // Increase height for premium message
           decoration: BoxDecoration(
             border: Border.all(
-              color: canAddMore ? Colors.blue.shade300 : Colors.grey.shade300,
+              color: canAddMore ? const Color(0xFF6F9686) : Colors.grey.shade300, // Soft Sage for active
               style: BorderStyle.solid,
+              width: 1.5,
             ),
             borderRadius: BorderRadius.circular(12),
-            color: canAddMore ? Colors.blue.shade50 : Colors.grey.shade50,
+            color: canAddMore ? const Color(0xFFF3D2E1).withValues(alpha: 0.3) : Colors.grey.shade50, // Pale Pink background
           ),
           child: _isLoading
               ? const Center(
@@ -301,7 +302,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
                     Icon(
                       canAddMore ? Icons.add_photo_alternate : Icons.lock,
                       size: canAddMore ? 32 : 24, // Smaller icon for premium message
-                      color: canAddMore ? Colors.blue[600] : Colors.grey[600],
+                      color: canAddMore ? const Color(0xFF558B6E) : Colors.grey[600], // Deep Sage
                     ),
                     SizedBox(height: canAddMore ? 8 : 6),
                     Text(
@@ -310,7 +311,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
                           : 'Upgrade for unlimited photos',
                       style: TextStyle(
                         fontSize: canAddMore ? 14 : 12,
-                        color: canAddMore ? Colors.blue[600] : Colors.grey[600],
+                        color: canAddMore ? const Color(0xFF558B6E) : Colors.grey[600], // Deep Sage
                         fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,

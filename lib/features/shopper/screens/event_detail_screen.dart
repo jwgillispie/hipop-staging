@@ -613,15 +613,15 @@ class EventDetailView extends StatelessWidget {
   String _buildEventShareContent(Event event) {
     final buffer = StringBuffer();
     
-    buffer.writeln('🎉 Event Alert!');
+    buffer.writeln('Event Alert!');
     buffer.writeln();
-    buffer.writeln('📍 ${event.name}');
+    buffer.writeln('${event.name}');
     if (event.description.isNotEmpty) {
       buffer.writeln(event.description);
     }
     buffer.writeln();
-    buffer.writeln('📍 Location: ${event.location}');
-    buffer.writeln('🗓️ When: ${_formatDateTime(event.startDateTime, event.endDateTime)}');
+    buffer.writeln('Location: ${event.location}');
+    buffer.writeln('When: ${_formatDateTime(event.startDateTime, event.endDateTime)}');
     buffer.writeln();
     buffer.writeln('Discovered on HiPop - Discover local pop-ups and markets');
     buffer.writeln('Download: https://hipopapp.com');
