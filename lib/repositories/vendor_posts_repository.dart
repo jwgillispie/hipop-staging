@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../features/vendor/models/vendor_post.dart';
-import '../features/vendor/models/post_type.dart';
 
 // Helper class for proximity search
 class _PostWithDistance {
@@ -64,13 +63,8 @@ class VendorPostsRepository implements IVendorPostsRepository {
           for (final doc in snapshot.docs) {
             try {
               final post = VendorPost.fromFirestore(doc);
-              // Only include posts that are either:
-              // 1. Independent posts (no market association), OR
-              // 2. Market posts that are approved
-              if (post.postType == PostType.independent || 
-                  (post.postType == PostType.market && post.approvalStatus == ApprovalStatus.approved)) {
-                posts.add(post);
-              }
+              // All active posts are included - market posts are auto-approved
+              posts.add(post);
             } catch (e) {
               debugPrint('Failed to parse vendor post ${doc.id}: $e');
             }
@@ -87,7 +81,8 @@ class VendorPostsRepository implements IVendorPostsRepository {
   Stream<List<VendorPost>> getMarketPosts(String marketId) {
     return _firestore
         .collection(_collection)
-        .where('marketId', isEqualTo: marketId)
+        .where('associatedMarketId', isEqualTo: marketId) // Updated to use new field
+        .where('isActive', isEqualTo: true) // Only show active posts
         .snapshots()
         .map((snapshot) {
           final posts = <VendorPost>[];
@@ -397,29 +392,8 @@ class VendorPostsRepository implements IVendorPostsRepository {
 
   @override
   Stream<List<VendorPost>> getPendingMarketPosts(String marketId) {
-    return _firestore
-        .collection(_collection)
-        .where('marketId', isEqualTo: marketId)
-        .where('postType', isEqualTo: 'market')
-        .where('approvalStatus', isEqualTo: 'pending')
-        .snapshots()
-        .map((snapshot) {
-          final posts = <VendorPost>[];
-          
-          for (final doc in snapshot.docs) {
-            try {
-              final post = VendorPost.fromFirestore(doc);
-              posts.add(post);
-            } catch (e) {
-              debugPrint('Failed to parse vendor post ${doc.id}: $e');
-            }
-          }
-          
-          // Sort by creation date (newest first)
-          posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          
-          return posts;
-        });
+    // Market posts are auto-approved - no pending posts exist
+    return Stream.value(<VendorPost>[]);
   }
 
   @override

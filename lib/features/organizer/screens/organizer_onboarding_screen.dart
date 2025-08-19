@@ -55,7 +55,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HiPopColors.surfacePalePink.withValues(alpha: 0.3),
+      backgroundColor: HiPopColors.darkBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -104,8 +104,12 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             ),
             
             // Navigation buttons
-            Padding(
+            Container(
               padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: HiPopColors.darkSurface,
+                border: Border(top: BorderSide(color: HiPopColors.darkBorder)),
+              ),
               child: Row(
                 children: [
                   if (_currentPage > 0)
@@ -202,7 +206,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 const SizedBox(height: 16),
                 const Text(
                   '• How to create and manage your market\n'
-                  '• Processing vendor applications\n'
+                  '• Finding and recruiting vendors\n'
                   '• Viewing analytics and insights\n'
                   '• Using the market calendar\n'
                   '• Getting started with your first market',
@@ -308,14 +312,14 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.assignment_turned_in,
+              Icons.campaign,
               size: 70,
               color: HiPopColors.vendorAccentDark,
             ),
           ),
           const SizedBox(height: 40),
           Text(
-            'Vendor Connections',
+            'Vendor Recruitment',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: HiPopColors.lightTextPrimary,
@@ -324,7 +328,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Manage vendor connections with ease. Share application links and review connections in one place.',
+            'Find and connect with vendors for your markets. Post recruitment calls and discover new vendors to grow your market.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: HiPopColors.organizerAccentDark,
             ),
@@ -347,24 +351,24 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
             child: Column(
               children: [
                 _buildFeatureItem(
-                  Icons.share,
-                  'Share Application Links',
-                  'Send vendors a direct link to apply',
+                  Icons.search,
+                  'Vendor Discovery',
+                  'Browse and filter vendors by category',
                   HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.rate_review,
-                  'Review Applications',
-                  'Approve, reject, or waitlist vendors',
+                  Icons.post_add,
+                  'Recruitment Posts',
+                  'Create posts to attract new vendors',
                   HiPopColors.accentMauve,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.notifications,
-                  'Get Notified',
-                  'Receive new applications instantly',
-                  HiPopColors.successGreen,
+                  Icons.send,
+                  'Bulk Messaging (Pro)',
+                  'Message multiple vendors at once',
+                  HiPopColors.warningAmber,
                 ),
               ],
             ),
@@ -383,7 +387,7 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Tip: The application form collects all vendor info automatically - no paper forms needed!',
+                    'Tip: Use vendor recruitment posts to quickly find vendors for upcoming markets and special events!',
                     style: TextStyle(
                       fontSize: 12,
                       color: HiPopColors.infoBlueGrayDark,
@@ -543,7 +547,6 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(28),
@@ -613,43 +616,65 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: HiPopColors.darkSurface,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: HiPopColors.lightBorder),
+              border: Border.all(color: HiPopColors.darkBorder),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Calendar Legend',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: HiPopColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
                         color: HiPopColors.successGreen,
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Expanded(child: Text('Market Operating', style: TextStyle(fontSize: 12))),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Market Operating Days',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: HiPopColors.lightTextSecondary,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const BoxDecoration(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
                         color: HiPopColors.vendorAccent,
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Expanded(child: Text('Selected Day', style: TextStyle(fontSize: 12))),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Today/Selected Day',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: HiPopColors.lightTextSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -726,12 +751,12 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildChecklistItem('Create your first market'),
-                _buildChecklistItem('Set operating hours and location'),
-                _buildChecklistItem('Share the vendor application link'),
-                _buildChecklistItem('Review and approve applications'),
-                _buildChecklistItem('Monitor analytics and growth'),
-                _buildChecklistItem('Consider Pro for vendor directory access'),
+                _buildChecklistItem('✓ Create your first market'),
+                _buildChecklistItem('✓ Set operating hours and location'),
+                _buildChecklistItem('✓ Post vendor recruitment calls'),
+                _buildChecklistItem('✓ Discover and invite vendors'),
+                _buildChecklistItem('✓ Monitor analytics and growth'),
+                _buildChecklistItem('✓ Upgrade to Pro for advanced features'),
               ],
             ),
           ),
@@ -806,20 +831,41 @@ class _OrganizerOnboardingScreenState extends State<OrganizerOnboardingScreen> {
   }
 
   Widget _buildChecklistItem(String text) {
+    final bool isChecked = text.startsWith('✓');
+    final String displayText = isChecked ? text.substring(2) : text;
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle_outline,
-            size: 16,
-            color: HiPopColors.organizerAccent,
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: isChecked ? HiPopColors.successGreen : Colors.transparent,
+              border: Border.all(
+                color: isChecked ? HiPopColors.successGreen : HiPopColors.organizerAccent,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: isChecked
+                ? Icon(
+                    Icons.check,
+                    size: 14,
+                    color: Colors.white,
+                  )
+                : null,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text,
-              style: TextStyle(fontSize: 14, color: HiPopColors.darkTextPrimary),
+              displayText,
+              style: TextStyle(
+                fontSize: 14,
+                color: HiPopColors.lightTextPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

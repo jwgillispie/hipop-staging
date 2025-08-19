@@ -23,6 +23,7 @@ import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 enum FeedFilter { markets, vendors, events, all }
 
@@ -201,7 +202,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
+            color: isSelected ? color : HiPopColors.darkBorder,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -209,14 +210,14 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           children: [
             Icon(
               icon,
-              color: isSelected ? color : Colors.grey.shade600,
+              color: isSelected ? color : HiPopColors.darkTextSecondary,
               size: 24,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? color : Colors.grey.shade600,
+                color: isSelected ? color : HiPopColors.darkTextSecondary,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 12,
               ),
@@ -240,9 +241,10 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
         }
 
         return Scaffold(
+          backgroundColor: HiPopColors.darkBackground,
           appBar: AppBar(
             title: const Text('HiPop Markets'),
-            backgroundColor: Colors.orange,
+            backgroundColor: HiPopColors.shopperAccent,
             foregroundColor: Colors.white,
             actions: [
               BlocBuilder<FavoritesBloc, FavoritesState>(
@@ -323,7 +325,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                                   Text(
                                     'Discover markets and vendor pop-ups near you',
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.grey[600],
+                                      color: HiPopColors.darkTextSecondary,
                                     ),
                                   ),
                                 ],
@@ -353,18 +355,18 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Expanded(child: Divider(color: Colors.grey[300])),
+                    Expanded(child: Divider(color: HiPopColors.darkBorder)),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'or browse all',
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                           fontSize: 12,
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: Colors.grey[300])),
+                    Expanded(child: Divider(color: HiPopColors.darkBorder)),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -456,7 +458,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
             Text(
               '${markets.length} found',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -502,7 +504,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
             Text(
               '${posts.length} found',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -548,7 +550,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
             Text(
               '${events.length} found',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -620,7 +622,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                     Text(
                       '$totalCount found (${sortedMarkets.length} markets, ${posts.length} vendor pop-ups, ${events.length} events)',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -655,7 +657,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           Text(
             error,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey[600],
+              color: HiPopColors.darkTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -707,7 +709,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                           'Pop-up • ${_formatPostDateTime(post.popUpStartDateTime)}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: HiPopColors.darkTextSecondary,
                           ),
                         ),
                       ],
@@ -744,7 +746,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: Colors.grey[500],
+                    color: HiPopColors.darkTextTertiary,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -771,7 +773,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 post.description,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey[600],
+                  color: HiPopColors.darkTextSecondary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -781,7 +783,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.camera_alt, size: 14, color: HiPopColors.darkTextSecondary),
                     const SizedBox(width: 4),
                     InkWell(
                       onTap: () => _launchInstagram(post.instagramHandle!),
@@ -968,7 +970,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                           'Event • ${event.formattedDateTime}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: HiPopColors.darkTextSecondary,
                           ),
                         ),
                       ],
@@ -987,7 +989,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: Colors.grey[500],
+                    color: HiPopColors.darkTextTertiary,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -1014,7 +1016,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 event.description,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey[600],
+                  color: HiPopColors.darkTextSecondary,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -1099,7 +1101,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                           'Market • ${market.eventDisplayInfo}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: HiPopColors.darkTextSecondary,
                           ),
                         ),
                       ],
@@ -1136,7 +1138,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   Icon(
                     Icons.location_on,
                     size: 16,
-                    color: Colors.grey[500],
+                    color: HiPopColors.darkTextTertiary,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -1164,7 +1166,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   market.description!,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: HiPopColors.darkTextSecondary,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -1225,20 +1227,20 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           Icon(
             icon,
             size: 64,
-            color: Colors.grey[400],
+            color: HiPopColors.darkBorder,
           ),
           const SizedBox(height: 16),
           Text(
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
+              color: HiPopColors.darkTextSecondary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             subtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
+              color: HiPopColors.darkTextTertiary,
             ),
             textAlign: TextAlign.center,
           ),

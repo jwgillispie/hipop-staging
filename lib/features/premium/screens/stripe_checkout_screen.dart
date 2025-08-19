@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/user_subscription.dart';
 import '../services/subscription_service.dart';
 import '../../shared/widgets/common/loading_widget.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 /// Real Stripe Checkout Screen for production payments
 class StripeCheckoutScreen extends StatefulWidget {
@@ -164,27 +165,33 @@ class _StripeCheckoutScreenState extends State<StripeCheckoutScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('Payment Successful!'),
+        backgroundColor: HiPopColors.darkSurface,
+        title: Text(
+          'Payment Successful!',
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.check_circle,
-              color: Colors.green,
+              color: HiPopColors.successGreen,
               size: 64,
             ),
             const SizedBox(height: 16),
             Text(
               'Welcome to ${_getTierName(widget.selectedTier)}!',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Your premium features are now active.',
               textAlign: TextAlign.center,
+              style: TextStyle(color: HiPopColors.darkTextSecondary),
             ),
           ],
         ),
@@ -204,6 +211,9 @@ class _StripeCheckoutScreenState extends State<StripeCheckoutScreen> {
                   context.go('/home');
               }
             },
+            style: TextButton.styleFrom(
+              foregroundColor: HiPopColors.primaryDeepSage,
+            ),
             child: const Text('Go to Premium Dashboard'),
           ),
         ],

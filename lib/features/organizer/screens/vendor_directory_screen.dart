@@ -7,6 +7,7 @@ import '../../premium/services/subscription_service.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
 import '../../shared/widgets/common/hipop_text_field.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
 
 class VendorDirectoryScreen extends StatefulWidget {
   const VendorDirectoryScreen({super.key});
@@ -207,44 +208,10 @@ class _VendorDirectoryScreenState extends State<VendorDirectoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.store,
-                color: Colors.amber[700],
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vendor Directory'),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade600,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'PRO',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.deepPurple.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: HiPopAppBar(
+        title: 'Vendor Directory',
+        userRole: 'vendor',
+        centerTitle: true,
       ),
       body: !_hasPremiumAccess
           ? _buildUpgradePrompt()

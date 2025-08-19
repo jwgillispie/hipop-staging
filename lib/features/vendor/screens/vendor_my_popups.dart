@@ -7,7 +7,9 @@ import 'package:hipop/repositories/vendor_posts_repository.dart';
 import 'package:hipop/features/shared/services/share_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:hipop/features/market/services/market_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../models/vendor_post.dart';
+import '../../market/models/market.dart';
 
 class VendorMyPopups extends StatefulWidget {
   const VendorMyPopups({super.key});
@@ -18,6 +20,7 @@ class VendorMyPopups extends StatefulWidget {
 
 class _VendorMyPopupsState extends State<VendorMyPopups> {
   final VendorPostsRepository _vendorPostsRepository = VendorPostsRepository();
+  final Map<String, Market?> _marketCache = {};
   String? _currentVendorId;
 
   @override
@@ -38,7 +41,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Pop-ups'),
-        backgroundColor: Colors.orange,
+        backgroundColor: HiPopColors.vendorAccent,
         foregroundColor: Colors.white,
       ),
       body: _currentVendorId == null
@@ -55,7 +58,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        Icon(Icons.error, size: 64, color: HiPopColors.errorPlum),
                         const SizedBox(height: 16),
                         Text(
                           'Error loading pop-ups',
@@ -64,7 +67,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                         const SizedBox(height: 8),
                         Text(
                           'Please try again later',
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: HiPopColors.lightTextSecondary),
                         ),
                       ],
                     ),
@@ -81,15 +84,15 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                         Icon(
                           Icons.event_busy,
                           size: 64,
-                          color: Colors.grey[400],
+                          color: HiPopColors.lightTextTertiary,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
+                        Text(
                           'No Pop-ups Created Yet',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: Colors.grey,
+                            color: HiPopColors.lightTextSecondary,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -97,14 +100,14 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                           'Create your first pop-up to get started!',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: HiPopColors.lightTextSecondary,
                           ),
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton.icon(
                           onPressed: () => context.go('/vendor/create-popup'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
+                            backgroundColor: HiPopColors.vendorAccent,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
@@ -133,21 +136,21 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                       const SizedBox(height: 24),
                       
                       if (livePosts.isNotEmpty) ...[
-                        _buildSectionHeader('Live Now', livePosts.length, Colors.green),
+                        _buildSectionHeader('Live Now', livePosts.length, HiPopColors.successGreen),
                         const SizedBox(height: 16),
                         ...livePosts.map((post) => _buildPostCard(post)),
                         const SizedBox(height: 24),
                       ],
                       
                       if (upcomingPosts.isNotEmpty) ...[
-                        _buildSectionHeader('Upcoming', upcomingPosts.length, Colors.orange),
+                        _buildSectionHeader('Upcoming', upcomingPosts.length, HiPopColors.vendorAccent),
                         const SizedBox(height: 16),
                         ...upcomingPosts.map((post) => _buildPostCard(post)),
                         const SizedBox(height: 24),
                       ],
                       
                       if (pastPosts.isNotEmpty) ...[
-                        _buildSectionHeader('Past Events', pastPosts.length, Colors.grey),
+                        _buildSectionHeader('Past Events', pastPosts.length, HiPopColors.lightTextSecondary),
                         const SizedBox(height: 16),
                         ...pastPosts.map((post) => _buildPostCard(post)),
                       ],
@@ -158,7 +161,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.go('/vendor/create-popup'),
-        backgroundColor: Colors.orange,
+        backgroundColor: HiPopColors.vendorAccent,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -167,15 +170,16 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
   Widget _buildStatsCard(int total, int upcoming, int live) {
     return Card(
       elevation: 4,
+      color: HiPopColors.surfacePalePink,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            _buildStatItem('Total', total.toString(), Colors.blue),
+            _buildStatItem('Total', total.toString(), HiPopColors.primaryDeepSage),
             const SizedBox(width: 24),
-            _buildStatItem('Live', live.toString(), Colors.green),
+            _buildStatItem('Live', live.toString(), HiPopColors.successGreen),
             const SizedBox(width: 24),
-            _buildStatItem('Upcoming', upcoming.toString(), Colors.orange),
+            _buildStatItem('Upcoming', upcoming.toString(), HiPopColors.vendorAccent),
           ],
         ),
       ),
@@ -199,7 +203,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[600],
+              color: HiPopColors.lightTextSecondary,
             ),
           ),
         ],
@@ -250,53 +254,80 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
+      color: HiPopColors.surfacePalePink,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Market indicator for market posts
+            if (post.isMarketPost) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.storefront, size: 14, color: HiPopColors.vendorAccent),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Market Vendor',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: HiPopColors.vendorAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Market name or location
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                          Icon(
+                            post.isMarketPost ? Icons.storefront : Icons.location_on, 
+                            size: 16, 
+                            color: HiPopColors.lightTextSecondary
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(
-                              post.location,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            child: _buildLocationWidget(post),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.schedule, size: 14, color: Colors.grey),
+                          Icon(Icons.schedule, size: 14, color: HiPopColors.lightTextSecondary),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  post.formattedDateTime,
+                                  _getFormattedDate(post),
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey[600],
+                                    color: HiPopColors.lightTextSecondary,
                                   ),
                                 ),
                                 Text(
                                   post.formattedTimeRange,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey[500],
+                                    color: HiPopColors.lightTextTertiary,
                                   ),
                                 ),
                               ],
@@ -311,10 +342,10 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: post.isHappening 
-                        ? Colors.green 
+                        ? HiPopColors.successGreen 
                         : post.isUpcoming 
-                            ? Colors.orange 
-                            : Colors.grey,
+                            ? HiPopColors.vendorAccent 
+                            : HiPopColors.lightTextSecondary,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
@@ -341,13 +372,13 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
             Row(
               children: [
                 if (post.instagramHandle != null) ...[
-                  const Icon(Icons.alternate_email, size: 16, color: Colors.grey),
+                  Icon(Icons.alternate_email, size: 16, color: HiPopColors.lightTextSecondary),
                   const SizedBox(width: 4),
                   Text(
                     post.instagramHandle!,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: HiPopColors.lightTextSecondary,
                     ),
                   ),
                   const Spacer(),
@@ -381,7 +412,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.copy, color: Colors.orange),
+              leading: Icon(Icons.copy, color: HiPopColors.vendorAccent),
               title: const Text('Duplicate'),
               onTap: () {
                 Navigator.pop(context);
@@ -389,8 +420,8 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              leading: Icon(Icons.delete, color: HiPopColors.errorPlum),
+              title: Text('Delete', style: TextStyle(color: HiPopColors.errorPlum)),
               onTap: () {
                 Navigator.pop(context);
                 _confirmDelete(post);
@@ -438,9 +469,9 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                 await _vendorPostsRepository.deletePost(post.id);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Pop-up deleted successfully'),
-                      backgroundColor: Colors.green,
+                      backgroundColor: HiPopColors.successGreen,
                     ),
                   );
                 }
@@ -449,13 +480,13 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Failed to delete pop-up: $e'),
-                      backgroundColor: Colors.red,
+                      backgroundColor: HiPopColors.errorPlum,
                     ),
                   );
                 }
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
             child: const Text('Delete'),
           ),
         ],
@@ -484,7 +515,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
       // Show success message
       if (mounted && result.status == ShareResultStatus.success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white, size: 20),
@@ -492,7 +523,7 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                 Text('Pop-up shared successfully!'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
             duration: Duration(seconds: 2),
           ),
         );
@@ -509,11 +540,144 @@ class _VendorMyPopupsState extends State<VendorMyPopups> {
                 Expanded(child: Text('Failed to share pop-up: $e')),
               ],
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
             duration: const Duration(seconds: 3),
           ),
         );
       }
+    }
+  }
+
+  // Helper method to build the location widget based on post type
+  Widget _buildLocationWidget(VendorPost post) {
+    if (post.isMarketPost) {
+      // For market posts, show market name if available, otherwise loading state
+      if (post.associatedMarketName != null && post.associatedMarketName!.isNotEmpty) {
+        return Text(
+          post.associatedMarketName!,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+      } else if (post.associatedMarketId != null) {
+        // Load market data if we have the ID but not the name
+        return FutureBuilder<Market?>(
+          future: _loadMarketData(post.associatedMarketId!),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: HiPopColors.vendorAccent,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Loading market...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: HiPopColors.lightTextSecondary,
+                    ),
+                  ),
+                ],
+              );
+            } else if (snapshot.hasData && snapshot.data != null) {
+              return Text(
+                snapshot.data!.name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            } else {
+              return Text(
+                'Market not found',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: HiPopColors.errorPlum,
+                ),
+              );
+            }
+          },
+        );
+      } else {
+        return Text(
+          'Unknown market',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    } else {
+      // For independent posts, show the location
+      return Text(
+        post.location.isNotEmpty ? post.location : 'Location not specified',
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+  }
+
+  // Format the date for display
+  String _getFormattedDate(VendorPost post) {
+    final eventDate = post.popUpStartDateTime;
+    
+    // For market posts, always show the actual date
+    if (post.isMarketPost) {
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      final month = months[eventDate.month - 1];
+      final weekday = weekdays[eventDate.weekday % 7];
+      
+      return '$weekday, $month ${eventDate.day}, ${eventDate.year}';
+    }
+    
+    // For independent posts, use relative time if it's upcoming
+    if (post.isHappening) {
+      return 'Happening now!';
+    } else if (post.isPast) {
+      return 'Past event';
+    } else {
+      // Show actual date for all posts
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      final month = months[eventDate.month - 1];
+      final weekday = weekdays[eventDate.weekday % 7];
+      
+      return '$weekday, $month ${eventDate.day}, ${eventDate.year}';
+    }
+  }
+
+  // Cache market data to avoid repeated API calls
+  Future<Market?> _loadMarketData(String marketId) async {
+    if (_marketCache.containsKey(marketId)) {
+      return _marketCache[marketId];
+    }
+
+    try {
+      final market = await MarketService.getMarket(marketId);
+      _marketCache[marketId] = market;
+      return market;
+    } catch (e) {
+      debugPrint('Error loading market data: $e');
+      _marketCache[marketId] = null;
+      return null;
     }
   }
 }

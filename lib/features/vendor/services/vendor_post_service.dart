@@ -63,17 +63,17 @@ class VendorPostService {
       photoUrls: postData.photoUrls,
       createdAt: now,
       updatedAt: now,
-      isActive: postType == PostType.independent,
+      isActive: true, // Changed: All posts are active immediately
       // NEW FIELDS
       postType: postType,
       associatedMarketId: selectedMarket?.id,
       associatedMarketName: selectedMarket?.name,
       associatedMarketLogo: selectedMarket?.imageUrl,
-      approvalStatus: postType == PostType.market ? ApprovalStatus.pending : null,
+      approvalStatus: postType == PostType.market ? ApprovalStatus.approved : null, // Changed: Market posts are approved immediately
       approvalRequestedAt: postType == PostType.market ? now : null,
-      approvalExpiresAt: postType == PostType.market 
-          ? postData.popUpStartDateTime.subtract(const Duration(days: 1))
-          : null,
+      approvalDecidedAt: postType == PostType.market ? now : null, // Changed: Set approval decision time immediately
+      approvedBy: postType == PostType.market ? 'system_auto_approval' : null, // Changed: Mark as system auto-approved
+      approvalExpiresAt: null, // Changed: No expiration since auto-approved
       vendorNotes: postData.vendorNotes,
       monthlyPostNumber: monthlyPostNumber,
       countsTowardLimit: true,
@@ -88,29 +88,10 @@ class VendorPostService {
         post.toFirestore(),
       );
       
-      // If market post, add to approval queue
+      // Market posts no longer need approval queue - they're auto-approved
+      // Automatically add vendor to market's vendor list for management visibility
       if (postType == PostType.market && selectedMarket != null) {
-        final queueDoc = _firestore.collection(_queueCollection).doc();
-        final priority = ApprovalPriority.calculatePriority(postData.popUpStartDateTime);
-        
-        transaction.set(queueDoc, {
-          'marketId': selectedMarket.id,
-          'organizerId': 'temp_organizer_id', // TODO: Add organizerId to Market model
-          'vendorPostId': postId,
-          'vendorName': vendor.businessName ?? vendor.displayName ?? 'Vendor',
-          'vendorId': vendorId,
-          'eventDate': Timestamp.fromDate(postData.popUpStartDateTime),
-          'requestedAt': Timestamp.fromDate(now),
-          'priority': priority.value,
-          'status': 'pending',
-          'preview': {
-            'description': postData.description.length > 100 
-                ? '${postData.description.substring(0, 100)}...'
-                : postData.description,
-            'productCount': postData.productListIds.length,
-            'photoCount': postData.photoUrls.length,
-          },
-        });
+        await _addVendorToMarketAutomatically(vendorId, selectedMarket.id, vendor);
       }
       
       // Monthly tracking will be handled after transaction completes
@@ -124,14 +105,56 @@ class VendorPostService {
       postId: postId,
     );
     
-    // 7. Send notification if market post
+    // 7. Market posts are auto-approved - no notification needed for approval requests
     if (postType == PostType.market && selectedMarket != null) {
-      // TODO: Send notification when NotificationService is available
-      debugPrint('📧 Would send notification to market organizer about new vendor request');
+      debugPrint('✅ Market post auto-approved for market: ${selectedMarket.name}');
     }
     
     debugPrint('✅ Created ${postType.value} post: $postId');
     return post;
+  }
+
+  /// Automatically add vendor to market's vendor list when they create a market post
+  static Future<void> _addVendorToMarketAutomatically(
+    String vendorId, 
+    String marketId, 
+    dynamic vendorProfile,
+  ) async {
+    try {
+      // Check if vendor is already in the market's vendor list
+      final vendorListQuery = await _firestore
+          .collection('vendor_market_relationships')
+          .where('vendorId', isEqualTo: vendorId)
+          .where('marketId', isEqualTo: marketId)
+          .where('isActive', isEqualTo: true)
+          .get();
+      
+      if (vendorListQuery.docs.isNotEmpty) {
+        debugPrint('Vendor $vendorId already in market $marketId vendor list');
+        return;
+      }
+      
+      // Create vendor-market relationship for management purposes
+      await _firestore.collection('vendor_market_relationships').add({
+        'vendorId': vendorId,
+        'marketId': marketId,
+        'vendorName': vendorProfile.businessName ?? vendorProfile.displayName ?? 'Vendor',
+        'vendorEmail': vendorProfile.email,
+        'relationshipType': 'auto_added_via_post',
+        'isActive': true,
+        'isApproved': true,
+        'approvedAt': FieldValue.serverTimestamp(),
+        'approvedBy': 'system_auto_approval',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'notes': 'Automatically added when vendor created market post',
+      });
+      
+      debugPrint('✅ Automatically added vendor $vendorId to market $marketId');
+    } catch (e) {
+      debugPrint('❌ Error auto-adding vendor to market: $e');
+      // Don't rethrow - this shouldn't block post creation
+    }
   }
   
   /// Get approved vendors for a market on a specific date

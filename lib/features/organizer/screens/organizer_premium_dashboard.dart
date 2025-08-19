@@ -4,9 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/premium/services/subscription_service.dart';
+import 'package:hipop/core/widgets/hipop_app_bar.dart';
 
 class OrganizerPremiumDashboard extends StatefulWidget {
   const OrganizerPremiumDashboard({super.key});
@@ -197,16 +199,10 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     }
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.diamond, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('Organizer Pro Dashboard'),
-          ],
-        ),
-        backgroundColor: Colors.deepPurple.shade700,
-        foregroundColor: Colors.white,
+      appBar: HiPopAppBar(
+        title: 'Organizer Pro Dashboard',
+        userRole: 'vendor',
+        centerTitle: true,
         bottom: _hasPremiumAccess ? TabBar(
           controller: _tabController,
           labelColor: Colors.white,
@@ -270,8 +266,8 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
 
   Widget _buildFeatureList() {
     final features = [
-      '🎯 Unlimited "Looking for Vendors" Posts - Create targeted posts that appear in vendor market discovery',
-      '📈 Vendor Response Management - View and manage vendor inquiries and applications',
+      'Unlimited "Looking for Vendors" Posts - Create targeted posts that appear in vendor market discovery',
+      'Vendor Response Management - View and manage vendor inquiries and applications',
       'Post Performance Analytics - Track views, responses, and conversion rates for your posts',
       'Smart Vendor Matching - Your posts are automatically matched to relevant vendors',
       'Integrated Discovery - Seamless integration with vendor premium discovery features',
@@ -280,16 +276,31 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
 
     return Column(
       children: features.map((feature) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('✅', style: TextStyle(fontSize: 16)),
-            const SizedBox(width: 8),
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: HiPopColors.successGreen.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check,
+                size: 14,
+                color: HiPopColors.successGreen,
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 feature,
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
               ),
             ),
           ],
@@ -540,7 +551,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            context.go('/organizer/vendor-posts/create');
+                            context.go('/organizer/vendor-recruitment/create');
                           },
                           icon: const Icon(Icons.add),
                           label: const Text('Create Post'),
@@ -735,8 +746,15 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        elevation: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isLocked ? Colors.white.withValues(alpha: 0.1) : color.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
         child: Stack(
           children: [
             Padding(
@@ -747,7 +765,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                   Icon(
                     icon, 
                     size: 32, 
-                    color: isLocked ? Colors.grey.shade400 : color,
+                    color: isLocked ? Colors.white.withValues(alpha: 0.3) : color,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -755,7 +773,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isLocked ? Colors.grey.shade400 : color,
+                      color: isLocked ? Colors.white.withValues(alpha: 0.3) : Colors.white,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -763,7 +781,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                     title,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isLocked ? Colors.grey.shade400 : Colors.grey[600],
+                      color: isLocked ? Colors.white.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.6),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -806,18 +824,22 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.deepPurple.shade600,
-                  Colors.deepPurple.shade800,
+                  HiPopColors.premiumGold.withValues(alpha: 0.3),
+                  HiPopColors.premiumGoldDark.withValues(alpha: 0.5),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: HiPopColors.premiumGold.withValues(alpha: 0.5),
+                width: 1,
+              ),
             ),
             child: Column(
               children: [
-                const Icon(
+                Icon(
                   Icons.diamond,
                   size: 64,
-                  color: Colors.amber,
+                  color: HiPopColors.premiumGold,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -830,11 +852,11 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Transform your market management with powerful premium tools',
                   style: TextStyle(
                     fontSize: 18,
-                    color: Colors.white70,
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -842,7 +864,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.amber,
+                    color: HiPopColors.premiumGold,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -850,7 +872,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: Color(0xFF0A0A0A),
                     ),
                   ),
                 ),
@@ -865,6 +887,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
@@ -930,7 +953,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 ),
                 SizedBox(height: 12),
                 Text(
-                  'Find just 1-2 quality vendors per month and Pro pays for itself. Most organizers see 5-10x ROI within the first month.',
+                  'Find just 1-2 quality vendors per month and Pro pays for itself.',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.black87,
@@ -955,18 +978,18 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
+                backgroundColor: HiPopColors.premiumGold,
+                foregroundColor: const Color(0xFF0A0A0A),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.diamond, size: 24),
-                  SizedBox(width: 12),
-                  Text(
+                  Icon(Icons.diamond, size: 24, color: const Color(0xFF0A0A0A)),
+                  const SizedBox(width: 12),
+                  const Text(
                     'Upgrade to Organizer Pro - \$69/month',
                     style: TextStyle(
                       fontSize: 18,
@@ -983,10 +1006,10 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           // Back button
           TextButton(
             onPressed: () => context.go('/organizer'),
-            child: const Text(
+            child: Text(
               'Maybe Later - Back to Dashboard',
               style: TextStyle(
-                color: Colors.grey,
+                color: Colors.white.withValues(alpha: 0.6),
                 fontSize: 16,
               ),
             ),
@@ -1000,9 +1023,9 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1012,16 +1035,16 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: Colors.white,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.black87,
+              color: Colors.white.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),

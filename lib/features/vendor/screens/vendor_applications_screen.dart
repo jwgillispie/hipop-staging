@@ -31,7 +31,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // Removed pending tab
     _selectedMarketId = _getInitialMarketId();
     _loadMarketNames();
   }
@@ -160,7 +160,19 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vendor Connections'),
-        backgroundColor: Colors.green,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF6F9686), // Soft Sage
+                Color(0xFF946C7E), // Mauve
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -207,7 +219,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                       Expanded(
                         child: DropdownButton<String>(
                           value: _selectedMarketId,
-                          dropdownColor: Colors.green.shade700,
+                          dropdownColor: const Color(0xFF6F9686),
                           style: const TextStyle(color: Colors.white),
                           underline: Container(
                             height: 1,
@@ -243,7 +255,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                 unselectedLabelColor: Colors.white70,
                 tabs: const [
                   Tab(text: 'All'),
-                  Tab(text: 'Pending'),
                   Tab(text: 'Approved'),
                   Tab(text: 'Rejected'),
                 ],
@@ -258,8 +269,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
               controller: _tabController,
               children: [
                 _buildPostApplicationsList(null),
-                _buildPostApplicationsList('pending'),
-                _buildPostApplicationsList('approved'),
+                _buildPostApplicationsList('approved'), // Market posts are auto-approved
                 _buildPostApplicationsList('denied'),
               ],
             ),
@@ -441,7 +451,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
         final filteredPosts = filterStatus == null 
             ? posts 
             : posts.where((post) {
-                if (filterStatus == 'pending') return post.approvalStatus?.value == 'pending';
                 if (filterStatus == 'approved') return post.approvalStatus?.value == 'approved';
                 if (filterStatus == 'denied') return post.approvalStatus?.value == 'denied';
                 return false;
@@ -457,15 +466,13 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  filterStatus == 'pending' ? Icons.pending_actions : Icons.assignment,
+                  Icons.assignment,
                   size: 64,
                   color: Colors.grey[400],
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  filterStatus == 'pending' 
-                      ? 'No pending market post applications'
-                      : 'No ${filterStatus ?? ""} applications',
+                  'No ${filterStatus ?? ""} applications',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
@@ -496,24 +503,20 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
   Widget _buildPostApplicationCard(VendorPost post) {
     final isApproved = post.approvalStatus?.value == 'approved';
     final isDenied = post.approvalStatus?.value == 'denied';
-    final isPending = post.approvalStatus?.value == 'pending';
+    // Market posts are auto-approved, no pending state
     
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
       child: ExpansionTile(
         leading: CircleAvatar(
-          backgroundColor: isPending 
-              ? Colors.orange 
-              : isApproved 
-                  ? Colors.green 
-                  : Colors.red,
+          backgroundColor: isApproved 
+              ? Colors.green 
+              : Colors.red,
           child: Icon(
-            isPending 
-                ? Icons.pending_actions 
-                : isApproved 
-                    ? Icons.check 
-                    : Icons.close,
+            isApproved 
+                ? Icons.check 
+                : Icons.close,
             color: Colors.white,
           ),
         ),
@@ -578,27 +581,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                   ),
                 ],
                 const SizedBox(height: 16),
-                if (isPending)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => _denyPost(post),
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
-                        child: const Text('Deny'),
-                      ),
-                      const SizedBox(width: 16),
-                      ElevatedButton(
-                        onPressed: () => _approvePost(post),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Approve'),
-                      ),
-                    ],
-                  )
-                else
+                // Market posts are auto-approved, no manual approval needed
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(

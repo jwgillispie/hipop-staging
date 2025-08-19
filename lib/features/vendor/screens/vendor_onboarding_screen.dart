@@ -55,7 +55,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HiPopColors.surfacePalePink.withValues(alpha: 0.5),
+      backgroundColor: HiPopColors.darkBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -104,8 +104,12 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             ),
             
             // Navigation buttons
-            Padding(
+            Container(
               padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: HiPopColors.darkSurface,
+                border: Border(top: BorderSide(color: HiPopColors.darkBorder)),
+              ),
               child: Row(
                 children: [
                   if (_currentPage > 0)
@@ -201,9 +205,9 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  '• Creating and managing popup events\n'
-                  '• Applying to farmers markets\n'
-                  '• Managing your product listings\n'
+                  '• Creating vendor pop-up posts\n'
+                  '• Discovering and joining markets\n'
+                  '• Managing your product catalog\n'
                   '• Tracking sales and analytics\n'
                   '• Growing your vendor business',
                   style: TextStyle(fontSize: 14, color: HiPopColors.lightTextSecondary),
@@ -236,7 +240,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           ),
           const SizedBox(height: 40),
           Text(
-            'Create Popup Events',
+            'Create Pop-up Posts',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: HiPopColors.lightTextPrimary,
@@ -245,7 +249,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Share your popup events with the community. Let customers know when and where to find you.',
+            'Share your pop-up events with the community. Let customers know when and where to find you at markets.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: HiPopColors.vendorAccentDark,
             ),
@@ -307,7 +311,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Free: 3 popup posts',
+                        'Free: 3 pop-up posts',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: HiPopColors.warningAmberDark,
@@ -315,7 +319,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                         ),
                       ),
                       Text(
-                        'Pro: Unlimited popup posts',
+                        'Premium: Unlimited pop-up posts',
                         style: TextStyle(
                           color: HiPopColors.warningAmberDark,
                           fontSize: 12,
@@ -345,14 +349,14 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.assignment,
+              Icons.explore,
               size: 70,
               color: HiPopColors.successGreen,
             ),
           ),
           const SizedBox(height: 40),
           Text(
-            'Apply to Markets',
+            'Discover Markets',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: HiPopColors.lightTextPrimary,
@@ -361,7 +365,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Find and apply to farmers markets in your area. Get accepted to regular market slots for consistent business.',
+            'Find farmers markets looking for vendors. Connect with market organizers and join markets that match your business.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: HiPopColors.vendorAccentDark,
             ),
@@ -385,22 +389,22 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
               children: [
                 _buildFeatureItem(
                   Icons.search,
-                  'Discover Markets',
-                  'Browse available farmers markets',
+                  'Browse Markets',
+                  'Find markets actively recruiting vendors',
                   HiPopColors.infoBlueGray,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.send,
-                  'Submit Applications',
-                  'Apply with your vendor profile',
+                  Icons.campaign,
+                  'View Recruitment Posts',
+                  'See what markets are looking for',
                   HiPopColors.accentMauve,
                 ),
                 const Divider(),
                 _buildFeatureItem(
-                  Icons.notifications,
-                  'Track Status',
-                  'Get notified about application updates',
+                  Icons.connect_without_contact,
+                  'Connect with Organizers',
+                  'Reach out to join their markets',
                   HiPopColors.successGreen,
                 ),
               ],
@@ -420,7 +424,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Tip: Complete your vendor profile to increase acceptance rates!',
+                    'Tip: Complete your vendor profile to stand out to market organizers!',
                     style: TextStyle(
                       fontSize: 12,
                       color: HiPopColors.infoBlueGrayDark,
@@ -607,7 +611,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Monitor your business performance with detailed analytics on sales, customer engagement, and market applications.',
+            'Monitor your business performance with sales tracking, customer insights, and market analytics.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: HiPopColors.vendorAccentDark,
             ),
@@ -645,8 +649,8 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                 const Divider(),
                 _buildFeatureItem(
                   Icons.assessment,
-                  'Market Performance',
-                  'Track application success rates',
+                  'Market Analytics',
+                  'Track your market performance',
                   HiPopColors.accentMauve,
                 ),
               ],
@@ -710,7 +714,7 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'You now know how to grow your vendor business with HiPop. Let\'s set up your first popup event!',
+            'You now know how to grow your vendor business with HiPop. Let\'s set up your first pop-up post!',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: HiPopColors.vendorAccentDark,
             ),
@@ -747,11 +751,11 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildChecklistItem('Complete your vendor profile'),
-                _buildChecklistItem('Add your product listings'),
-                _buildChecklistItem('Create your first popup event'),
-                _buildChecklistItem('Apply to local farmers markets'),
-                _buildChecklistItem('Track your success with analytics'),
+                _buildChecklistItem('✓ Complete your vendor profile'),
+                _buildChecklistItem('✓ Add your product listings'),
+                _buildChecklistItem('✓ Create your first pop-up post'),
+                _buildChecklistItem('✓ Discover and join markets'),
+                _buildChecklistItem('✓ Track your sales and analytics'),
               ],
             ),
           ),
@@ -765,14 +769,38 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.tips_and_updates, color: HiPopColors.successGreen, size: 20),
+                Icon(Icons.workspace_premium, color: HiPopColors.successGreen, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Consider upgrading to Vendor Premium for unlimited posts and advanced analytics!',
+                    'Consider upgrading to Vendor Premium (\$29/month) for unlimited posts and advanced analytics!',
                     style: TextStyle(
                       fontSize: 12,
                       color: HiPopColors.successGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.support_agent, color: HiPopColors.infoBlueGray, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Need help? You can always replay this onboarding from the settings menu.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: HiPopColors.infoBlueGrayDark,
                     ),
                   ),
                 ),
@@ -826,20 +854,41 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
   }
 
   Widget _buildChecklistItem(String text) {
+    final bool isChecked = text.startsWith('✓');
+    final String displayText = isChecked ? text.substring(2) : text;
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle_outline,
-            size: 16,
-            color: HiPopColors.vendorAccent,
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: isChecked ? HiPopColors.successGreen : Colors.transparent,
+              border: Border.all(
+                color: isChecked ? HiPopColors.successGreen : HiPopColors.vendorAccent,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: isChecked
+                ? Icon(
+                    Icons.check,
+                    size: 14,
+                    color: Colors.white,
+                  )
+                : null,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
-              text,
-              style: TextStyle(fontSize: 14, color: HiPopColors.darkTextPrimary),
+              displayText,
+              style: TextStyle(
+                fontSize: 14,
+                color: HiPopColors.lightTextPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],

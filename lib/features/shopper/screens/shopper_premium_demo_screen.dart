@@ -5,6 +5,7 @@ import 'package:hipop/features/vendor/services/vendor_following_service.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 /// Demo screen showcasing premium shopper features
 class ShopperPremiumDemoScreen extends StatefulWidget {
@@ -132,6 +133,7 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: const Row(
           children: [
@@ -140,12 +142,12 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
             Text('Shopper Premium Features'),
           ],
         ),
-        backgroundColor: Colors.blue,
+        backgroundColor: HiPopColors.shopperAccent,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: HiPopColors.darkTextSecondary,
           indicatorColor: Colors.white,
           tabs: const [
             Tab(icon: Icon(Icons.category), text: 'Categories'),
@@ -181,7 +183,7 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.filter_list, color: Colors.blue),
+                      Icon(Icons.filter_list, color: HiPopColors.shopperAccent),
                       SizedBox(width: 8),
                       Text(
                         'Advanced Category Search',
@@ -265,7 +267,7 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.search, color: Colors.green),
+                      Icon(Icons.search, color: HiPopColors.primaryDeepSage),
                       SizedBox(width: 8),
                       Text(
                         'Product-Specific Search',
@@ -332,7 +334,7 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.favorite, color: Colors.red),
+                      Icon(Icons.favorite, color: HiPopColors.errorPlum),
                       SizedBox(width: 8),
                       Text(
                         'Followed Vendors',
@@ -361,21 +363,21 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
                 width: double.infinity,
                 child: const Column(
                   children: [
-                    Icon(Icons.favorite_border, size: 64, color: Colors.grey),
+                    Icon(Icons.favorite_border, size: 64, color: HiPopColors.darkTextSecondary),
                     SizedBox(height: 16),
                     Text(
                       'No followed vendors yet',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                        color: HiPopColors.darkTextSecondary,
                       ),
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Browse vendors and tap the follow button to stay updated!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: HiPopColors.darkTextSecondary),
                     ),
                   ],
                 ),
@@ -415,7 +417,7 @@ class _ShopperPremiumDemoScreenState extends State<ShopperPremiumDemoScreen> wit
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.recommend, color: Colors.purple),
+                      Icon(Icons.recommend, color: HiPopColors.shopperAccent),
                       SizedBox(width: 8),
                       Text(
                         'Personalized Recommendations',

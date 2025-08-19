@@ -4,6 +4,7 @@ import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_event.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class MarketOrganizerComprehensiveSignupScreen extends StatefulWidget {
   const MarketOrganizerComprehensiveSignupScreen({super.key});
@@ -67,17 +68,22 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
         appBar: AppBar(
           title: const Text('Market Organizer Setup'),
           centerTitle: true,
-          backgroundColor: Colors.indigo,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: HiPopColors.primaryGradient,
+            ),
+          ),
           foregroundColor: Colors.white,
         ),
+        backgroundColor: HiPopColors.darkBackground,
         body: Column(
           children: [
             // Progress indicator
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.indigo.shade50,
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                color: HiPopColors.darkSurface,
+                border: Border(bottom: BorderSide(color: HiPopColors.darkBorder)),
               ),
               child: Column(
                 children: [
@@ -86,19 +92,22 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
                     children: [
                       Text(
                         'Step ${_currentStep + 1} of $_totalSteps',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: HiPopColors.darkTextPrimary,
+                        ),
                       ),
                       Text(
                         '${((_currentStep + 1) / _totalSteps * 100).round()}% Complete',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(color: HiPopColors.darkTextSecondary),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: (_currentStep + 1) / _totalSteps,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.indigo),
+                    backgroundColor: HiPopColors.organizerAccent.withValues(alpha: 0.3),
+                    valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.organizerAccent),
                   ),
                 ],
               ),
@@ -120,8 +129,8 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                color: HiPopColors.darkSurface,
+                border: Border(top: BorderSide(color: HiPopColors.darkBorder)),
               ),
               child: Row(
                 children: [
@@ -129,6 +138,10 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _isLoading ? null : _previousStep,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: HiPopColors.organizerAccent,
+                          side: BorderSide(color: HiPopColors.organizerAccent.withValues(alpha: 0.5)),
+                        ),
                         child: const Text('Back'),
                       ),
                     ),
@@ -137,7 +150,7 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _nextStep,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo,
+                        backgroundColor: HiPopColors.organizerAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -163,8 +176,10 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
   }
 
   Widget _buildStep1BasicAuth() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+    return Container(
+      color: HiPopColors.darkBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
       child: Form(
         key: _step1FormKey,
         child: Column(
@@ -175,6 +190,7 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
               'Create Your Market Organizer Account',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -182,7 +198,7 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
             Text(
               'Let\'s start with your basic account information.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -256,7 +272,8 @@ class _MarketOrganizerComprehensiveSignupScreenState extends State<MarketOrganiz
                 return null;
               },
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

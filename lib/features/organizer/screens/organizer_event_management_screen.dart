@@ -7,6 +7,7 @@ import 'package:hipop/features/shared/services/event_service.dart';
 import 'package:intl/intl.dart';
 import 'organizer/create_event_screen.dart';
 import 'organizer/edit_event_screen.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
 
 class OrganizerEventManagementScreen extends StatefulWidget {
   const OrganizerEventManagementScreen({super.key});
@@ -36,10 +37,10 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Event Management'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
+      appBar: HiPopAppBar(
+        title: 'Event Management',
+        userRole: 'vendor',
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

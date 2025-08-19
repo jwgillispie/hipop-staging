@@ -6,6 +6,7 @@ import '../services/organizer_vendor_post_service.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
 import '../../premium/services/subscription_service.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
 
 class OrganizerVendorPostsScreen extends StatefulWidget {
   const OrganizerVendorPostsScreen({super.key});
@@ -178,61 +179,10 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.campaign,
-                color: Colors.amber[700],
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(child: Text('Vendor Posts')),
-            if (_remainingPosts >= -1) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _remainingPosts > 0 ? Colors.green.shade100 : Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: _remainingPosts > 0 ? Colors.green.shade300 : Colors.red.shade300,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.post_add,
-                      size: 14,
-                      color: _remainingPosts > 0 ? Colors.green.shade700 : Colors.red.shade700,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _remainingPosts == -1 
-                          ? 'Unlimited' 
-                          : '$_remainingPosts left',
-                      style: TextStyle(
-                        color: _remainingPosts > 0 ? Colors.green.shade700 : Colors.red.shade700,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: HiPopAppBar(
+        title: 'Vendor Posts',
+        userRole: 'vendor',
+        centerTitle: true,
         actions: [
           if (_hasPremiumAccess)
             IconButton(

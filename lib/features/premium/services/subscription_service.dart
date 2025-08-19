@@ -455,7 +455,7 @@ class SubscriptionService {
           'product_lists': 1,
         };
       case 'market_organizer':
-        return {'markets_managed': -1, 'events_per_month': 10};
+        return {'markets_managed': 2, 'events_per_month': 10};
       case 'shopper':
         return {'saved_favorites': 10};
       default:
@@ -1083,43 +1083,128 @@ class SubscriptionService {
     }
   }
 
-  /// Check if user can create a market (for market organizers)
-  static Future<bool> canCreateMarket(String userId, int currentMarketCount) async {
+  /// Check if user can create a market (for market organizers) - NOW USING MONTHLY LIMITS
+  static Future<bool> canCreateMarket(String userId) async {
     try {
       final subscription = await getUserSubscription(userId);
-      if (subscription == null) {
-        // Create free subscription if none exists
-        final userProfile = await _firestore.collection('users').doc(userId).get();
-        final userType = userProfile.data()?['userType'] ?? 'shopper';
-        final newSubscription = await createFreeSubscription(userId, userType);
-        return newSubscription.isWithinLimit('markets_managed', currentMarketCount);
+      
+      // Premium users have unlimited markets
+      if (subscription?.isPremium == true) {
+        return true;
       }
-
-      return subscription.isWithinLimit('markets_managed', currentMarketCount);
+      
+      // Free tier: check monthly limit (2 markets per month)
+      final monthlyCount = await _getCurrentMonthlyMarketCount(userId);
+      const monthlyLimit = 2;
+      
+      debugPrint('🏪 Market creation check - Monthly count: $monthlyCount, Limit: $monthlyLimit');
+      return monthlyCount < monthlyLimit;
     } catch (e) {
       debugPrint('Error checking market creation ability: $e');
       return false;
     }
   }
 
-  /// Get remaining markets that can be created
-  static Future<int> getRemainingMarkets(String userId, int currentMarketCount) async {
+  /// Get current monthly market count from user_stats collection
+  static Future<int> _getCurrentMonthlyMarketCount(String userId) async {
     try {
-      final subscription = await getUserSubscription(userId);
-      if (subscription == null) {
-        // Return free tier limit
-        return 2 - currentMarketCount; // Free tier has 2 markets for organizers
-      }
-
-      final limit = subscription.getLimit('markets_managed');
-      if (limit == -1) return -1; // unlimited
+      final statsRef = _firestore.collection('user_stats').doc(userId);
+      final statsDoc = await statsRef.get();
       
-      final remaining = limit - currentMarketCount;
-      return remaining < 0 ? 0 : remaining;
+      if (!statsDoc.exists) {
+        return 0; // No markets created yet
+      }
+      
+      final data = statsDoc.data()!;
+      final currentMonth = _getCurrentMonth();
+      final storedMonth = data['currentCountMonth'] as String?;
+      
+      // If different month, count has reset
+      if (storedMonth != currentMonth) {
+        return 0;
+      }
+      
+      // Return the monthly market count
+      return (data['monthlyMarketCount'] as num?)?.toInt() ?? 0;
     } catch (e) {
-      debugPrint('Error getting remaining markets: $e');
+      debugPrint('Error getting monthly market count: $e');
       return 0;
     }
+  }
+  
+  /// Get remaining markets that can be created this month
+  static Future<int> getRemainingMonthlyMarkets(String userId) async {
+    try {
+      final subscription = await getUserSubscription(userId);
+      
+      // Premium users have unlimited markets
+      if (subscription?.isPremium == true) {
+        return -1; // Unlimited
+      }
+      
+      // Free tier: 2 markets per month
+      const monthlyLimit = 2;
+      final monthlyCount = await _getCurrentMonthlyMarketCount(userId);
+      final remaining = monthlyLimit - monthlyCount;
+      
+      return remaining < 0 ? 0 : remaining;
+    } catch (e) {
+      debugPrint('Error getting remaining monthly markets: $e');
+      return 0;
+    }
+  }
+  
+  /// Increment monthly market count when a market is created
+  static Future<void> incrementMarketCount(String userId) async {
+    try {
+      final statsRef = _firestore.collection('user_stats').doc(userId);
+      final currentMonth = _getCurrentMonth();
+      
+      await _firestore.runTransaction((transaction) async {
+        final statsDoc = await transaction.get(statsRef);
+        
+        if (!statsDoc.exists) {
+          // Create new stats document
+          transaction.set(statsRef, {
+            'userId': userId,
+            'monthlyMarketCount': 1,
+            'currentCountMonth': currentMonth,
+            'lastMarketCreatedAt': FieldValue.serverTimestamp(),
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          final data = statsDoc.data()!;
+          final storedMonth = data['currentCountMonth'] as String?;
+          
+          if (storedMonth == currentMonth) {
+            // Same month - increment count
+            final currentCount = (data['monthlyMarketCount'] as num?)?.toInt() ?? 0;
+            transaction.update(statsRef, {
+              'monthlyMarketCount': currentCount + 1,
+              'lastMarketCreatedAt': FieldValue.serverTimestamp(),
+            });
+          } else {
+            // New month - reset count to 1
+            transaction.update(statsRef, {
+              'monthlyMarketCount': 1,
+              'currentCountMonth': currentMonth,
+              'lastMarketCreatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      });
+      
+      debugPrint('✅ Market count incremented for user: $userId');
+    } catch (e) {
+      debugPrint('❌ Error incrementing market count: $e');
+      throw Exception('Failed to increment market count: $e');
+    }
+  }
+  
+  /// Helper method to get current month in YYYY-MM format
+  static String _getCurrentMonth() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
   }
 
   /// Get market usage summary for a user
@@ -1137,7 +1222,7 @@ class SubscriptionService {
       }
 
       final limit = subscription.getLimit('markets_managed');
-      final remaining = await getRemainingMarkets(userId, currentMarketCount);
+      final remaining = await getRemainingMonthlyMarkets(userId);
 
       return {
         'markets_used': currentMarketCount,

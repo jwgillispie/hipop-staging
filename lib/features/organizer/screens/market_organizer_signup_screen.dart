@@ -5,6 +5,7 @@ import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class MarketOrganizerSignupScreen extends StatefulWidget {
   const MarketOrganizerSignupScreen({super.key});
@@ -56,7 +57,14 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
         appBar: AppBar(
           title: const Text('Market Organizer Signup'),
           centerTitle: true,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: HiPopColors.primaryGradient,
+            ),
+          ),
+          foregroundColor: Colors.white,
         ),
+        backgroundColor: HiPopColors.darkBackground,
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -72,6 +80,7 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                     'Create Your Market Organizer Account',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: HiPopColors.darkTextPrimary,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -79,7 +88,7 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                   Text(
                     'Join HiPop to manage your farmers markets and connect with vendors.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
+                      color: HiPopColors.darkTextSecondary,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -88,11 +97,24 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                   // Name Field
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: HiPopColors.darkTextPrimary),
+                    decoration: InputDecoration(
                       labelText: 'Full Name',
+                      labelStyle: TextStyle(color: HiPopColors.organizerAccent),
                       hintText: 'Enter your full name',
-                      prefixIcon: Icon(Icons.person),
-                      border: OutlineInputBorder(),
+                      hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                      prefixIcon: Icon(Icons.person, color: HiPopColors.organizerAccent),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: HiPopColors.darkBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: HiPopColors.darkBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: HiPopColors.organizerAccent, width: 2),
+                      ),
+                      fillColor: HiPopColors.darkSurface,
+                      filled: true,
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -179,6 +201,8 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                   ElevatedButton(
                     onPressed: _isLoading ? null : _submitSignup,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: HiPopColors.organizerAccent,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -200,6 +224,9 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                   // Sign In Link
                   TextButton(
                     onPressed: () => context.go('/signin'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: HiPopColors.organizerAccent,
+                    ),
                     child: const Text('Already have an account? Sign In'),
                   ),
 
@@ -209,22 +236,22 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue[50],
+                      color: HiPopColors.organizerAccent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
+                      border: Border.all(color: HiPopColors.organizerAccent.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info, color: Colors.blue[600], size: 20),
+                            Icon(Icons.info, color: HiPopColors.organizerAccent, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               'What\'s Next?',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blue[800],
+                                color: HiPopColors.organizerAccentDark,
                               ),
                             ),
                           ],
@@ -236,7 +263,7 @@ class _MarketOrganizerSignupScreenState extends State<MarketOrganizerSignupScree
                           '• Invite and manage vendors\n'
                           '• Track analytics and performance\n'
                           '• Connect with your community',
-                          style: TextStyle(color: Colors.blue[700]),
+                          style: TextStyle(color: HiPopColors.organizerAccent),
                         ),
                       ],
                     ),

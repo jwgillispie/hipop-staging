@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/vendor_sales_data.dart';
@@ -18,7 +17,6 @@ class VendorSalesService {
   static const String _marketFinancialsCollection = 'market_financials';
   
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   
   /// Create new sales data entry
   Future<String> createSalesData(VendorSalesData salesData) async {
@@ -65,25 +63,45 @@ class VendorSalesService {
   }
   
   /// Get sales data for a specific date
+  /// 
+  /// If marketId is provided, looks for sales at that specific market.
+  /// If marketId is null, looks for any sales on that date.
+  /// If venueDetails is provided, looks for sales matching that venue.
   Future<VendorSalesData?> getSalesDataForDate({
     required String vendorId,
-    required String marketId,
+    String? marketId,
     required DateTime date,
+    VenueDetails? venueDetails,
   }) async {
     try {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
       
-      final snapshot = await _firestore
+      Query query = _firestore
           .collection(_salesCollection)
           .where('vendorId', isEqualTo: vendorId)
-          .where('marketId', isEqualTo: marketId)
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('date', isLessThan: Timestamp.fromDate(endOfDay))
-          .limit(1)
-          .get();
+          .where('date', isLessThan: Timestamp.fromDate(endOfDay));
+      
+      // Add market filter if specified
+      if (marketId != null) {
+        query = query.where('marketId', isEqualTo: marketId);
+      }
+      
+      final snapshot = await query.limit(1).get();
       
       if (snapshot.docs.isNotEmpty) {
+        // If venue details specified, filter by venue
+        if (venueDetails != null) {
+          for (final doc in snapshot.docs) {
+            final salesData = VendorSalesData.fromFirestore(doc);
+            if (_venueMatches(salesData.venueDetails, venueDetails)) {
+              return salesData;
+            }
+          }
+          return null; // No matching venue found
+        }
+        
         return VendorSalesData.fromFirestore(snapshot.docs.first);
       }
       
@@ -92,6 +110,12 @@ class VendorSalesService {
       debugPrint('Error getting sales data for date: $e');
       throw Exception('Failed to get sales data: $e');
     }
+  }
+  
+  /// Check if two venue details match (for duplicate detection)
+  bool _venueMatches(VenueDetails venue1, VenueDetails venue2) {
+    return venue1.type == venue2.type && 
+           venue1.name.toLowerCase() == venue2.name.toLowerCase();
   }
   
   /// Get sales data for a date range
@@ -116,6 +140,26 @@ class VendorSalesService {
       
       return snapshot.docs.map((doc) => VendorSalesData.fromFirestore(doc)).toList();
     } catch (e) {
+      // Debug print for Firestore index errors
+      print('\n🔴 ERROR in getSalesDataForRange:');
+      print('Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
+      
+      final errorString = e.toString();
+      if (errorString.contains('index')) {
+        print('\n⚠️ FIRESTORE INDEX REQUIRED for vendor_sales range query!');
+        print('Query: vendor_sales where vendorId=X, date range, orderBy date desc');
+        print('Full error: $errorString');
+        
+        // Extract URL if present
+        final urlPattern = RegExp(r'https://console\.firebase\.google\.com/[^\s]+');
+        final match = urlPattern.firstMatch(errorString);
+        if (match != null) {
+          print('\n🔗 INDEX CREATION LINK:');
+          print(match.group(0));
+        }
+      }
+      
       debugPrint('Error getting sales data for range: $e');
       throw Exception('Failed to get sales data range: $e');
     }
@@ -354,8 +398,15 @@ class VendorSalesService {
   
   Future<void> _updateMarketFinancials(VendorSalesData salesData, {bool isDelete = false}) async {
     try {
+      // Only update market financials if this is a formal market sale
+      final marketId = salesData.marketId;
+      if (marketId == null || marketId.isEmpty) {
+        debugPrint('Skipping market financials update - not a formal market sale');
+        return;
+      }
+      
       final dateKey = salesData.date.toIso8601String().split('T')[0];
-      final docId = '${salesData.marketId}_$dateKey';
+      final docId = '${marketId}_$dateKey';
       
       final docRef = _firestore.collection(_marketFinancialsCollection).doc(docId);
       
@@ -371,7 +422,7 @@ class VendorSalesService {
       } else {
         // Add or update amounts
         await docRef.set({
-          'marketId': salesData.marketId,
+          'marketId': marketId,
           'date': Timestamp.fromDate(salesData.date),
           'totalMarketRevenue': FieldValue.increment(salesData.revenue),
           'totalCommissionsCollected': FieldValue.increment(salesData.commissionPaid),
@@ -388,10 +439,17 @@ class VendorSalesService {
   
   Future<void> _createCommissionRecord(VendorSalesData salesData) async {
     try {
+      // Only create commission records for formal market sales
+      final marketId = salesData.marketId;
+      if (marketId == null || marketId.isEmpty) {
+        debugPrint('Skipping commission record - not a formal market sale');
+        return;
+      }
+      
       final commissionData = CommissionData(
         id: '',
         vendorId: salesData.vendorId,
-        marketId: salesData.marketId,
+        marketId: marketId,
         organizerId: '', // TODO: Get organizer ID from market data
         date: salesData.date,
         vendorRevenue: salesData.revenue,
@@ -411,11 +469,18 @@ class VendorSalesService {
   
   Future<void> _updateCommissionRecord(VendorSalesData salesData) async {
     try {
+      // Only update commission records for formal market sales
+      final marketId = salesData.marketId;
+      if (marketId == null || marketId.isEmpty) {
+        debugPrint('Skipping commission record update - not a formal market sale');
+        return;
+      }
+      
       // Find existing commission record for this vendor/market/date
       final snapshot = await _firestore
           .collection(_commissionsCollection)
           .where('vendorId', isEqualTo: salesData.vendorId)
-          .where('marketId', isEqualTo: salesData.marketId)
+          .where('marketId', isEqualTo: marketId)
           .where('date', isEqualTo: Timestamp.fromDate(salesData.date))
           .limit(1)
           .get();
@@ -440,10 +505,17 @@ class VendorSalesService {
   
   Future<void> _deleteCommissionRecord(VendorSalesData salesData) async {
     try {
+      // Only delete commission records for formal market sales
+      final marketId = salesData.marketId;
+      if (marketId == null || marketId.isEmpty) {
+        debugPrint('Skipping commission record deletion - not a formal market sale');
+        return;
+      }
+      
       final snapshot = await _firestore
           .collection(_commissionsCollection)
           .where('vendorId', isEqualTo: salesData.vendorId)
-          .where('marketId', isEqualTo: salesData.marketId)
+          .where('marketId', isEqualTo: marketId)
           .where('date', isEqualTo: Timestamp.fromDate(salesData.date))
           .limit(1)
           .get();
@@ -536,7 +608,11 @@ class VendorSalesService {
       final marketMap = <String, double>{};
       
       for (final sale in salesData) {
-        marketMap[sale.marketId] = (marketMap[sale.marketId] ?? 0.0) + sale.revenue;
+        // Only include sales with marketId (formal market sales)
+        final marketId = sale.marketId;
+        if (marketId != null && marketId.isNotEmpty) {
+          marketMap[marketId] = (marketMap[marketId] ?? 0.0) + sale.revenue;
+        }
       }
       
       final marketList = marketMap.entries
@@ -550,5 +626,82 @@ class VendorSalesService {
       debugPrint('Error getting top markets: $e');
       return [];
     }
+  }
+  
+  /// Get sales analytics broken down by venue type
+  Future<Map<String, dynamic>> getSalesAnalyticsByVenueType({
+    required String vendorId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final salesData = await getSalesDataForRange(
+        vendorId: vendorId,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      final venueTypeBreakdown = <String, Map<String, dynamic>>{};
+      
+      for (final sale in salesData) {
+        final venueTypeName = sale.venueDetails.type.displayName;
+        
+        if (venueTypeBreakdown.containsKey(venueTypeName)) {
+          venueTypeBreakdown[venueTypeName]!['revenue'] += sale.revenue;
+          venueTypeBreakdown[venueTypeName]!['transactions'] += sale.transactions;
+          venueTypeBreakdown[venueTypeName]!['count'] += 1;
+          venueTypeBreakdown[venueTypeName]!['netProfit'] += sale.netProfit;
+        } else {
+          venueTypeBreakdown[venueTypeName] = {
+            'revenue': sale.revenue,
+            'transactions': sale.transactions,
+            'count': 1,
+            'netProfit': sale.netProfit,
+            'type': sale.venueDetails.type.name,
+          };
+        }
+      }
+      
+      // Calculate additional metrics for each venue type
+      for (final data in venueTypeBreakdown.values) {
+        final revenue = data['revenue'] as double;
+        final transactions = data['transactions'] as int;
+        final count = data['count'] as int;
+        
+        data['averageTransactionValue'] = transactions > 0 ? revenue / transactions : 0.0;
+        data['averageRevenuePerEvent'] = count > 0 ? revenue / count : 0.0;
+      }
+      
+      return {
+        'venueTypeBreakdown': venueTypeBreakdown,
+        'totalVenueTypes': venueTypeBreakdown.length,
+        'topVenueType': _getTopVenueType(venueTypeBreakdown),
+      };
+    } catch (e) {
+      debugPrint('Error getting venue type analytics: $e');
+      return {
+        'venueTypeBreakdown': <String, Map<String, dynamic>>{},
+        'totalVenueTypes': 0,
+        'topVenueType': null,
+      };
+    }
+  }
+  
+  Map<String, dynamic>? _getTopVenueType(Map<String, Map<String, dynamic>> breakdown) {
+    if (breakdown.isEmpty) return null;
+    
+    var topEntry = breakdown.entries.first;
+    for (final entry in breakdown.entries) {
+      if ((entry.value['revenue'] as double) > (topEntry.value['revenue'] as double)) {
+        topEntry = entry;
+      }
+    }
+    
+    return {
+      'name': topEntry.key,
+      'revenue': topEntry.value['revenue'],
+      'transactions': topEntry.value['transactions'],
+      'count': topEntry.value['count'],
+    };
   }
 }

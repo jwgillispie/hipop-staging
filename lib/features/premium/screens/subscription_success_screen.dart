@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../services/subscription_success_service.dart';
 import '../models/user_subscription.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class SubscriptionSuccessScreen extends StatefulWidget {
   final String sessionId;
@@ -67,10 +68,16 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.green.shade50,
+      backgroundColor: isDark ? HiPopColors.darkBackground : HiPopColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Subscription Complete'),
+        title: Text(
+          'Subscription Complete',
+          style: TextStyle(
+            color: isDark ? HiPopColors.darkTextPrimary : HiPopColors.lightTextPrimary,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: Container(), // Remove back button
@@ -92,26 +99,31 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
   }
 
   Widget _buildProcessingView() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.primaryDeepSage),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           Text(
             'Processing your subscription...',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? HiPopColors.darkTextPrimary 
+                  : HiPopColors.lightTextPrimary,
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             'This may take a few moments',
             style: TextStyle(
-              color: Colors.grey,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? HiPopColors.darkTextSecondary 
+                  : HiPopColors.lightTextSecondary,
               fontSize: 14,
             ),
           ),
@@ -129,13 +141,13 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: HiPopColors.errorPlumLight.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.error_outline,
               size: 80,
-              color: Colors.red.shade600,
+              color: HiPopColors.errorPlum,
             ),
           ),
           const SizedBox(height: 32),
@@ -143,7 +155,7 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
             'Subscription Error',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.red.shade700,
+              color: HiPopColors.errorPlum,
             ),
             textAlign: TextAlign.center,
           ),
@@ -151,7 +163,9 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           Text(
             _errorMessage!,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? HiPopColors.darkTextSecondary 
+                  : HiPopColors.lightTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -161,8 +175,8 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
             child: ElevatedButton(
               onPressed: _processSuccessfulSubscription,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
+                backgroundColor: HiPopColors.warningAmber,
+                foregroundColor: HiPopColors.darkTextPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -214,13 +228,13 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.green.shade100,
+              color: HiPopColors.successGreenLight.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.check_circle,
               size: 80,
-              color: Colors.green.shade600,
+              color: HiPopColors.successGreen,
             ),
           ),
           const SizedBox(height: 32),
@@ -228,7 +242,9 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
             '🎉 Welcome to $tierName!',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.green.shade700,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? HiPopColors.darkTextPrimary 
+                  : HiPopColors.lightTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -236,7 +252,9 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           Text(
             'Your subscription has been activated successfully. You now have access to all premium features.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey.shade600,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? HiPopColors.darkTextSecondary 
+                  : HiPopColors.lightTextSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -248,8 +266,8 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
             child: ElevatedButton(
               onPressed: () => _navigateToPremiumFeatures(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+                backgroundColor: HiPopColors.primaryDeepSage,
+                foregroundColor: HiPopColors.darkTextPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -288,8 +306,15 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? HiPopColors.darkSurfaceVariant
+                  : HiPopColors.infoBlueGrayLight.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? HiPopColors.darkBorder
+                    : HiPopColors.infoBlueGray.withValues(alpha: 0.3),
+              ),
             ),
             child: Column(
               children: [
@@ -297,14 +322,16 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
                   children: [
                     Icon(
                       Icons.info,
-                      color: Colors.blue.shade600,
+                      color: HiPopColors.infoBlueGray,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'What\'s Next?',
                         style: TextStyle(
-                          color: Colors.blue.shade700,
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? HiPopColors.darkTextPrimary 
+                              : HiPopColors.lightTextPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -316,7 +343,9 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
                 Text(
                   '• Your subscription will auto-renew monthly\n• You can cancel anytime from your account settings\n• Need help? Contact us at hipopmarkets@gmail.com',
                   style: TextStyle(
-                    color: Colors.blue.shade700,
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? HiPopColors.darkTextSecondary 
+                        : HiPopColors.lightTextSecondary,
                     fontSize: 14,
                   ),
                 ),
@@ -334,11 +363,20 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? HiPopColors.darkSurface
+            : HiPopColors.lightSurface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? HiPopColors.darkBorder
+              : HiPopColors.lightBorder,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black26
+                : HiPopColors.lightShadow,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -349,9 +387,12 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
         children: [
           Text(
             'Activated Features',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? HiPopColors.darkTextPrimary 
+                  : HiPopColors.lightTextPrimary,
             ),
           ),
           const SizedBox(height: 16),
@@ -363,12 +404,12 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: HiPopColors.successGreenLight.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
                       Icons.check,
-                      color: Colors.green.shade600,
+                      color: HiPopColors.successGreen,
                       size: 16,
                     ),
                   ),
@@ -376,9 +417,12 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
                   Expanded(
                     child: Text(
                       feature,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? HiPopColors.darkTextPrimary 
+                            : HiPopColors.lightTextPrimary,
                       ),
                     ),
                   ),

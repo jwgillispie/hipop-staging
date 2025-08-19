@@ -44,7 +44,7 @@ enum PostType {
       case PostType.independent:
         return 'Your own event at any location';
       case PostType.market:
-        return 'Join an organized market event';
+        return 'Join an organized market event (instant approval)';
     }
   }
 
@@ -54,7 +54,7 @@ enum PostType {
       case PostType.independent:
         return false;
       case PostType.market:
-        return true;
+        return false; // Changed: Market posts no longer require approval
     }
   }
 }

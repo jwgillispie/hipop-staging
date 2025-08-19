@@ -15,6 +15,8 @@ import '../../vendor/services/managed_vendor_service.dart';
 import '../../shared/widgets/common/simple_places_widget.dart';
 import '../../../core/constants/ui_utils.dart';
 import '../../../core/constants/constants.dart';
+import '../../../core/theme/hipop_colors.dart';
+import 'market_vendor_recruitment_form.dart';
 
 class MarketFormDialog extends StatefulWidget {
   final Market? market;
@@ -48,6 +50,10 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   
   bool _isLoading = false;
   bool get _isEditing => widget.market != null;
+  
+  // Vendor Recruitment Fields
+  bool _isLookingForVendors = false;
+  Map<String, dynamic> _recruitmentData = {};
 
   @override
   void initState() {
@@ -61,6 +67,17 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       _descriptionController.text = market.description ?? '';
       _selectedVendorIds = List.from(market.associatedVendorIds);
       _selectedEventDate = market.eventDate;
+      _isLookingForVendors = market.isLookingForVendors;
+      _recruitmentData = {
+        'isLookingForVendors': market.isLookingForVendors,
+        'applicationUrl': market.applicationUrl,
+        'applicationFee': market.applicationFee,
+        'dailyBoothFee': market.dailyBoothFee,
+        'vendorSpotsTotal': market.vendorSpotsTotal,
+        'vendorSpotsAvailable': market.vendorSpotsAvailable,
+        'applicationDeadline': market.applicationDeadline,
+        'vendorRequirements': market.vendorRequirements,
+      };
       
       // Parse existing times
       _parseTime(market.startTime, true);
@@ -189,8 +206,8 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     if (!_isEditing) {
       final authState = context.read<AuthBloc>().state;
       if (authState is Authenticated && authState.userProfile != null) {
-        final currentMarketCount = authState.userProfile!.managedMarketIds.length;
-        final canCreate = await SubscriptionService.canCreateMarket(authState.userProfile!.userId, currentMarketCount);
+        final userId = authState.userProfile!.userId;
+        final canCreate = await SubscriptionService.canCreateMarket(userId);
         
         if (!canCreate) {
           // Track analytics for limit encounter
@@ -198,12 +215,11 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
             'market_creation_limit_encountered',
             {
               'user_type': 'market_organizer',
-              'current_market_count': currentMarketCount,
-              'limit': 2,
+              'monthly_limit': 2,
               'is_premium': false,
               'source': 'market_form_dialog',
             },
-            userId: authState.userProfile!.userId,
+            userId: userId,
           );
           
           if (mounted) {
@@ -256,9 +272,27 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
           : null,
       associatedVendorIds: _selectedVendorIds,
       createdAt: DateTime.now(),
+      // Vendor Recruitment Fields
+      isLookingForVendors: _recruitmentData['isLookingForVendors'] ?? false,
+      applicationUrl: _recruitmentData['applicationUrl'],
+      applicationFee: _recruitmentData['applicationFee'],
+      dailyBoothFee: _recruitmentData['dailyBoothFee'],
+      vendorSpotsTotal: _recruitmentData['vendorSpotsTotal'],
+      vendorSpotsAvailable: _recruitmentData['vendorSpotsAvailable'],
+      applicationDeadline: _recruitmentData['applicationDeadline'],
+      vendorRequirements: _recruitmentData['vendorRequirements'],
     );
 
+    // Get auth state before async gap
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.userProfile?.userId : null;
+    
     final createdMarketId = await MarketService.createMarket(market);
+    
+    // Increment monthly market count for free tier tracking
+    if (userId != null) {
+      await SubscriptionService.incrementMarketCount(userId);
+    }
     
     final updatedMarket = market.copyWith(id: createdMarketId);
     
@@ -288,6 +322,15 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
           ? _descriptionController.text.trim() 
           : null,
       associatedVendorIds: _selectedVendorIds,
+      // Vendor Recruitment Fields
+      isLookingForVendors: _recruitmentData['isLookingForVendors'] ?? false,
+      applicationUrl: _recruitmentData['applicationUrl'],
+      applicationFee: _recruitmentData['applicationFee'],
+      dailyBoothFee: _recruitmentData['dailyBoothFee'],
+      vendorSpotsTotal: _recruitmentData['vendorSpotsTotal'],
+      vendorSpotsAvailable: _recruitmentData['vendorSpotsAvailable'],
+      applicationDeadline: _recruitmentData['applicationDeadline'],
+      vendorRequirements: _recruitmentData['vendorRequirements'],
     );
     
     await MarketService.updateMarket(market.id, updatedMarket.toFirestore());
@@ -300,6 +343,11 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
 
   Widget _buildEventDateTimeForm() {
     return Card(
+      color: HiPopColors.darkSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: HiPopColors.darkBorder),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -307,12 +355,13 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
           children: [
             Row(
               children: [
-                Icon(Icons.event, color: Colors.blue[600]),
+                Icon(Icons.event, color: HiPopColors.accentMauve),
                 const SizedBox(width: 8),
                 Text(
                   'Event Date & Time',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: HiPopColors.darkTextPrimary,
                   ),
                 ),
               ],
@@ -324,29 +373,105 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
               'Event Date',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: HiPopColors.darkTextPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(4),
+                color: HiPopColors.darkSurfaceVariant,
+                border: Border.all(color: HiPopColors.darkBorder),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: ListTile(
                 title: Text(
                   _selectedEventDate != null 
                       ? '${_selectedEventDate!.month}/${_selectedEventDate!.day}/${_selectedEventDate!.year}'
                       : 'Select event date',
-                  style: const TextStyle(color: Colors.black),
+                  style: TextStyle(color: HiPopColors.darkTextPrimary),
                 ),
-                leading: const Icon(Icons.calendar_today),
+                leading: Icon(Icons.calendar_today, color: HiPopColors.darkTextTertiary),
                 onTap: () async {
                   final date = await showDatePicker(
                     context: context,
                     initialDate: _selectedEventDate ?? DateTime.now().add(const Duration(days: 1)),
                     firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
+                    builder: (context, child) {
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          colorScheme: ColorScheme.dark(
+                            primary: HiPopColors.primaryDeepSage,
+                            onPrimary: HiPopColors.darkTextPrimary,
+                            surface: HiPopColors.darkSurface,
+                            onSurface: HiPopColors.darkTextPrimary,
+                            surfaceContainerHighest: HiPopColors.darkSurfaceVariant,
+                            onSurfaceVariant: HiPopColors.darkTextSecondary,
+                            secondary: HiPopColors.accentMauve,
+                            onSecondary: HiPopColors.darkTextPrimary,
+                            error: HiPopColors.errorPlum,
+                            onError: HiPopColors.darkTextPrimary,
+                            outline: HiPopColors.darkBorder,
+                            shadow: HiPopColors.darkShadow,
+                          ),
+                          dialogTheme: DialogThemeData(
+                            backgroundColor: HiPopColors.darkSurface,
+                            surfaceTintColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          datePickerTheme: DatePickerThemeData(
+                            backgroundColor: HiPopColors.darkSurface,
+                            surfaceTintColor: Colors.transparent,
+                            headerBackgroundColor: HiPopColors.darkSurfaceVariant,
+                            headerForegroundColor: HiPopColors.darkTextPrimary,
+                            weekdayStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+                            dayStyle: TextStyle(color: HiPopColors.darkTextPrimary),
+                            yearStyle: TextStyle(color: HiPopColors.darkTextPrimary),
+                            todayBackgroundColor: WidgetStateProperty.all(HiPopColors.darkSurfaceElevated),
+                            todayForegroundColor: WidgetStateProperty.all(HiPopColors.primaryDeepSage),
+                            dayBackgroundColor: WidgetStateProperty.resolveWith((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return HiPopColors.primaryDeepSage;
+                              }
+                              return null;
+                            }),
+                            dayForegroundColor: WidgetStateProperty.resolveWith((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return HiPopColors.darkTextPrimary;
+                              }
+                              if (states.contains(WidgetState.disabled)) {
+                                return HiPopColors.darkTextDisabled;
+                              }
+                              return HiPopColors.darkTextPrimary;
+                            }),
+                            yearBackgroundColor: WidgetStateProperty.resolveWith((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return HiPopColors.primaryDeepSage;
+                              }
+                              return null;
+                            }),
+                            yearForegroundColor: WidgetStateProperty.resolveWith((states) {
+                              if (states.contains(WidgetState.selected)) {
+                                return HiPopColors.darkTextPrimary;
+                              }
+                              if (states.contains(WidgetState.disabled)) {
+                                return HiPopColors.darkTextDisabled;
+                              }
+                              return HiPopColors.darkTextPrimary;
+                            }),
+                            confirmButtonStyle: TextButton.styleFrom(
+                              foregroundColor: HiPopColors.primaryDeepSage,
+                            ),
+                            cancelButtonStyle: TextButton.styleFrom(
+                              foregroundColor: HiPopColors.darkTextSecondary,
+                            ),
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    },
                   );
                   if (date != null) {
                     setState(() {
@@ -363,7 +488,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
               'Operating Hours',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: HiPopColors.darkTextPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -371,9 +496,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
               children: [
                 Expanded(
                   child: ListTile(
-                    title: const Text('Start Time', style: TextStyle(color: Colors.black)),
-                    subtitle: Text(_formatTimeOfDay(_startTime), style: const TextStyle(color: Colors.black)),
-                    leading: const Icon(Icons.access_time),
+                    title: Text('Start Time', style: TextStyle(color: HiPopColors.darkTextPrimary)),
+                    subtitle: Text(_formatTimeOfDay(_startTime), style: TextStyle(color: HiPopColors.darkTextSecondary)),
+                    leading: Icon(Icons.access_time, color: HiPopColors.darkTextTertiary),
                     onTap: () async {
                       final time = await showTimePicker(
                         context: context,
@@ -390,9 +515,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                 ),
                 Expanded(
                   child: ListTile(
-                    title: const Text('End Time', style: TextStyle(color: Colors.black)),
-                    subtitle: Text(_formatTimeOfDay(_endTime), style: const TextStyle(color: Colors.black)),
-                    leading: const Icon(Icons.access_time_filled),
+                    title: Text('End Time', style: TextStyle(color: HiPopColors.darkTextPrimary)),
+                    subtitle: Text(_formatTimeOfDay(_endTime), style: TextStyle(color: HiPopColors.darkTextSecondary)),
+                    leading: Icon(Icons.access_time_filled, color: HiPopColors.darkTextTertiary),
                     onTap: () async {
                       final time = await showTimePicker(
                         context: context,
@@ -416,22 +541,22 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.green[50],
+                  color: HiPopColors.darkSurfaceVariant,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green[200]!),
+                  border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.check_circle, color: Colors.green[600]),
+                        Icon(Icons.check_circle, color: HiPopColors.successGreen),
                         const SizedBox(width: 8),
                         Text(
                           'Event Preview',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
+                            color: HiPopColors.darkTextPrimary,
                           ),
                         ),
                       ],
@@ -441,7 +566,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                       'Date: ${_selectedEventDate!.month}/${_selectedEventDate!.day}/${_selectedEventDate!.year}',
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
-                        color: Colors.green[700],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -449,7 +574,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                       'Time: ${_formatTimeOfDay(_startTime)} - ${_formatTimeOfDay(_endTime)}',
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
-                        color: Colors.green[700],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                     ),
                   ],
@@ -502,11 +627,12 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        backgroundColor: HiPopColors.darkBackground,
+        title: Row(
           children: [
-            Icon(Icons.lock, color: Colors.orange),
+            Icon(Icons.lock, color: HiPopColors.warningAmber),
             SizedBox(width: 8),
-            Text('Market Creation Limit Reached'),
+            Text('Market Creation Limit Reached', style: TextStyle(color: HiPopColors.darkTextPrimary)),
           ],
         ),
         content: Column(
@@ -515,15 +641,15 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
           children: [
             Text(
               'You have reached your free tier limit of ${usageSummary['markets_limit']} markets.',
-              style: const TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16, color: HiPopColors.darkTextPrimary),
             ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue[200]!),
+                border: Border.all(color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,31 +658,31 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                     'Current Usage: ${usageSummary['markets_used']} of ${usageSummary['markets_limit']} markets',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue[800],
+                      color: HiPopColors.primaryDeepSageDark,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Upgrade to Market Organizer Pro for unlimited markets!',
-                    style: TextStyle(color: Colors.blue[700]),
+                    style: TextStyle(color: HiPopColors.primaryDeepSage),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Pro Features:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
             ),
             const SizedBox(height: 8),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('• Unlimited markets'),
-                Text('• Advanced analytics'),
-                Text('• Vendor recruitment tools'),
-                Text('• Priority support'),
-                Text('• Revenue optimization'),
+                Text('• Unlimited markets', style: TextStyle(color: HiPopColors.darkTextSecondary)),
+                Text('• Advanced analytics', style: TextStyle(color: HiPopColors.darkTextSecondary)),
+                Text('• Vendor recruitment tools', style: TextStyle(color: HiPopColors.darkTextSecondary)),
+                Text('• Priority support', style: TextStyle(color: HiPopColors.darkTextSecondary)),
+                Text('• Revenue optimization', style: TextStyle(color: HiPopColors.darkTextSecondary)),
               ],
             ),
           ],
@@ -564,6 +690,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: HiPopColors.darkTextSecondary,
+            ),
             child: const Text('Maybe Later'),
           ),
           ElevatedButton(
@@ -573,8 +702,8 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
               // This would typically navigate to subscription management
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
+              backgroundColor: HiPopColors.primaryDeepSage,
+              foregroundColor: HiPopColors.darkTextPrimary,
             ),
             child: const Text('Upgrade Now'),
           ),
@@ -592,13 +721,14 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
           'Associate Vendors',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
+            color: HiPopColors.darkTextPrimary,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Select vendors to associate with this market',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey[600],
+            color: HiPopColors.darkTextTertiary,
           ),
         ),
         const SizedBox(height: 16),
@@ -615,7 +745,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
             Text(
               'Associated Vendors',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Colors.blue[700],
+                color: HiPopColors.primaryDeepSageDark,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -656,14 +786,14 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
         secondary: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
+            color: HiPopColors.darkSurfaceVariant,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+            border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
           ),
           child: Text(
             'APPROVED',
             style: TextStyle(
-              color: Colors.green[700],
+              color: HiPopColors.successGreenDark,
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
@@ -701,14 +831,14 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
         secondary: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
+            color: HiPopColors.darkSurfaceVariant,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+            border: Border.all(color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3)),
           ),
           child: Text(
             'MANAGED',
             style: TextStyle(
-              color: Colors.blue[700],
+              color: HiPopColors.primaryDeepSageDark,
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
@@ -723,7 +853,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     
     return Card(
       elevation: isSelected ? 3 : 1,
-      color: isSelected ? Colors.blue[50] : null,
+      color: isSelected ? HiPopColors.darkSurfaceVariant : HiPopColors.darkSurface,
       margin: const EdgeInsets.only(bottom: 8),
       child: CheckboxListTile(
         title: Text(vendor.businessName),
@@ -766,13 +896,13 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   Widget _getSourceIcon(VendorSource source) {
     switch (source) {
       case VendorSource.permissionRequest:
-        return Icon(Icons.verified_user, size: 16, color: Colors.green);
+        return Icon(Icons.verified_user, size: 16, color: HiPopColors.successGreen);
       case VendorSource.eventApplication:
-        return Icon(Icons.event, size: 16, color: Colors.orange);
+        return Icon(Icons.event, size: 16, color: HiPopColors.warningAmber);
       case VendorSource.manuallyCreated:
-        return Icon(Icons.person_add, size: 16, color: Colors.blue);
+        return Icon(Icons.person_add, size: 16, color: HiPopColors.primaryDeepSage);
       case VendorSource.marketInvitation:
-        return Icon(Icons.mail, size: 16, color: Colors.purple);
+        return Icon(Icons.mail, size: 16, color: HiPopColors.accentMauve);
     }
   }
 
@@ -792,42 +922,76 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   Color _getSourceColor(VendorSource source) {
     switch (source) {
       case VendorSource.permissionRequest:
-        return Colors.green;
+        return HiPopColors.successGreen;
       case VendorSource.eventApplication:
-        return Colors.orange;
+        return HiPopColors.warningAmber;
       case VendorSource.manuallyCreated:
-        return Colors.blue;
+        return HiPopColors.primaryDeepSage;
       case VendorSource.marketInvitation:
-        return Colors.purple;
+        return HiPopColors.accentMauve;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: HiPopColors.darkBackground,
       child: Container(
         width: MediaQuery.of(context).size.width * AppConstants.dialogWidthRatio,
         height: MediaQuery.of(context).size.height * AppConstants.dialogHeightRatio,
         padding: const EdgeInsets.all(AppConstants.dialogPadding),
+        decoration: BoxDecoration(
+          color: HiPopColors.darkBackground,
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Column(
           children: [
             Row(
               children: [
                 Icon(
                   Icons.storefront,
-                  color: Colors.teal,
+                  color: HiPopColors.primaryDeepSage,
                   size: 24,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    _isEditing ? 'Edit Market' : 'Create New Market',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isEditing ? 'Edit Market' : 'Create New Market',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
+                      ),
+                      // Show remaining markets for free tier users when creating
+                      if (!_isEditing)
+                        FutureBuilder<int>(
+                          future: () async {
+                            final authState = context.read<AuthBloc>().state;
+                            if (authState is Authenticated && authState.userProfile != null) {
+                              return SubscriptionService.getRemainingMonthlyMarkets(authState.userProfile!.userId);
+                            }
+                            return -1;
+                          }(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData && snapshot.data! >= 0) {
+                              final remaining = snapshot.data!;
+                              return Text(
+                                'You have $remaining of 2 markets remaining this month',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: remaining > 0 ? HiPopColors.darkTextSecondary : HiPopColors.warningAmber,
+                                ),
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                    ],
                   ),
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: HiPopColors.darkTextSecondary),
                 ),
               ],
             ),
@@ -841,11 +1005,27 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: HiPopColors.darkTextPrimary),
+                        decoration: InputDecoration(
                           labelText: 'Market Name *',
-                          prefixIcon: Icon(Icons.storefront),
-                          border: OutlineInputBorder(),
+                          labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+                          prefixIcon: Icon(Icons.storefront, color: HiPopColors.darkTextSecondary),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.darkBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.darkBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.primaryDeepSage),
+                          ),
+                          filled: true,
+                          fillColor: HiPopColors.darkSurface,
                           helperText: 'e.g., "Downtown Farmers Market"',
+                          helperStyle: TextStyle(color: HiPopColors.darkTextTertiary),
                         ),
                         textCapitalization: TextCapitalization.words,
                         validator: (value) {
@@ -862,7 +1042,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                           Text(
                             'Market Location *',
                             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.grey[700],
+                              color: HiPopColors.darkTextSecondary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -881,19 +1061,19 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.1),
+                                color: HiPopColors.darkSurfaceVariant,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                                border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                                  Icon(Icons.check_circle, color: HiPopColors.successGreenDark, size: 20),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Location selected: ${_selectedPlace!.formattedAddress}',
                                       style: TextStyle(
-                                        color: Colors.green[700],
+                                        color: HiPopColors.successGreenDark,
                                         fontSize: 12,
                                       ),
                                     ),
@@ -907,11 +1087,27 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _descriptionController,
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: HiPopColors.darkTextPrimary),
+                        decoration: InputDecoration(
                           labelText: 'Description (Optional)',
-                          prefixIcon: Icon(Icons.description),
-                          border: OutlineInputBorder(),
+                          labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+                          prefixIcon: Icon(Icons.description, color: HiPopColors.darkTextSecondary),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.darkBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.darkBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.primaryDeepSage),
+                          ),
+                          filled: true,
+                          fillColor: HiPopColors.darkSurface,
                           helperText: 'Brief description of your market',
+                          helperStyle: TextStyle(color: HiPopColors.darkTextTertiary),
                         ),
                         maxLines: 3,
                         textCapitalization: TextCapitalization.sentences,
@@ -919,6 +1115,18 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                       const SizedBox(height: 24),
                       // Event Date and Time Form
                       _buildEventDateTimeForm(),
+                      const SizedBox(height: 24),
+                      // Vendor Recruitment Section
+                      MarketVendorRecruitmentForm(
+                        market: widget.market,
+                        isLookingForVendors: _isLookingForVendors,
+                        onRecruitmentDataChanged: (data) {
+                          setState(() {
+                            _recruitmentData = data;
+                            _isLookingForVendors = data['isLookingForVendors'] ?? false;
+                          });
+                        },
+                      ),
                       const SizedBox(height: 24),
                       // Vendor Management Section
                       _buildVendorManagementSection(),
@@ -933,6 +1141,13 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: HiPopColors.darkBorder),
+                      foregroundColor: HiPopColors.darkTextSecondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                     child: const Text('Cancel'),
                   ),
                 ),
@@ -941,16 +1156,19 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitForm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
+                      backgroundColor: HiPopColors.primaryDeepSage,
+                      foregroundColor: HiPopColors.darkTextPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 20,
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: HiPopColors.darkTextPrimary,
                             ),
                           )
                         : Text(_isEditing ? 'Update Market' : 'Create Market'),

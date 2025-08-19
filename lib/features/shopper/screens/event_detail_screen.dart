@@ -6,7 +6,7 @@ import '../../shared/models/event.dart';
 import '../../shared/blocs/event_detail/event_detail_bloc.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart' as common_error;
-import '../../shared/widgets/common/cached_image_widget.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class EventDetailScreen extends StatelessWidget {
   final String eventId;
@@ -35,6 +35,7 @@ class EventDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: HiPopColors.darkBackground,
       body: BlocBuilder<EventDetailBloc, EventDetailState>(
         builder: (context, state) {
           switch (state.status) {
@@ -53,8 +54,8 @@ class EventDetailView extends StatelessWidget {
               return Scaffold(
                 appBar: AppBar(
                   title: const Text('Event Details'),
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
+                  backgroundColor: HiPopColors.darkSurface,
+                  foregroundColor: HiPopColors.darkTextPrimary,
                   elevation: 0,
                 ),
                 body: Center(
@@ -74,13 +75,13 @@ class EventDetailView extends StatelessWidget {
   Widget _buildEventContent(BuildContext context, Event event, bool isFavorite, bool isLoading) {
     return CustomScrollView(
       slivers: [
-        // Hero Image with App Bar
+        // App Bar without Hero Image
         SliverAppBar(
-          expandedHeight: 300,
           pinned: true,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          backgroundColor: HiPopColors.darkSurface,
+          foregroundColor: HiPopColors.darkTextPrimary,
           elevation: 0,
+          title: Text(event.name),
           actions: [
             // Favorite Button
             Semantics(
@@ -91,7 +92,7 @@ class EventDetailView extends StatelessWidget {
                 },
                 icon: Icon(
                   isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isFavorite ? Colors.red : Colors.grey[600],
+                  color: isFavorite ? HiPopColors.errorPlum : HiPopColors.darkTextSecondary,
                 ),
               ),
             ),
@@ -104,52 +105,6 @@ class EventDetailView extends StatelessWidget {
               ),
             ),
           ],
-          flexibleSpace: FlexibleSpaceBar(
-            background: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Hero Image
-                if (event.imageUrl != null)
-                  CachedImageWidget(
-                    imageUrl: event.imageUrl!,
-                    fit: BoxFit.cover,
-                  )
-                else
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.purple.shade400,
-                          Colors.purple.shade600,
-                        ],
-                      ),
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        Icons.event,
-                        size: 80,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                // Gradient Overlay
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withValues(alpha: 0.7),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
         // Event Content
         SliverToBoxAdapter(
@@ -165,7 +120,7 @@ class EventDetailView extends StatelessWidget {
                     event.name,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
+                      color: HiPopColors.darkTextPrimary,
                     ),
                   ),
                 ),
@@ -291,12 +246,12 @@ class EventDetailView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
+                    color: HiPopColors.shopperAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
-                    color: Colors.purple,
+                    color: HiPopColors.shopperAccent,
                     size: 24,
                   ),
                 ),
@@ -309,14 +264,14 @@ class EventDetailView extends StatelessWidget {
                         title,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
+                          color: HiPopColors.darkTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         content,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                           height: 1.4,
                         ),
                       ),
@@ -327,7 +282,7 @@ class EventDetailView extends StatelessWidget {
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Colors.grey[400],
+                    color: HiPopColors.darkBorder,
                   ),
               ],
             ),
@@ -350,12 +305,12 @@ class EventDetailView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
+                    color: HiPopColors.shopperAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.description,
-                    color: Colors.purple,
+                    color: HiPopColors.shopperAccent,
                     size: 24,
                   ),
                 ),
@@ -364,7 +319,7 @@ class EventDetailView extends StatelessWidget {
                   'About This Event',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
+                    color: HiPopColors.darkTextPrimary,
                   ),
                 ),
               ],
@@ -375,7 +330,7 @@ class EventDetailView extends StatelessWidget {
               child: Text(
                 description,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
+                  color: HiPopColors.darkTextSecondary,
                   height: 1.5,
                 ),
               ),
@@ -394,7 +349,7 @@ class EventDetailView extends StatelessWidget {
           'Tags',
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
+            color: HiPopColors.darkTextPrimary,
           ),
         ),
         const SizedBox(height: 8),
@@ -406,14 +361,14 @@ class EventDetailView extends StatelessWidget {
             children: tags.map((tag) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.purple.withValues(alpha: 0.1),
+                color: HiPopColors.shopperAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.purple.withValues(alpha: 0.3)),
+                border: Border.all(color: HiPopColors.shopperAccent.withValues(alpha: 0.3)),
               ),
               child: Text(
                 tag,
                 style: TextStyle(
-                  color: Colors.purple[700],
+                  color: HiPopColors.primaryDeepSage,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -436,7 +391,7 @@ class EventDetailView extends StatelessWidget {
             icon: const Icon(Icons.directions),
             label: const Text('Get Directions'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
+              backgroundColor: HiPopColors.shopperAccent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -457,7 +412,7 @@ class EventDetailView extends StatelessWidget {
                 icon: const Icon(Icons.calendar_today),
                 label: const Text('Add to Calendar'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.purple,
+                  foregroundColor: HiPopColors.shopperAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -474,7 +429,7 @@ class EventDetailView extends StatelessWidget {
                 icon: const Icon(Icons.share),
                 label: const Text('Share'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.purple,
+                  foregroundColor: HiPopColors.shopperAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

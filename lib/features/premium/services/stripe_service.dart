@@ -96,12 +96,19 @@ class StripeService {
       debugPrint('⏰ Timestamp: ${DateTime.now()}');
       
       // Get the price ID for this user type - try Remote Config first, then fallback
+      debugPrint('🔍 Getting price ID for user type: $userType');
+      debugPrint('🔍 Environment check:');
+      debugPrint('   ENVIRONMENT: ${dotenv.env['ENVIRONMENT']}');
+      debugPrint('   STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM: ${dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM']}');
+      debugPrint('   STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM_TEST: ${dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM_TEST']}');
+      
       String priceId = await RemoteConfigService.getStripePriceId(userType);
       
       // If Remote Config fails, use local method
       if (priceId.isEmpty) {
         debugPrint('⚠️ Remote Config price ID empty, trying local .env');
         priceId = _getPriceIdForUserType(userType);
+        debugPrint('🔍 Local .env price ID result: $priceId');
       }
       
       if (priceId.isEmpty) {
@@ -165,14 +172,31 @@ class StripeService {
 
   /// Get price ID from environment for user type
   static String _getPriceIdForUserType(String userType) {
+    // Determine environment to choose the right price ID
+    final environment = dotenv.env['ENVIRONMENT'] ?? 'staging';
+    final isProduction = environment == 'production';
+    
+    debugPrint('🔧 _getPriceIdForUserType: Environment=$environment, userType=$userType');
+    
     switch (userType) {
       // case 'shopper':
-      //   return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
+      //   return isProduction 
+      //     ? (dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '')
+      //     : (dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM_TEST'] ?? '');
       case 'vendor':
-        return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
+        final priceId = isProduction 
+          ? (dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '')
+          : (dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM_TEST'] ?? '');
+        debugPrint('🏷️ StripeService price ID for vendor: $priceId (${isProduction ? 'LIVE' : 'TEST'})');
+        return priceId;
       case 'market_organizer':
-        return dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '';
+        final priceId = isProduction 
+          ? (dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '')
+          : (dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM_TEST'] ?? '');
+        debugPrint('🏷️ StripeService price ID for market_organizer: $priceId (${isProduction ? 'LIVE' : 'TEST'})');
+        return priceId;
       default:
+        debugPrint('❌ Unknown user type in StripeService fallback: $userType');
         return '';
     }
   }

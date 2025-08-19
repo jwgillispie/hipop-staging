@@ -18,6 +18,17 @@ class Market extends Equatable {
   final bool isActive;
   final List<String> associatedVendorIds; // IDs of vendors associated with this market
   final DateTime createdAt;
+  
+  // Vendor Recruitment Fields
+  final bool isLookingForVendors;
+  final bool isRecruitmentOnly; // If true, only shows in vendor discovery, not shopper feed
+  final String? applicationUrl;
+  final double? applicationFee;
+  final double? dailyBoothFee;
+  final int? vendorSpotsAvailable;
+  final int? vendorSpotsTotal;
+  final DateTime? applicationDeadline;
+  final String? vendorRequirements;
 
   const Market({
     required this.id,
@@ -36,6 +47,16 @@ class Market extends Equatable {
     this.isActive = true,
     this.associatedVendorIds = const [],
     required this.createdAt,
+    // Vendor Recruitment Fields with defaults
+    this.isLookingForVendors = false,
+    this.isRecruitmentOnly = false,
+    this.applicationUrl,
+    this.applicationFee,
+    this.dailyBoothFee,
+    this.vendorSpotsAvailable,
+    this.vendorSpotsTotal,
+    this.applicationDeadline,
+    this.vendorRequirements,
   });
 
   factory Market.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +82,16 @@ class Market extends Equatable {
             ? List<String>.from(data['associatedVendorIds'])
             : [],
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        // Vendor Recruitment Fields
+        isLookingForVendors: data['isLookingForVendors'] ?? false,
+        isRecruitmentOnly: data['isRecruitmentOnly'] ?? false,
+        applicationUrl: data['applicationUrl'],
+        applicationFee: data['applicationFee']?.toDouble(),
+        dailyBoothFee: data['dailyBoothFee']?.toDouble(),
+        vendorSpotsAvailable: data['vendorSpotsAvailable'],
+        vendorSpotsTotal: data['vendorSpotsTotal'],
+        applicationDeadline: (data['applicationDeadline'] as Timestamp?)?.toDate(),
+        vendorRequirements: data['vendorRequirements'],
       );
     } catch (e) {
       // Error parsing Market from Firestore
@@ -85,6 +116,18 @@ class Market extends Equatable {
       'isActive': isActive,
       'associatedVendorIds': associatedVendorIds,
       'createdAt': Timestamp.fromDate(createdAt),
+      // Vendor Recruitment Fields
+      'isLookingForVendors': isLookingForVendors,
+      'isRecruitmentOnly': isRecruitmentOnly,
+      'applicationUrl': applicationUrl,
+      'applicationFee': applicationFee,
+      'dailyBoothFee': dailyBoothFee,
+      'vendorSpotsAvailable': vendorSpotsAvailable,
+      'vendorSpotsTotal': vendorSpotsTotal,
+      'applicationDeadline': applicationDeadline != null 
+          ? Timestamp.fromDate(applicationDeadline!) 
+          : null,
+      'vendorRequirements': vendorRequirements,
     };
   }
 
@@ -105,6 +148,15 @@ class Market extends Equatable {
     bool? isActive,
     List<String>? associatedVendorIds,
     DateTime? createdAt,
+    bool? isLookingForVendors,
+    bool? isRecruitmentOnly,
+    String? applicationUrl,
+    double? applicationFee,
+    double? dailyBoothFee,
+    int? vendorSpotsAvailable,
+    int? vendorSpotsTotal,
+    DateTime? applicationDeadline,
+    String? vendorRequirements,
   }) {
     return Market(
       id: id ?? this.id,
@@ -123,6 +175,15 @@ class Market extends Equatable {
       isActive: isActive ?? this.isActive,
       associatedVendorIds: associatedVendorIds ?? this.associatedVendorIds,
       createdAt: createdAt ?? this.createdAt,
+      isLookingForVendors: isLookingForVendors ?? this.isLookingForVendors,
+      isRecruitmentOnly: isRecruitmentOnly ?? this.isRecruitmentOnly,
+      applicationUrl: applicationUrl ?? this.applicationUrl,
+      applicationFee: applicationFee ?? this.applicationFee,
+      dailyBoothFee: dailyBoothFee ?? this.dailyBoothFee,
+      vendorSpotsAvailable: vendorSpotsAvailable ?? this.vendorSpotsAvailable,
+      vendorSpotsTotal: vendorSpotsTotal ?? this.vendorSpotsTotal,
+      applicationDeadline: applicationDeadline ?? this.applicationDeadline,
+      vendorRequirements: vendorRequirements ?? this.vendorRequirements,
     );
   }
 
@@ -156,6 +217,47 @@ class Market extends Equatable {
     return '$dateStr • $timeRange';
   }
   
+  /// Helper methods for vendor recruitment
+  bool get hasAvailableSpots {
+    if (vendorSpotsAvailable == null || vendorSpotsTotal == null) return true;
+    return vendorSpotsAvailable! > 0;
+  }
+  
+  String get spotsDisplay {
+    if (vendorSpotsAvailable == null || vendorSpotsTotal == null) {
+      return 'Spots available';
+    }
+    return '$vendorSpotsAvailable of $vendorSpotsTotal spots available';
+  }
+  
+  bool get isApplicationDeadlinePassed {
+    if (applicationDeadline == null) return false;
+    return applicationDeadline!.isBefore(DateTime.now());
+  }
+  
+  bool get isApplicationDeadlineUrgent {
+    if (applicationDeadline == null) return false;
+    final daysUntilDeadline = applicationDeadline!.difference(DateTime.now()).inDays;
+    return daysUntilDeadline <= 3 && daysUntilDeadline >= 0;
+  }
+  
+  String get applicationDeadlineDisplay {
+    if (applicationDeadline == null) return '';
+    final now = DateTime.now();
+    final difference = applicationDeadline!.difference(now);
+    
+    if (difference.isNegative) {
+      return 'Application closed';
+    } else if (difference.inDays == 0) {
+      return 'Deadline: Today';
+    } else if (difference.inDays == 1) {
+      return 'Deadline: Tomorrow';
+    } else if (difference.inDays <= 7) {
+      return 'Deadline: ${difference.inDays} days';
+    } else {
+      return 'Deadline: ${applicationDeadline!.month}/${applicationDeadline!.day}';
+    }
+  }
 
   @override
   List<Object?> get props => [
@@ -175,5 +277,14 @@ class Market extends Equatable {
         isActive,
         associatedVendorIds,
         createdAt,
+        isLookingForVendors,
+        isRecruitmentOnly,
+        applicationUrl,
+        applicationFee,
+        dailyBoothFee,
+        vendorSpotsAvailable,
+        vendorSpotsTotal,
+        applicationDeadline,
+        vendorRequirements,
       ];
 }

@@ -579,7 +579,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     } else if (_popupType == 'market' && _selectedMarket != null) {
       iconData = Icons.storefront;
       title = 'Create Market Pop-Up';
-      subtitle = 'Submit your pop-up for market approval';
+      subtitle = 'Create a pop-up for ${_selectedMarket!.name}';
     } else {
       iconData = Icons.store;
       title = 'Create Your Pop-Up';
@@ -972,29 +972,6 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: HiPopColors.warningAmber.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, size: 16, color: HiPopColors.warningAmber),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: const Text(
-                    'This post will be submitted for market organizer approval',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: HiPopColors.warningAmber,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -1028,6 +1005,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: HiPopColors.lightTextPrimary
                   ),
                 ),
                 const Spacer(),

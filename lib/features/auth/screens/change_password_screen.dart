@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -141,7 +142,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Change Password'),
-        backgroundColor: Colors.orange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                HiPopColors.shopperAccent,
+                HiPopColors.primaryDeepSage,
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -162,7 +175,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         children: [
                           Icon(
                             Icons.info_outline,
-                            color: Colors.blue.shade600,
+                            color: HiPopColors.shopperAccent,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -316,7 +329,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: ElevatedButton(
                   onPressed: _isChangingPassword ? null : _handleChangePassword,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: HiPopColors.shopperAccent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),

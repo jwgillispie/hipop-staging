@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hipop/features/shared/services/support_service.dart';
 import 'package:hipop/features/shared/models/user_profile.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 /// A reusable widget for displaying support contact options
 class SupportContactWidget extends StatelessWidget {
@@ -40,9 +41,9 @@ class SupportContactWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: HiPopColors.darkBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +62,7 @@ class SupportContactWidget extends StatelessWidget {
                   title ?? 'Need Help?',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
+                    color: HiPopColors.darkTextPrimary,
                     fontSize: 14,
                   ),
                 ),
@@ -73,7 +74,7 @@ class SupportContactWidget extends StatelessWidget {
             Text(
               subtitle!,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
                 fontSize: 12,
               ),
             ),
@@ -89,11 +90,12 @@ class SupportContactWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: HiPopColors.darkBorder),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -127,7 +129,7 @@ class SupportContactWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -135,7 +137,7 @@ class SupportContactWidget extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -212,7 +214,7 @@ class SupportContactWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: HiPopColors.darkBorder),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -228,7 +230,7 @@ class SupportContactWidget extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
+                  color: HiPopColors.darkTextPrimary,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -247,8 +249,8 @@ class SupportContactWidget extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-          color: Colors.grey.shade50,
+          border: Border.all(color: HiPopColors.darkBorder),
+          color: HiPopColors.darkSurface.withValues(alpha: 0.5),
         ),
         child: Row(
           children: [
@@ -273,7 +275,7 @@ class SupportContactWidget extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[800],
+                      color: HiPopColors.darkTextPrimary,
                       fontSize: 14,
                     ),
                   ),
@@ -281,7 +283,7 @@ class SupportContactWidget extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: HiPopColors.darkTextSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -290,7 +292,7 @@ class SupportContactWidget extends StatelessWidget {
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.grey[400],
+              color: HiPopColors.darkTextTertiary,
               size: 16,
             ),
           ],
@@ -372,7 +374,7 @@ class SupportContactWidgetFactory {
       userProfile: userProfile,
       title: 'Account Not Approved?',
       subtitle: 'Let\'s discuss how we can help resolve this',
-      primaryColor: primaryColor ?? Colors.red,
+      primaryColor: primaryColor ?? HiPopColors.errorPlum,
       compact: compact,
     );
   }

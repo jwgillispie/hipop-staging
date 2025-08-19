@@ -117,6 +117,7 @@ class MarketService {
       
       final allMarkets = querySnapshot.docs
           .map((doc) => Market.fromFirestore(doc))
+          .where((market) => !market.isRecruitmentOnly) // Filter out recruitment-only posts
           .toList();
           
       debugPrint('MarketService: Total active markets: ${allMarkets.length}');
@@ -193,6 +194,7 @@ class MarketService {
       
       return querySnapshot.docs
           .map((doc) => Market.fromFirestore(doc))
+          .where((market) => !(market.isRecruitmentOnly ?? false)) // Filter out recruitment-only posts
           .toList();
     } catch (e) {
       throw Exception('Failed to get all markets: $e');
@@ -206,6 +208,7 @@ class MarketService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => Market.fromFirestore(doc))
+            .where((market) => !market.isRecruitmentOnly) // Filter out recruitment-only posts
             .toList());
   }
 
@@ -216,6 +219,7 @@ class MarketService {
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => Market.fromFirestore(doc))
+            .where((market) => !market.isRecruitmentOnly) // Filter out recruitment-only posts
             .toList());
   }
 

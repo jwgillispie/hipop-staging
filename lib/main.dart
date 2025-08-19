@@ -40,8 +40,20 @@ Future<void> _initializeApp() async {
     // Initialize Stripe (now supports web too)
     await _initializeStripe();
     
-    // Initialize Remote Config in background - don't block app startup
-    RemoteConfigService.instance.catchError((e) => null);
+    // Initialize Remote Config and wait for it to complete
+    // This ensures price IDs are available when needed
+    try {
+      await RemoteConfigService.instance;
+      debugPrint('✅ Remote Config initialized successfully during app startup');
+      
+      // In debug mode, run configuration test
+      if (kDebugMode) {
+        await RemoteConfigService.debugConfiguration();
+      }
+    } catch (e) {
+      debugPrint('⚠️ Remote Config initialization failed during startup: $e');
+      // Continue with app startup, fallback to .env values will be used
+    }
     
     // Initialize Analytics with consent
     await _initializeAnalytics();

@@ -37,7 +37,7 @@ import '../../features/vendor/screens/vendor_sales_tracker_screen.dart';
 import '../../features/vendor/screens/vendor_analytics_screen.dart';
 import '../../features/vendor/screens/vendor_premium_dashboard.dart';
 import '../../features/vendor/screens/vendor_products_management_screen.dart';
-import '../../features/vendor/screens/vendor_market_discovery_screen.dart';
+import '../../features/vendor/screens/vendor_market_discovery_optimized.dart';
 import '../../features/vendor/screens/select_market_screen.dart';
 // Organizer screens
 import '../../features/organizer/screens/organizer_dashboard.dart';
@@ -50,6 +50,10 @@ import '../../features/organizer/screens/market_organizer_comprehensive_signup_s
 import '../../features/organizer/screens/organizer_premium_dashboard.dart';
 import '../../features/organizer/screens/organizer_vendor_discovery_screen.dart';
 import '../../features/organizer/screens/organizer_bulk_messaging_screen.dart';
+import '../../features/organizer/screens/create_vendor_recruitment_post_screen.dart';
+import '../../features/organizer/screens/organizer_vendor_posts_screen.dart';
+import '../../features/organizer/screens/create_vendor_post_screen.dart';
+import '../../features/organizer/screens/vendor_post_responses_screen.dart';
 // Shared screens
 import '../../features/shared/screens/create_popup_screen.dart';
 import '../../features/shared/screens/custom_items_screen.dart';
@@ -58,6 +62,7 @@ import '../../features/shared/screens/favorites_screen.dart';
 import '../../features/shared/screens/legal_documents_screen.dart';
 import '../../features/shared/screens/account_verification_pending_screen.dart';
 import '../../features/shared/screens/ceo_verification_dashboard_screen.dart';
+import '../../features/ceo/screens/ceo_metrics_dashboard.dart';
 // Premium screens
 import '../../features/premium/screens/premium_onboarding_screen.dart';
 import '../../features/premium/screens/subscription_success_screen.dart';
@@ -133,6 +138,11 @@ class AppRouter {
           path: '/ceo-verification-dashboard',
           name: 'ceoVerificationDashboard',
           builder: (context, state) => const CeoVerificationDashboardScreen(),
+        ),
+        GoRoute(
+          path: '/ceo-metrics-dashboard',
+          name: 'ceoMetricsDashboard',
+          builder: (context, state) => const CEOMetricsDashboard(),
         ),
         GoRoute(
           path: '/shopper',
@@ -306,7 +316,7 @@ class AppRouter {
             GoRoute(
               path: 'market-discovery',
               name: 'vendorMarketDiscovery',
-              builder: (context, state) => const VendorMarketDiscoveryScreen(),
+              builder: (context, state) => const VendorMarketDiscoveryOptimized(),
             ),
             GoRoute(
               path: 'products-management',
@@ -384,6 +394,11 @@ class AppRouter {
               },
             ),
             GoRoute(
+              path: 'vendor-recruitment/create',
+              name: 'createVendorRecruitment',
+              builder: (context, state) => const CreateVendorRecruitmentPostScreen(),
+            ),
+            GoRoute(
               path: 'vendor-discovery',
               name: 'organizerVendorDiscovery',
               builder: (context, state) => const OrganizerVendorDiscoveryScreen(),
@@ -392,6 +407,35 @@ class AppRouter {
               path: 'vendor-communications',
               name: 'organizerVendorCommunications',
               builder: (context, state) => const OrganizerBulkMessagingScreen(),
+            ),
+            GoRoute(
+              path: 'vendor-posts',
+              name: 'organizerVendorPosts',
+              builder: (context, state) => const OrganizerVendorPostsScreen(),
+              routes: [
+                GoRoute(
+                  path: 'create',
+                  name: 'createOrganizerVendorPost',
+                  builder: (context, state) => const CreateVendorPostScreen(),
+                ),
+                GoRoute(
+                  path: ':postId/edit',
+                  name: 'editOrganizerVendorPost',
+                  builder: (context, state) {
+                    final postId = state.pathParameters['postId']!;
+                    // TODO: Update CreateVendorPostScreen to support editing
+                    return const CreateVendorPostScreen();
+                  },
+                ),
+                GoRoute(
+                  path: ':postId/responses',
+                  name: 'organizerVendorPostResponses',
+                  builder: (context, state) {
+                    final postId = state.pathParameters['postId']!;
+                    return VendorPostResponsesScreen(postId: postId);
+                  },
+                ),
+              ],
             ),
             if (kDebugMode)
               GoRoute(

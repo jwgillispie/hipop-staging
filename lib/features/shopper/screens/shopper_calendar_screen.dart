@@ -10,6 +10,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../market/models/market.dart';
 import '../../market/services/market_service.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 
 class ShopperCalendarScreen extends StatefulWidget {
@@ -161,9 +162,22 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: const Text('Market Calendar'),
-        backgroundColor: Colors.orange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                HiPopColors.shopperAccent,
+                HiPopColors.primaryDeepSage,
+              ],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -175,7 +189,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: HiPopColors.darkTextSecondary,
           indicatorColor: Colors.white,
           tabs: const [
             Tab(
@@ -212,7 +226,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
             // Market summary
             Container(
               padding: const EdgeInsets.all(16),
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: HiPopColors.shopperAccent.withValues(alpha: 0.1),
               child: _buildMarketSummary(),
             ),
             
@@ -241,15 +255,15 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
               calendarStyle: const CalendarStyle(
                 outsideDaysVisible: false,
                 markerDecoration: BoxDecoration(
-                  color: Colors.orange,
+                  color: HiPopColors.shopperAccent,
                   shape: BoxShape.circle,
                 ),
                 selectedDecoration: BoxDecoration(
-                  color: Colors.green,
+                  color: HiPopColors.primaryDeepSage,
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: Colors.blue,
+                  color: HiPopColors.secondarySoftSage,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -258,7 +272,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                 titleCentered: true,
                 formatButtonShowsNext: false,
                 formatButtonDecoration: BoxDecoration(
-                  color: Colors.orange,
+                  color: HiPopColors.shopperAccent,
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
                 formatButtonTextStyle: TextStyle(
@@ -317,14 +331,14 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
               '${currentMarkets.length}',
               'Total Markets',
               Icons.storefront,
-              Colors.blue,
+              HiPopColors.secondarySoftSage,
             ),
             const SizedBox(width: 16),
             _buildSummaryCard(
               '$openMarkets',
               'Open Now',
               Icons.schedule,
-              Colors.green,
+              HiPopColors.primaryDeepSage,
             ),
           ],
         ),
@@ -344,7 +358,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: HiPopColors.darkBorder),
         ),
         child: Row(
           children: [
@@ -366,7 +380,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                     label,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: HiPopColors.darkTextSecondary,
                     ),
                   ),
                 ],
@@ -399,7 +413,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
               ? 'No markets operating today'
               : '${events.length} market${events.length == 1 ? '' : 's'} operating',
             style: TextStyle(
-              color: Colors.grey[600],
+              color: HiPopColors.darkTextSecondary,
               fontSize: 14,
             ),
           ),
@@ -424,13 +438,13 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isCurrentlyOpen 
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.orange.withValues(alpha: 0.1),
+                  ? HiPopColors.primaryDeepSage.withValues(alpha: 0.1)
+                  : HiPopColors.warningAmber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.storefront,
-                color: isCurrentlyOpen ? Colors.green : Colors.orange,
+                color: isCurrentlyOpen ? HiPopColors.primaryDeepSage : HiPopColors.warningAmber,
                 size: 20,
               ),
             ),
@@ -454,7 +468,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: HiPopColors.primaryDeepSage,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
@@ -471,7 +485,7 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                         const SizedBox(width: 8),
                         const Icon(
                           Icons.favorite,
-                          color: Colors.red,
+                          color: HiPopColors.errorPlum,
                           size: 16,
                         ),
                       ],
@@ -483,13 +497,13 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                       Icon(
                         Icons.access_time,
                         size: 14,
-                        color: Colors.grey[600],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         event.timeRange,
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -502,14 +516,14 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                         Icon(
                           Icons.location_on,
                           size: 14,
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             market.address,
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: HiPopColors.darkTextSecondary,
                               fontSize: 12,
                             ),
                             maxLines: 1,

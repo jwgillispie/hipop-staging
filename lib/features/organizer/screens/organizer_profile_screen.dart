@@ -7,6 +7,7 @@ import '../../../blocs/auth/auth_event.dart';
 import '../../shared/models/user_feedback.dart';
 import '../../shared/services/user_feedback_service.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
 
 class OrganizerProfileScreen extends StatefulWidget {
   const OrganizerProfileScreen({super.key});
@@ -19,10 +20,10 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Organizer Profile'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+      appBar: HiPopAppBar(
+        title: 'Organizer Profile',
+        userRole: 'vendor',
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

@@ -5,6 +5,7 @@ import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_event.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class VendorSignupScreen extends StatefulWidget {
   const VendorSignupScreen({super.key});
@@ -109,38 +110,39 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
         appBar: AppBar(
           title: const Text('Vendor Account Setup'),
           centerTitle: true,
-          backgroundColor: Colors.green,
+          backgroundColor: HiPopColors.vendorAccent,
           foregroundColor: Colors.white,
         ),
+        backgroundColor: HiPopColors.darkBackground,
         body: Column(
           children: [
             // Progress indicator
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                color: HiPopColors.darkSurface,
+                border: Border(bottom: BorderSide(color: HiPopColors.darkBorder)),
               ),
-              child: Column(
+                child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Step ${_currentStep + 1} of $_totalSteps',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
                       ),
                       Text(
                         '${((_currentStep + 1) / _totalSteps * 100).round()}% Complete',
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(color: HiPopColors.darkTextSecondary),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: (_currentStep + 1) / _totalSteps,
-                    backgroundColor: Colors.grey[300],
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    backgroundColor: HiPopColors.darkBorder,
+                    valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
                   ),
                 ],
               ),
@@ -163,8 +165,8 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
-                border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                color: HiPopColors.darkSurface,
+                border: Border(top: BorderSide(color: HiPopColors.darkBorder)),
               ),
               child: Row(
                 children: [
@@ -172,6 +174,10 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _isLoading ? null : _previousStep,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: HiPopColors.vendorAccent,
+                          side: BorderSide(color: HiPopColors.vendorAccent.withValues(alpha: 0.5)),
+                        ),
                         child: const Text('Back'),
                       ),
                     ),
@@ -180,7 +186,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _nextStep,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: HiPopColors.vendorAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -206,18 +212,21 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
   }
 
   Widget _buildStep1BasicAuth() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _step1FormKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return Container(
+      color: HiPopColors.darkBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _step1FormKey,
+            child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             const SizedBox(height: 20),
             Text(
               'Create Your Vendor Account',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -225,18 +234,31 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Text(
               'Let\'s start with your basic account information.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Full Name',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'Enter your full name',
-                prefixIcon: Icon(Icons.person),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.person, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -249,11 +271,24 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Email',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'Enter your email address',
-                prefixIcon: Icon(Icons.email),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.email, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -269,11 +304,24 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             TextFormField(
               controller: _passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Password',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'Enter your password',
-                prefixIcon: Icon(Icons.lock),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.lock, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
               validator: (value) {
                 if (value == null || value.length < 6) {
@@ -286,11 +334,24 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             TextFormField(
               controller: _confirmPasswordController,
               obscureText: true,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Confirm Password',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'Confirm your password',
-                prefixIcon: Icon(Icons.lock_outline),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.lock_outline, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
               validator: (value) {
                 if (value != _passwordController.text) {
@@ -299,18 +360,21 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 return null;
               },
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildStep2BusinessInfo() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _step2FormKey,
-        child: Column(
+    return Container(
+      color: HiPopColors.darkBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _step2FormKey,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
@@ -318,6 +382,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
               'Business Information',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -325,18 +390,31 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Text(
               'Tell us about your business and what you sell.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
             TextFormField(
               controller: _businessNameController,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Business Name *',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'e.g., Fresh Farm Produce',
-                prefixIcon: Icon(Icons.business),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.business, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -349,10 +427,23 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             TextFormField(
               controller: _bioController,
               maxLines: 4,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Business Description *',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'Describe your business, products, and what makes you special...',
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
                 alignLabelWithHint: true,
               ),
               validator: (value) {
@@ -363,11 +454,12 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
               },
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'What categories do you sell? *',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
+                color: HiPopColors.darkTextPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -377,8 +469,19 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
               children: _availableCategories.map((category) {
                 final isSelected = _selectedCategories.contains(category);
                 return FilterChip(
-                  label: Text(category),
+                  label: Text(
+                    category,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : HiPopColors.darkTextPrimary,
+                    ),
+                  ),
                   selected: isSelected,
+                  selectedColor: HiPopColors.vendorAccent,
+                  backgroundColor: HiPopColors.darkSurface,
+                  checkmarkColor: Colors.white,
+                  side: BorderSide(
+                    color: isSelected ? HiPopColors.vendorAccent : HiPopColors.darkBorder,
+                  ),
                   onSelected: (selected) {
                     setState(() {
                       if (selected) {
@@ -388,8 +491,6 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                       }
                     });
                   },
-                  selectedColor: Colors.green.shade100,
-                  checkmarkColor: Colors.green.shade700,
                 );
               }).toList(),
             ),
@@ -399,23 +500,26 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                 child: Text(
                   'Please select at least one category',
                   style: TextStyle(
-                    color: Colors.red.shade700,
+                    color: HiPopColors.errorPlum,
                     fontSize: 12,
                   ),
                 ),
               ),
           ],
         ),
+        ),
       ),
     );
   }
 
   Widget _buildStep3ContactDetails() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _step3FormKey,
-        child: Column(
+    return Container(
+      color: HiPopColors.darkBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _step3FormKey,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
@@ -423,6 +527,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
               'Contact Information',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -430,7 +535,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Text(
               'How can market organizers and customers reach you?',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -438,46 +543,88 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             TextFormField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Phone Number',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: '(555) 123-4567',
-                prefixIcon: Icon(Icons.phone),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.phone, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _websiteController,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Website',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'https://your-website.com',
-                prefixIcon: Icon(Icons.language),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.language, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _instagramController,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Instagram Handle',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: '@your_business_name',
-                prefixIcon: Icon(Icons.camera_alt),
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                prefixIcon: Icon(Icons.camera_alt, color: HiPopColors.vendorAccent),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
               ),
             ),
           ],
+        ),
         ),
       ),
     );
   }
 
   Widget _buildStep4ProductsSpecialties() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _step4FormKey,
-        child: Column(
+    return Container(
+      color: HiPopColors.darkBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _step4FormKey,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
@@ -485,6 +632,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
               'Products & Specialties',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -492,7 +640,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Text(
               'Give us more details about what you offer.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -500,25 +648,41 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             TextFormField(
               controller: _specificProductsController,
               maxLines: 5,
-              decoration: const InputDecoration(
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+              decoration: InputDecoration(
                 labelText: 'Specific Products & Details',
+                labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                 hintText: 'List your specific products, varieties, specialties, certifications (organic, etc.), seasonal availability, etc...',
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.darkBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                ),
+                fillColor: HiPopColors.darkSurface,
+                filled: true,
                 alignLabelWithHint: true,
               ),
             ),
           ],
+        ),
         ),
       ),
     );
   }
 
   Widget _buildStep5AdditionalInfo() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: _step5FormKey,
-        child: Column(
+    return Container(
+      color: HiPopColors.darkBackground,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _step5FormKey,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
@@ -526,6 +690,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
               'Additional Information',
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -533,7 +698,7 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Text(
               'Any additional contact emails for notifications?',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -544,27 +709,40 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                   child: TextFormField(
                     controller: _ccEmailController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: HiPopColors.darkTextPrimary),
+                    decoration: InputDecoration(
                       labelText: 'Additional Email',
+                      labelStyle: TextStyle(color: HiPopColors.vendorAccent),
                       hintText: 'partner@yourbusiness.com',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
+                      hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                      prefixIcon: Icon(Icons.email_outlined, color: HiPopColors.vendorAccent),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: HiPopColors.darkBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: HiPopColors.darkBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
+                      ),
+                      fillColor: HiPopColors.darkSurface,
+                      filled: true,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: _addCcEmail,
-                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                  icon: Icon(Icons.add_circle, color: HiPopColors.vendorAccent),
                   tooltip: 'Add email',
                 ),
               ],
             ),
             if (_ccEmails.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Additional Emails:',
-                style: TextStyle(fontWeight: FontWeight.w500),
+                style: TextStyle(fontWeight: FontWeight.w500, color: HiPopColors.darkTextPrimary),
               ),
               const SizedBox(height: 8),
               ..._ccEmails.map((email) => Padding(
@@ -575,16 +753,17 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
+                              color: HiPopColors.darkSurface,
                               borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: HiPopColors.darkBorder),
                             ),
-                            child: Text(email),
+                            child: Text(email, style: TextStyle(color: HiPopColors.darkTextPrimary)),
                           ),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           onPressed: () => _removeCcEmail(email),
-                          icon: const Icon(Icons.remove_circle, color: Colors.red),
+                          icon: Icon(Icons.remove_circle, color: HiPopColors.errorPlum),
                           tooltip: 'Remove email',
                         ),
                       ],
@@ -595,32 +774,33 @@ class _VendorSignupScreenState extends State<VendorSignupScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade50,
+                color: HiPopColors.darkSurface,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade200),
+                border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
               ),
-              child: Column(
+                child: Column(
                 children: [
-                  Icon(Icons.pending_actions, color: Colors.green.shade600, size: 32),
+                  Icon(Icons.pending_actions, color: HiPopColors.vendorAccent, size: 32),
                   const SizedBox(height: 8),
                   Text(
                     'Ready to Submit!',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.green.shade800,
+                      color: HiPopColors.darkTextPrimary,
                       fontSize: 18,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'After you submit your profile, we\'ll review your account and get back to you soon. You\'ll receive an email when your account is approved!',
-                    style: TextStyle(color: Colors.green.shade700),
+                    style: TextStyle(color: HiPopColors.darkTextSecondary),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
           ],
+        ),
         ),
       ),
     );

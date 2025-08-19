@@ -77,7 +77,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   Expanded(
                     child: _buildTypeOption(
                       title: 'Market-Associated',
-                      subtitle: 'Submit for market approval',
+                      subtitle: 'Connect with a market',
                       icon: Icons.storefront,
                       color: Colors.orange,
                       isEnabled: true,
@@ -206,7 +206,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   child: _buildPopupTypeCard(
                     context,
                     'Market-Associated',
-                    'Submit for market approval',
+                    'Connect with a market',
                     Icons.storefront,
                     Colors.orange,
                     onTap: () {

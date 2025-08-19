@@ -7,6 +7,7 @@ import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/features/shared/models/user_profile.dart';
 import 'package:hipop/features/shared/widgets/common/support_contact_widget.dart';
 import 'package:hipop/features/shared/services/support_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class VendorVerificationPendingScreen extends StatelessWidget {
   const VendorVerificationPendingScreen({super.key});
@@ -57,10 +58,10 @@ class VendorVerificationPendingScreen extends StatelessWidget {
 
   Widget _buildPendingScreen(BuildContext context, UserProfile userProfile) {
     return Scaffold(
-      backgroundColor: Colors.orange.shade50,
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: const Text('Account Under Review'),
-        backgroundColor: Colors.orange,
+        backgroundColor: HiPopColors.vendorAccent,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),
@@ -72,11 +73,12 @@ class VendorVerificationPendingScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: HiPopColors.darkSurface,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: HiPopColors.darkBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.shade200,
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -87,14 +89,14 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                     Icon(
                       Icons.pending_actions,
                       size: 64,
-                      color: Colors.orange.shade600,
+                      color: HiPopColors.vendorAccent,
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'Account Under Review',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade800,
+                        color: HiPopColors.darkTextPrimary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -102,7 +104,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                     Text(
                       'Thanks for submitting your vendor profile! We\'re currently reviewing your account to ensure quality and authenticity.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[700],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -110,21 +112,21 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade200),
+                        border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.business, color: Colors.orange.shade700),
+                              Icon(Icons.business, color: HiPopColors.vendorAccent),
                               const SizedBox(width: 8),
                               Text(
                                 userProfile.businessName ?? userProfile.displayName ?? 'Your Business',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.orange.shade800,
+                                  color: HiPopColors.darkTextPrimary,
                                 ),
                               ),
                             ],
@@ -132,11 +134,11 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(Icons.email, color: Colors.orange.shade700),
+                              Icon(Icons.email, color: HiPopColors.vendorAccent),
                               const SizedBox(width: 8),
                               Text(
                                 userProfile.email,
-                                style: TextStyle(color: Colors.orange.shade700),
+                                style: TextStyle(color: HiPopColors.vendorAccent),
                               ),
                             ],
                           ),
@@ -144,11 +146,11 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.schedule, color: Colors.orange.shade700),
+                                Icon(Icons.schedule, color: HiPopColors.vendorAccent),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Submitted ${_formatDate(userProfile.verificationRequestedAt!)}',
-                                  style: TextStyle(color: Colors.orange.shade700),
+                                  style: TextStyle(color: HiPopColors.vendorAccent),
                                 ),
                               ],
                             ),
@@ -161,7 +163,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                       'What\'s Next?',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -170,7 +172,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                       '• Verify your contact details\n'
                       '• You\'ll receive an email when approved\n'
                       '• This usually takes 1-2 business days',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: HiPopColors.darkTextSecondary),
                       textAlign: TextAlign.left,
                     ),
                   ],
@@ -179,7 +181,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
               const SizedBox(height: 24),
               SupportContactWidgetFactory.forAccountVerification(
                 userProfile: userProfile,
-                primaryColor: Colors.orange,
+                primaryColor: HiPopColors.vendorAccent,
                 compact: true,
               ),
               const SizedBox(height: 32),
@@ -202,7 +204,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                       icon: const Icon(Icons.refresh),
                       label: const Text('Refresh'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
+                        backgroundColor: HiPopColors.vendorAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
@@ -219,10 +221,10 @@ class VendorVerificationPendingScreen extends StatelessWidget {
 
   Widget _buildRejectedScreen(BuildContext context, UserProfile userProfile) {
     return Scaffold(
-      backgroundColor: Colors.red.shade50,
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: const Text('Account Review'),
-        backgroundColor: Colors.red,
+        backgroundColor: HiPopColors.errorPlum,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),
@@ -234,11 +236,12 @@ class VendorVerificationPendingScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: HiPopColors.darkSurface,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: HiPopColors.darkBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.shade200,
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -249,14 +252,14 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                     Icon(
                       Icons.cancel,
                       size: 64,
-                      color: Colors.red.shade600,
+                      color: HiPopColors.errorPlum,
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'Account Not Approved',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.red.shade800,
+                        color: HiPopColors.errorPlum,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -264,7 +267,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                     Text(
                       'Unfortunately, we weren\'t able to approve your vendor account at this time.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[700],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -273,9 +276,9 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
+                          color: HiPopColors.errorPlum.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
+                          border: Border.all(color: HiPopColors.errorPlum.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,13 +287,13 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                               'Review Notes:',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red.shade800,
+                                color: HiPopColors.errorPlum,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               userProfile.verificationNotes!,
-                              style: TextStyle(color: Colors.red.shade700),
+                              style: TextStyle(color: HiPopColors.errorPlum),
                             ),
                           ],
                         ),
@@ -301,7 +304,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                       'Need Help?',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -332,7 +335,7 @@ class VendorVerificationPendingScreen extends StatelessWidget {
                       icon: const Icon(Icons.support_agent),
                       label: const Text('Contact Support'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: HiPopColors.errorPlum,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),

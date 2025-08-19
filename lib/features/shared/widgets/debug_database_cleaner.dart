@@ -16,9 +16,9 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
   
   // Protected users - these will NOT be deleted
   final List<String> _protectedEmails = [
-    'jozo@gmail.com',
-    'vendorjozo@gmail.com',
-    'marketjozo@gmail.com',
+    'hipopmarketss@gmail.com',
+    'hipopvendor@gmail.com',
+    'jordangillispie@outlook.com',
   ];
 
   @override
@@ -71,11 +71,19 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• Your 3 test accounts (jozo@gmail.com, vendorjozo@gmail.com, marketjozo@gmail.com)',
+                    '• Your 3 accounts:',
                     style: TextStyle(color: Colors.orange.shade700),
                   ),
                   Text(
-                    '• Any account with "maria" in the email',
+                    '  - hipopmarketss@gmail.com',
+                    style: TextStyle(color: Colors.orange.shade700),
+                  ),
+                  Text(
+                    '  - hipopvendor@gmail.com',
+                    style: TextStyle(color: Colors.orange.shade700),
+                  ),
+                  Text(
+                    '  - jordangillispie@outlook.com',
                     style: TextStyle(color: Colors.orange.shade700),
                   ),
                   const SizedBox(height: 8),
@@ -120,6 +128,22 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
                   ),
                   Text(
                     '• All favorites',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All analytics data',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All vendor market items',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All vendor follows',
+                    style: TextStyle(color: Colors.red.shade600),
+                  ),
+                  Text(
+                    '• All shopping insights',
                     style: TextStyle(color: Colors.red.shade600),
                   ),
                 ],
@@ -195,10 +219,9 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text('✅ jozo@gmail.com'),
-              Text('✅ vendorjozo@gmail.com'),
-              Text('✅ marketjozo@gmail.com'),
-              Text('✅ Any email containing "maria"'),
+              Text('✅ hipopmarketss@gmail.com'),
+              Text('✅ hipopvendor@gmail.com'),
+              Text('✅ jordangillispie@outlook.com'),
               SizedBox(height: 16),
               Text(
                 'Are you absolutely sure you want to proceed?',
@@ -246,6 +269,12 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
       _result = '';
     });
 
+    print('\n========================================');
+    print('🗑️ STARTING DATABASE CLEANUP');
+    print('========================================');
+    print('Protected emails: ${_protectedEmails.join(", ")}');
+    print('========================================\n');
+
     try {
       String log = '🗑️ STARTING DATABASE CLEANUP\n\n';
       
@@ -255,13 +284,16 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
       
       // Get all user profiles to identify protected users
       final userProfilesSnapshot = await _firestore.collection('user_profiles').get();
+      print('Found ${userProfilesSnapshot.docs.length} total user profiles');
+      
       for (final doc in userProfilesSnapshot.docs) {
         final data = doc.data();
         final email = data['email'] as String? ?? '';
         
-        if (_protectedEmails.contains(email) || email.toLowerCase().contains('maria')) {
+        if (_protectedEmails.contains(email)) {
           protectedUserIds.add(doc.id);
           log += '✅ Protected user: $email (ID: ${doc.id})\n';
+          print('✅ Protecting user: $email');
         }
       }
       
@@ -280,6 +312,7 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
           .where((doc) => !protectedUserIds.contains(doc.id))
           .toList();
       
+      print('Deleting ${userProfilesToDelete.length} user profiles...');
       for (final doc in userProfilesToDelete) {
         final data = doc.data();
         final email = data['email'] ?? 'unknown';
@@ -287,6 +320,7 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
         log += '❌ Deleted user profile: $email\n';
       }
       log += 'Deleted ${userProfilesToDelete.length} user profiles\n\n';
+      print('✅ Deleted ${userProfilesToDelete.length} user profiles');
       
       setState(() {
         _result = log;
@@ -443,7 +477,7 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
         final data = doc.data();
         final email = data['email'] as String? ?? '';
         
-        if (!_protectedEmails.contains(email) && !email.toLowerCase().contains('maria')) {
+        if (!_protectedEmails.contains(email)) {
           await doc.reference.delete();
           log += '❌ Deleted legacy user: $email\n';
           deletedLegacyUsers++;
@@ -452,6 +486,271 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
         }
       }
       log += 'Deleted $deletedLegacyUsers legacy users\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 16: Clear analytics collection
+      log += '🗑️ CLEARING ANALYTICS:\n';
+      final analyticsSnapshot = await _firestore.collection('analytics').get();
+      for (final doc in analyticsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${analyticsSnapshot.docs.length} analytics records\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 17: Clear vendor daily analytics
+      log += '🗑️ CLEARING VENDOR DAILY ANALYTICS:\n';
+      final vendorAnalyticsSnapshot = await _firestore.collection('vendor_daily_analytics').get();
+      for (final doc in vendorAnalyticsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${vendorAnalyticsSnapshot.docs.length} vendor daily analytics\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 18: Clear vendor market items
+      log += '🗑️ CLEARING VENDOR MARKET ITEMS:\n';
+      final vendorMarketItemsSnapshot = await _firestore.collection('vendor_market_items').get();
+      for (final doc in vendorMarketItemsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${vendorMarketItemsSnapshot.docs.length} vendor market items\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 19: Clear vendor follows
+      log += '🗑️ CLEARING VENDOR FOLLOWS:\n';
+      final vendorFollowsSnapshot = await _firestore.collection('vendor_follows').get();
+      for (final doc in vendorFollowsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${vendorFollowsSnapshot.docs.length} vendor follows\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 20: Clear vendor loyalty programs
+      log += '🗑️ CLEARING VENDOR LOYALTY PROGRAMS:\n';
+      final loyaltyProgramsSnapshot = await _firestore.collection('vendor_loyalty_programs').get();
+      for (final doc in loyaltyProgramsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${loyaltyProgramsSnapshot.docs.length} vendor loyalty programs\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 21: Clear vendor branding
+      log += '🗑️ CLEARING VENDOR BRANDING:\n';
+      final vendorBrandingSnapshot = await _firestore.collection('vendor_branding').get();
+      for (final doc in vendorBrandingSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${vendorBrandingSnapshot.docs.length} vendor branding records\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 22: Clear shopping insights
+      log += '🗑️ CLEARING SHOPPING INSIGHTS:\n';
+      final shoppingInsightsSnapshot = await _firestore.collection('shopping_insights').get();
+      for (final doc in shoppingInsightsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${shoppingInsightsSnapshot.docs.length} shopping insights\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 23: Clear spending tracking
+      log += '🗑️ CLEARING SPENDING TRACKING:\n';
+      final spendingTrackingSnapshot = await _firestore.collection('spending_tracking').get();
+      for (final doc in spendingTrackingSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${spendingTrackingSnapshot.docs.length} spending tracking records\n\n';
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 24: Clear analytics_reports
+      log += '🗑️ CLEARING ANALYTICS REPORTS:\n';
+      final analyticsReportsSnapshot = await _firestore.collection('analytics_reports').get();
+      for (final doc in analyticsReportsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${analyticsReportsSnapshot.docs.length} analytics reports\n\n';
+      print('Deleted ${analyticsReportsSnapshot.docs.length} analytics reports');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 25: Clear debug_logs
+      log += '🗑️ CLEARING DEBUG LOGS:\n';
+      final debugLogsSnapshot = await _firestore.collection('debug_logs').get();
+      for (final doc in debugLogsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${debugLogsSnapshot.docs.length} debug logs\n\n';
+      print('Deleted ${debugLogsSnapshot.docs.length} debug logs');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 26: Clear events
+      log += '🗑️ CLEARING EVENTS:\n';
+      final eventsSnapshot = await _firestore.collection('events').get();
+      for (final doc in eventsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${eventsSnapshot.docs.length} events\n\n';
+      print('Deleted ${eventsSnapshot.docs.length} events');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 27: Clear performance_metrics
+      log += '🗑️ CLEARING PERFORMANCE METRICS:\n';
+      final performanceMetricsSnapshot = await _firestore.collection('performance_metrics').get();
+      for (final doc in performanceMetricsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${performanceMetricsSnapshot.docs.length} performance metrics\n\n';
+      print('Deleted ${performanceMetricsSnapshot.docs.length} performance metrics');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 28: Clear premium_logs
+      log += '🗑️ CLEARING PREMIUM LOGS:\n';
+      final premiumLogsSnapshot = await _firestore.collection('premium_logs').get();
+      for (final doc in premiumLogsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${premiumLogsSnapshot.docs.length} premium logs\n\n';
+      print('Deleted ${premiumLogsSnapshot.docs.length} premium logs');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 29: Clear system_alerts
+      log += '🗑️ CLEARING SYSTEM ALERTS:\n';
+      final systemAlertsSnapshot = await _firestore.collection('system_alerts').get();
+      for (final doc in systemAlertsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${systemAlertsSnapshot.docs.length} system alerts\n\n';
+      print('Deleted ${systemAlertsSnapshot.docs.length} system alerts');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 30: Clear system_health_reports
+      log += '🗑️ CLEARING SYSTEM HEALTH REPORTS:\n';
+      final systemHealthReportsSnapshot = await _firestore.collection('system_health_reports').get();
+      for (final doc in systemHealthReportsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${systemHealthReportsSnapshot.docs.length} system health reports\n\n';
+      print('Deleted ${systemHealthReportsSnapshot.docs.length} system health reports');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 31: Clear user_events
+      log += '🗑️ CLEARING USER EVENTS:\n';
+      final userEventsSnapshot = await _firestore.collection('user_events').get();
+      for (final doc in userEventsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${userEventsSnapshot.docs.length} user events\n\n';
+      print('Deleted ${userEventsSnapshot.docs.length} user events');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 32: Clear user_feedback
+      log += '🗑️ CLEARING USER FEEDBACK:\n';
+      final userFeedbackSnapshot = await _firestore.collection('user_feedback').get();
+      for (final doc in userFeedbackSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${userFeedbackSnapshot.docs.length} user feedback\n\n';
+      print('Deleted ${userFeedbackSnapshot.docs.length} user feedback');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 33: Clear user_sessions
+      log += '🗑️ CLEARING USER SESSIONS:\n';
+      final userSessionsSnapshot = await _firestore.collection('user_sessions').get();
+      for (final doc in userSessionsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${userSessionsSnapshot.docs.length} user sessions\n\n';
+      print('Deleted ${userSessionsSnapshot.docs.length} user sessions');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 34: Clear user_stats
+      log += '🗑️ CLEARING USER STATS:\n';
+      final userStatsSnapshot = await _firestore.collection('user_stats').get();
+      for (final doc in userStatsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${userStatsSnapshot.docs.length} user stats\n\n';
+      print('Deleted ${userStatsSnapshot.docs.length} user stats');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 35: Clear vendor_product_lists
+      log += '🗑️ CLEARING VENDOR PRODUCT LISTS:\n';
+      final vendorProductListsSnapshot = await _firestore.collection('vendor_product_lists').get();
+      for (final doc in vendorProductListsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${vendorProductListsSnapshot.docs.length} vendor product lists\n\n';
+      print('Deleted ${vendorProductListsSnapshot.docs.length} vendor product lists');
+      
+      setState(() {
+        _result = log;
+      });
+      
+      // Step 36: Clear vendor_stats
+      log += '🗑️ CLEARING VENDOR STATS:\n';
+      final vendorStatsSnapshot = await _firestore.collection('vendor_stats').get();
+      for (final doc in vendorStatsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+      log += 'Deleted ${vendorStatsSnapshot.docs.length} vendor stats\n\n';
+      print('Deleted ${vendorStatsSnapshot.docs.length} vendor stats');
       
       setState(() {
         _result = log;
@@ -473,9 +772,36 @@ class _DebugDatabaseCleanerState extends State<DebugDatabaseCleaner> {
       log += '• Deleted ${marketFavoritesSnapshot.docs.length} user market favorites\n';
       log += '• Deleted ${vendorPostsSnapshot.docs.length} vendor posts\n';
       log += '• Deleted ${favoritesSnapshot.docs.length} user favorites\n';
-      log += '• Deleted $deletedLegacyUsers legacy users\n\n';
+      log += '• Deleted $deletedLegacyUsers legacy users\n';
+      log += '• Deleted ${analyticsSnapshot.docs.length} analytics records\n';
+      log += '• Deleted ${vendorAnalyticsSnapshot.docs.length} vendor daily analytics\n';
+      log += '• Deleted ${vendorMarketItemsSnapshot.docs.length} vendor market items\n';
+      log += '• Deleted ${vendorFollowsSnapshot.docs.length} vendor follows\n';
+      log += '• Deleted ${loyaltyProgramsSnapshot.docs.length} vendor loyalty programs\n';
+      log += '• Deleted ${vendorBrandingSnapshot.docs.length} vendor branding records\n';
+      log += '• Deleted ${shoppingInsightsSnapshot.docs.length} shopping insights\n';
+      log += '• Deleted ${spendingTrackingSnapshot.docs.length} spending tracking records\n';
+      log += '• Deleted ${analyticsReportsSnapshot.docs.length} analytics reports\n';
+      log += '• Deleted ${debugLogsSnapshot.docs.length} debug logs\n';
+      log += '• Deleted ${eventsSnapshot.docs.length} events\n';
+      log += '• Deleted ${performanceMetricsSnapshot.docs.length} performance metrics\n';
+      log += '• Deleted ${premiumLogsSnapshot.docs.length} premium logs\n';
+      log += '• Deleted ${systemAlertsSnapshot.docs.length} system alerts\n';
+      log += '• Deleted ${systemHealthReportsSnapshot.docs.length} system health reports\n';
+      log += '• Deleted ${userEventsSnapshot.docs.length} user events\n';
+      log += '• Deleted ${userFeedbackSnapshot.docs.length} user feedback\n';
+      log += '• Deleted ${userSessionsSnapshot.docs.length} user sessions\n';
+      log += '• Deleted ${userStatsSnapshot.docs.length} user stats\n';
+      log += '• Deleted ${vendorProductListsSnapshot.docs.length} vendor product lists\n';
+      log += '• Deleted ${vendorStatsSnapshot.docs.length} vendor stats\n\n';
       log += '🎉 Database is now clean and ready for fresh data!\n';
       log += '🔒 All protected users remain intact.';
+      
+      print('\n========================================');
+      print('✅ DATABASE CLEANUP COMPLETED');
+      print('========================================');
+      print('Protected ${protectedUserIds.length} users');
+      print('========================================\n');
       
       setState(() {
         _result = log;

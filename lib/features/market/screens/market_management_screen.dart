@@ -9,6 +9,7 @@ import '../../market/services/market_service.dart';
 import '../../premium/services/subscription_service.dart';
 import '../../shared/services/real_time_analytics_service.dart';
 import '../widgets/market_form_dialog.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class MarketManagementScreen extends StatefulWidget {
   const MarketManagementScreen({super.key});
@@ -61,8 +62,7 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           currentMarketCount,
         );
         final canCreate = await SubscriptionService.canCreateMarket(
-          authState.userProfile!.userId, 
-          currentMarketCount,
+          authState.userProfile!.userId,
         );
         
         setState(() {
@@ -345,7 +345,7 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: HiPopColors.darkTextPrimary,
             ),
             child: const Text('Upgrade'),
           ),
@@ -400,31 +400,59 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
                   style: TextStyle(color: Colors.blue[700]),
                 )
               else ...[
-                Text(
-                  '${_usageSummary['markets_used']} of ${_usageSummary['markets_limit']} markets used',
-                  style: TextStyle(
-                    color: isAtLimit ? Colors.orange[700] : Colors.blue[700],
-                    fontWeight: FontWeight.w500,
-                  ),
+                FutureBuilder<int>(
+                  future: () async {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is Authenticated && authState.userProfile != null) {
+                      return SubscriptionService.getRemainingMonthlyMarkets(authState.userProfile!.userId);
+                    }
+                    return 0;
+                  }(),
+                  builder: (context, snapshot) {
+                    final remaining = snapshot.data ?? 0;
+                    final monthlyUsed = 2 - remaining; // Since free tier limit is 2
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$monthlyUsed of 2 markets used this month',
+                          style: TextStyle(
+                            color: remaining == 0 ? Colors.orange[700] : Colors.blue[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: monthlyUsed / 2,
+                          backgroundColor: Colors.grey[300],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            remaining == 0 ? Colors.orange : Colors.blue,
+                          ),
+                        ),
+                        if (remaining == 0) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Monthly limit reached. Resets on the 1st',
+                            style: TextStyle(
+                              color: Colors.orange[700],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            '$remaining market${remaining == 1 ? '' : 's'} remaining this month',
+                            style: TextStyle(
+                              color: Colors.green[700],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (_usageSummary['markets_used'] as int) / (_usageSummary['markets_limit'] as int),
-                  backgroundColor: Colors.grey[300],
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isAtLimit ? Colors.orange : Colors.blue,
-                  ),
-                ),
-                if (isAtLimit) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Upgrade to create unlimited markets',
-                    style: TextStyle(
-                      color: Colors.orange[700],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ],
             ],
           ),
@@ -454,8 +482,20 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Market Management'),
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    HiPopColors.secondarySoftSage,
+                    HiPopColors.accentMauve,
+                  ],
+                ),
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            foregroundColor: HiPopColors.darkTextPrimary,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -477,8 +517,8 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: _canCreateMarkets ? _showCreateMarketDialog : _showMarketLimitReachedDialog,
-            backgroundColor: _canCreateMarkets ? Colors.teal : Colors.grey,
-            foregroundColor: Colors.white,
+            backgroundColor: _canCreateMarkets ? HiPopColors.accentMauve : Colors.grey,
+            foregroundColor: HiPopColors.darkTextPrimary,
             icon: Icon(_canCreateMarkets ? Icons.add : Icons.lock),
             label: Text(_canCreateMarkets ? 'Create Market' : 'Limit Reached'),
           ),
@@ -491,16 +531,29 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: HiPopColors.darkBackground,
+        border: Border(bottom: BorderSide(color: HiPopColors.darkBorder)),
       ),
       child: TextField(
         controller: _searchController,
+        style: TextStyle(color: HiPopColors.darkTextPrimary),
         decoration: InputDecoration(
           hintText: 'Search markets...',
-          prefixIcon: const Icon(Icons.search),
+          hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+          prefixIcon: Icon(Icons.search, color: HiPopColors.darkTextTertiary),
+          filled: true,
+          fillColor: HiPopColors.darkBackground,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: HiPopColors.darkBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: HiPopColors.darkBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: HiPopColors.accentMauve),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
@@ -535,7 +588,7 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           Icon(
             Icons.storefront,
             size: 64,
-            color: Colors.grey[400],
+            color: HiPopColors.darkTextTertiary,
           ),
           const SizedBox(height: 16),
           const Text(
@@ -559,8 +612,8 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
             icon: Icon(_canCreateMarkets ? Icons.add : Icons.lock),
             label: Text(_canCreateMarkets ? 'Create First Market' : 'Limit Reached'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _canCreateMarkets ? Colors.teal : Colors.grey,
-              foregroundColor: Colors.white,
+              backgroundColor: _canCreateMarkets ? HiPopColors.accentMauve : Colors.grey,
+              foregroundColor: HiPopColors.darkTextPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),

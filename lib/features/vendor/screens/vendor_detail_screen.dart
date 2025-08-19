@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hipop/features/shared/services/url_launcher_service.dart';
+import 'package:hipop/features/shared/services/real_time_analytics_service.dart';
 import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
 import 'package:hipop/features/vendor/models/managed_vendor.dart';
 import 'package:hipop/features/vendor/services/managed_vendor_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 
 class VendorDetailScreen extends StatefulWidget {
@@ -46,6 +49,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         _isLoading = false;
       });
       if (vendor != null) {
+        // Track vendor profile view
+        await RealTimeAnalyticsService.trackVendorInteraction(
+          VendorActions.profileView,
+          widget.vendorId,
+          FirebaseAuth.instance.currentUser?.uid,
+          metadata: {
+            'vendorName': vendor.businessName,
+            'categories': vendor.categories.map((c) => c.displayName).toList(),
+            'source': 'vendor_detail_screen',
+          },
+        );
       }
     } catch (e) {
       setState(() {
@@ -613,10 +627,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         // Price Range
         if (_vendor!.priceRange != null && _vendor!.priceRange!.isNotEmpty) ...[
           Card(
+            color: HiPopColors.darkSurface,
             child: ListTile(
-              leading: const Icon(Icons.attach_money, color: Colors.green),
-              title: const Text('Price Range'),
-              subtitle: Text(_vendor!.priceRange!),
+              leading: Icon(Icons.attach_money, color: HiPopColors.successGreen),
+              title: Text(
+                'Price Range',
+                style: TextStyle(color: HiPopColors.darkTextPrimary),
+              ),
+              subtitle: Text(
+                _vendor!.priceRange!,
+                style: TextStyle(color: HiPopColors.darkTextSecondary),
+              ),
             ),
           ),
         ],
@@ -626,12 +647,16 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
 
   Widget _buildProductCard(String product) {
     return Card(
+      color: HiPopColors.darkSurface,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const Icon(Icons.shopping_basket, color: Colors.orange),
-        title: Text(product),
+        leading: Icon(Icons.shopping_basket, color: HiPopColors.accentMauve),
+        title: Text(
+          product,
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+        ),
         trailing: _vendor!.acceptsOrders 
-            ? const Icon(Icons.add_shopping_cart, color: Colors.grey)
+            ? Icon(Icons.add_shopping_cart, color: HiPopColors.darkTextTertiary)
             : null,
       ),
     );
@@ -732,12 +757,19 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
 
   Widget _buildContactCard(IconData icon, String label, String value, VoidCallback? onTap) {
     return Card(
+      color: HiPopColors.darkSurface,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Icon(icon, color: Colors.orange),
-        title: Text(label),
-        subtitle: Text(value),
-        trailing: onTap != null ? const Icon(Icons.launch, color: Colors.grey) : null,
+        leading: Icon(icon, color: HiPopColors.accentMauve),
+        title: Text(
+          label,
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+        ),
+        subtitle: Text(
+          value,
+          style: TextStyle(color: HiPopColors.darkTextSecondary),
+        ),
+        trailing: onTap != null ? Icon(Icons.launch, color: HiPopColors.darkTextTertiary) : null,
         onTap: onTap,
       ),
     );

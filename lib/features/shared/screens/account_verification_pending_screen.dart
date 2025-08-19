@@ -7,7 +7,7 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 
 import '../models/user_profile.dart';
 import '../widgets/common/support_contact_widget.dart';
-import '../services/support_service.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class AccountVerificationPendingScreen extends StatelessWidget {
   const AccountVerificationPendingScreen({super.key});
@@ -68,10 +68,10 @@ class AccountVerificationPendingScreen extends StatelessWidget {
     final businessName = isVendor 
         ? (userProfile.businessName ?? userProfile.displayName ?? 'Your Business')
         : (userProfile.organizationName ?? userProfile.displayName ?? 'Your Organization');
-    final colorScheme = isVendor ? Colors.green : Colors.indigo;
+    final colorScheme = isVendor ? HiPopColors.vendorAccent : HiPopColors.organizerAccent;
 
     return Scaffold(
-      backgroundColor: colorScheme.shade50,
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: Text(title),
         backgroundColor: colorScheme,
@@ -86,11 +86,12 @@ class AccountVerificationPendingScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: HiPopColors.darkSurface,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: HiPopColors.darkBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.shade200,
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -101,14 +102,14 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                     Icon(
                       Icons.pending_actions,
                       size: 64,
-                      color: colorScheme.shade600,
+                      color: colorScheme,
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'Account Under Review',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: colorScheme.shade800,
+                        color: HiPopColors.darkTextPrimary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -118,7 +119,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                           ? 'Thanks for submitting your vendor profile! We\'re currently reviewing your account to ensure quality and authenticity.'
                           : 'Thanks for submitting your market organizer profile! We\'re currently reviewing your account to verify your organization and experience.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[700],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -126,9 +127,9 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: colorScheme.shade50,
+                        color: colorScheme.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: colorScheme.shade200),
+                        border: Border.all(color: colorScheme.withValues(alpha: 0.3)),
                       ),
                       child: Column(
                         children: [
@@ -136,7 +137,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                             children: [
                               Icon(
                                 isVendor ? Icons.business : Icons.account_balance,
-                                color: colorScheme.shade700,
+                                color: colorScheme,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -144,7 +145,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                                   businessName,
                                   style: TextStyle(
                                     fontWeight: FontWeight.w500,
-                                    color: colorScheme.shade800,
+                                    color: HiPopColors.darkTextPrimary,
                                   ),
                                 ),
                               ),
@@ -153,24 +154,24 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Icon(Icons.email, color: colorScheme.shade700),
+                              Icon(Icons.email, color: colorScheme),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   userProfile.email,
-                                  style: TextStyle(color: colorScheme.shade700),
+                                  style: TextStyle(color: colorScheme),
                                 ),
                               ),
                             ],
                           ),
                           Row(
                             children: [
-                              Icon(Icons.person, color: colorScheme.shade700),
+                              Icon(Icons.person, color: colorScheme),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   '${isVendor ? 'Vendor' : 'Market Organizer'} Account',
-                                  style: TextStyle(color: colorScheme.shade700),
+                                  style: TextStyle(color: colorScheme),
                                 ),
                               ),
                             ],
@@ -179,12 +180,12 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.schedule, color: colorScheme.shade700),
+                                Icon(Icons.schedule, color: colorScheme),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     'Submitted ${_formatDate(userProfile.verificationRequestedAt!)}',
-                                    style: TextStyle(color: colorScheme.shade700),
+                                    style: TextStyle(color: colorScheme),
                                   ),
                                 ),
                               ],
@@ -198,7 +199,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                       'What\'s Next?',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -212,7 +213,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                             '• Verify your market management experience\n'
                             '• You\'ll receive an email when approved\n'
                             '• This usually takes 1-2 business days',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: HiPopColors.darkTextSecondary),
                       textAlign: TextAlign.left,
                     ),
                   ],
@@ -233,6 +234,8 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                       icon: const Icon(Icons.logout),
                       label: const Text('Sign Out'),
                       style: OutlinedButton.styleFrom(
+                        foregroundColor: HiPopColors.darkTextPrimary,
+                        side: BorderSide(color: HiPopColors.darkBorder),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -264,10 +267,10 @@ class AccountVerificationPendingScreen extends StatelessWidget {
     final title = isVendor ? 'Vendor Account Review' : 'Market Organizer Account Review';
 
     return Scaffold(
-      backgroundColor: Colors.red.shade50,
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: Colors.red,
+        backgroundColor: HiPopColors.errorPlum,
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
       ),
@@ -279,11 +282,12 @@ class AccountVerificationPendingScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: HiPopColors.darkSurface,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: HiPopColors.darkBorder),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.shade200,
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -294,14 +298,14 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                     Icon(
                       Icons.cancel,
                       size: 64,
-                      color: Colors.red.shade600,
+                      color: HiPopColors.errorPlum,
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'Account Not Approved',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: Colors.red.shade800,
+                        color: HiPopColors.errorPlum,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -311,7 +315,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                           ? 'Unfortunately, we weren\'t able to approve your vendor account at this time.'
                           : 'Unfortunately, we weren\'t able to approve your market organizer account at this time.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey[700],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -320,9 +324,9 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
+                          color: HiPopColors.errorPlum.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.shade200),
+                          border: Border.all(color: HiPopColors.errorPlum.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,13 +335,13 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                               'Review Notes:',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.red.shade800,
+                                color: HiPopColors.errorPlum,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               userProfile.verificationNotes!,
-                              style: TextStyle(color: Colors.red.shade700),
+                              style: TextStyle(color: HiPopColors.errorPlum),
                             ),
                           ],
                         ),
@@ -348,7 +352,7 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                       'Need Help?',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -367,6 +371,8 @@ class AccountVerificationPendingScreen extends StatelessWidget {
                   icon: const Icon(Icons.logout),
                   label: const Text('Sign Out'),
                   style: OutlinedButton.styleFrom(
+                    foregroundColor: HiPopColors.darkTextPrimary,
+                    side: BorderSide(color: HiPopColors.darkBorder),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -401,14 +407,6 @@ class AccountVerificationPendingScreen extends StatelessWidget {
   void _refresh(BuildContext context) {
     // Reload user profile to check for verification status updates
     context.read<AuthBloc>().add(ReloadUserEvent());
-  }
-
-  void _contactSupport() {
-    SupportService.contactSupportByEmail(
-      context: SupportContext.accountVerification,
-      userProfile: null, // Can be enhanced to pass actual user profile
-      additionalDetails: 'I need help with account verification process.',
-    );
   }
 
 }

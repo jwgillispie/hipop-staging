@@ -1,5 +1,196 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Enum representing different types of sales venues
+enum VenueType {
+  formalMarket,     // Traditional farmers market with booth
+  independentEvent, // Pop-ups, private events, catering
+  onlineSales,      // E-commerce, social media sales
+  directSales,      // Farm stands, delivery, CSA boxes
+}
+
+extension VenueTypeExtension on VenueType {
+  String get displayName {
+    switch (this) {
+      case VenueType.formalMarket:
+        return 'Farmers Market';
+      case VenueType.independentEvent:
+        return 'Independent Event';
+      case VenueType.onlineSales:
+        return 'Online Sales';
+      case VenueType.directSales:
+        return 'Direct Sales';
+    }
+  }
+  
+  String get description {
+    switch (this) {
+      case VenueType.formalMarket:
+        return 'Organized farmers markets with assigned booths';
+      case VenueType.independentEvent:
+        return 'Pop-ups, festivals, private events, catering';
+      case VenueType.onlineSales:
+        return 'Website, social media, online platforms';
+      case VenueType.directSales:
+        return 'Farm stands, delivery routes, CSA boxes';
+    }
+  }
+  
+  /// Whether this venue type typically has commission fees
+  bool get hasCommissionFees {
+    switch (this) {
+      case VenueType.formalMarket:
+        return true;
+      case VenueType.independentEvent:
+        return false; // Usually flat fees or free
+      case VenueType.onlineSales:
+        return false; // Platform fees handled separately
+      case VenueType.directSales:
+        return false; // No intermediary fees
+    }
+  }
+}
+
+/// Model representing flexible venue details for sales tracking
+class VenueDetails {
+  final VenueType type;
+  final String name;
+  final String? location;
+  final String? description;
+  final Map<String, dynamic>? customFields; // For additional venue-specific data
+  
+  const VenueDetails({
+    required this.type,
+    required this.name,
+    this.location,
+    this.description,
+    this.customFields,
+  });
+  
+  /// Create venue details for a formal market
+  factory VenueDetails.formalMarket({
+    required String marketName,
+    required String marketLocation,
+    String? boothNumber,
+  }) {
+    return VenueDetails(
+      type: VenueType.formalMarket,
+      name: marketName,
+      location: marketLocation,
+      customFields: boothNumber != null ? {'boothNumber': boothNumber} : null,
+    );
+  }
+  
+  /// Create venue details for an independent event
+  factory VenueDetails.independentEvent({
+    required String eventName,
+    String? eventLocation,
+    String? eventType,
+    String? organizer,
+  }) {
+    return VenueDetails(
+      type: VenueType.independentEvent,
+      name: eventName,
+      location: eventLocation,
+      description: eventType,
+      customFields: organizer != null ? {'organizer': organizer} : null,
+    );
+  }
+  
+  /// Create venue details for online sales
+  factory VenueDetails.onlineSales({
+    required String platform,
+    String? orderReference,
+    String? shippingMethod,
+  }) {
+    return VenueDetails(
+      type: VenueType.onlineSales,
+      name: platform,
+      customFields: {
+        if (orderReference != null) 'orderReference': orderReference,
+        if (shippingMethod != null) 'shippingMethod': shippingMethod,
+      },
+    );
+  }
+  
+  /// Create venue details for direct sales
+  factory VenueDetails.directSales({
+    required String salesMethod,
+    String? location,
+    String? route,
+  }) {
+    return VenueDetails(
+      type: VenueType.directSales,
+      name: salesMethod,
+      location: location,
+      customFields: route != null ? {'route': route} : null,
+    );
+  }
+  
+  /// Create from map (for Firestore)
+  factory VenueDetails.fromMap(Map<String, dynamic> map) {
+    return VenueDetails(
+      type: VenueType.values.firstWhere(
+        (t) => t.name == map['type'],
+        orElse: () => VenueType.formalMarket,
+      ),
+      name: map['name'] ?? '',
+      location: map['location'],
+      description: map['description'],
+      customFields: map['customFields'] != null 
+          ? Map<String, dynamic>.from(map['customFields'])
+          : null,
+    );
+  }
+  
+  /// Convert to map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type.name,
+      'name': name,
+      'location': location,
+      'description': description,
+      'customFields': customFields,
+    };
+  }
+  
+  /// Get display text for UI
+  String get displayText {
+    final buffer = StringBuffer(name);
+    if (location != null && location!.isNotEmpty) {
+      buffer.write(' • $location');
+    }
+    return buffer.toString();
+  }
+  
+  /// Get detailed text for reporting
+  String get detailedText {
+    final buffer = StringBuffer('${type.displayName}: $name');
+    if (location != null && location!.isNotEmpty) {
+      buffer.write(' ($location)');
+    }
+    if (description != null && description!.isNotEmpty) {
+      buffer.write(' - $description');
+    }
+    return buffer.toString();
+  }
+  
+  VenueDetails copyWith({
+    VenueType? type,
+    String? name,
+    String? location,
+    String? description,
+    Map<String, dynamic>? customFields,
+  }) {
+    return VenueDetails(
+      type: type ?? this.type,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      description: description ?? this.description,
+      customFields: customFields ?? this.customFields,
+    );
+  }
+}
+
 /// Model representing a vendor's sales data for a specific date
 /// 
 /// This model captures comprehensive sales information including:
@@ -7,10 +198,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// - Individual product performance
 /// - Commission and fee tracking
 /// - Photo uploads for record keeping
+/// - Flexible venue tracking (markets, events, online, direct sales)
 class VendorSalesData {
   final String id;
   final String vendorId;
-  final String marketId;
+  final String? marketId; // Now optional to support non-market sales
+  final VenueDetails venueDetails; // New flexible venue information
   final DateTime date;
   final double revenue;
   final int transactions;
@@ -26,7 +219,8 @@ class VendorSalesData {
   const VendorSalesData({
     required this.id,
     required this.vendorId,
-    required this.marketId,
+    this.marketId, // Now optional
+    required this.venueDetails,
     required this.date,
     required this.revenue,
     required this.transactions,
@@ -47,7 +241,10 @@ class VendorSalesData {
     return VendorSalesData(
       id: doc.id,
       vendorId: data['vendorId'] ?? '',
-      marketId: data['marketId'] ?? '',
+      marketId: data['marketId'], // Now nullable
+      venueDetails: data['venueDetails'] != null 
+          ? VenueDetails.fromMap(data['venueDetails'] as Map<String, dynamic>)
+          : _createLegacyVenueDetails(data), // Handle legacy data
       date: (data['date'] as Timestamp).toDate(),
       revenue: (data['revenue'] ?? 0).toDouble(),
       transactions: data['transactions'] ?? 0,
@@ -66,12 +263,31 @@ class VendorSalesData {
       ),
     );
   }
+  
+  /// Create venue details for legacy data that only has marketId
+  static VenueDetails _createLegacyVenueDetails(Map<String, dynamic> data) {
+    final marketId = data['marketId'] as String?;
+    if (marketId != null && marketId.isNotEmpty) {
+      // Legacy market data - create formal market venue
+      return VenueDetails.formalMarket(
+        marketName: 'Market', // Will be resolved from market service in UI
+        marketLocation: 'Unknown Location',
+      );
+    } else {
+      // No market specified - default to direct sales
+      return VenueDetails.directSales(
+        salesMethod: 'Direct Sales',
+        location: 'Various Locations',
+      );
+    }
+  }
 
   /// Convert to Firestore document data
   Map<String, dynamic> toFirestore() {
     return {
       'vendorId': vendorId,
-      'marketId': marketId,
+      'marketId': marketId, // Now nullable
+      'venueDetails': venueDetails.toMap(),
       'date': Timestamp.fromDate(date),
       'revenue': revenue,
       'transactions': transactions,
@@ -91,6 +307,7 @@ class VendorSalesData {
     String? id,
     String? vendorId,
     String? marketId,
+    VenueDetails? venueDetails,
     DateTime? date,
     double? revenue,
     int? transactions,
@@ -107,6 +324,7 @@ class VendorSalesData {
       id: id ?? this.id,
       vendorId: vendorId ?? this.vendorId,
       marketId: marketId ?? this.marketId,
+      venueDetails: venueDetails ?? this.venueDetails,
       date: date ?? this.date,
       revenue: revenue ?? this.revenue,
       transactions: transactions ?? this.transactions,

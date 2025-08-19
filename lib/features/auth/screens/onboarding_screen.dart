@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/onboarding_service.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -109,18 +110,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     // Show loading while checking onboarding status
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
+      return Scaffold(
+        backgroundColor: HiPopColors.darkBackground,
         body: Center(
           child: CircularProgressIndicator(
-            color: Colors.orange,
+            color: HiPopColors.shopperAccent,
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: HiPopColors.darkBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -131,10 +132,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: TextButton(
                   onPressed: _completeOnboarding,
+                  style: TextButton.styleFrom(
+                    foregroundColor: HiPopColors.shopperAccent,
+                  ),
                   child: Text(
                     'Skip',
                     style: TextStyle(
-                      color: Colors.grey[600],
+                      color: HiPopColors.darkTextSecondary,
                       fontSize: 16,
                     ),
                   ),
@@ -196,10 +200,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Title
           Text(
             page.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: HiPopColors.darkTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -220,7 +224,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             page.description,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: HiPopColors.darkTextSecondary,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -241,11 +245,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.purple.shade400, Colors.blue.shade400],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: HiPopColors.premiumGradient,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -258,10 +258,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Title
           Text(
             page.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: HiPopColors.darkTextPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -282,7 +282,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             page.description,
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: HiPopColors.darkTextSecondary,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -292,9 +292,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.purple.shade50,
+              color: HiPopColors.premiumGold.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.purple.shade200),
+              border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: [
@@ -347,7 +347,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           width: _currentPage == index ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: _currentPage == index ? Colors.orange : Colors.grey[300],
+            color: _currentPage == index ? HiPopColors.shopperAccent : HiPopColors.darkTextTertiary,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -366,8 +366,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: OutlinedButton(
                 onPressed: _previousPage,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange),
+                  foregroundColor: HiPopColors.shopperAccent,
+                  side: BorderSide(color: HiPopColors.shopperAccent),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -386,7 +386,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: ElevatedButton(
               onPressed: _nextPage,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+                backgroundColor: HiPopColors.shopperAccent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

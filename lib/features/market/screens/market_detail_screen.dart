@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hipop/blocs/favorites/favorites_bloc.dart';
 import 'package:hipop/features/shared/services/url_launcher_service.dart';
+import 'package:hipop/features/shared/services/real_time_analytics_service.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
@@ -34,6 +36,28 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _trackMarketView();
+  }
+  
+  Future<void> _trackMarketView() async {
+    try {
+      // Track market event view
+      await RealTimeAnalyticsService.trackMarketEngagement(
+        MarketActions.marketView,
+        widget.market.id,
+        FirebaseAuth.instance.currentUser?.uid,
+        metadata: {
+          'marketName': widget.market.name,
+          'eventDate': widget.market.eventDate.toIso8601String(),
+          'isRecruitmentOnly': widget.market.isRecruitmentOnly,
+          'isLookingForVendors': widget.market.isLookingForVendors,
+          'source': 'market_detail_screen',
+        },
+      );
+    } catch (e) {
+      // Don't disrupt UI if analytics fails
+      debugPrint('Failed to track market view: $e');
+    }
   }
 
   @override

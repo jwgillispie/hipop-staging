@@ -5,14 +5,12 @@ import 'package:hipop/features/shared/services/url_launcher_service.dart';
 import 'package:flutter/services.dart';
 import 'package:hipop/features/vendor/services/vendor_product_service.dart';
 import 'package:hipop/features/vendor/models/vendor_product.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 class VendorPostDetailScreen extends StatefulWidget {
   final VendorPost vendorPost;
 
-  const VendorPostDetailScreen({
-    super.key,
-    required this.vendorPost,
-  });
+  const VendorPostDetailScreen({super.key, required this.vendorPost});
 
   @override
   State<VendorPostDetailScreen> createState() => _VendorPostDetailScreenState();
@@ -30,14 +28,14 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
 
   Future<void> _loadVendorProducts() async {
     if (widget.vendorPost.productListIds.isEmpty) return;
-    
+
     setState(() {
       _isLoadingProducts = true;
     });
 
     try {
       final productIds = <String>{};
-      
+
       // Get all product IDs from the associated product lists
       for (final listId in widget.vendorPost.productListIds) {
         final productList = await VendorProductService.getProductList(listId);
@@ -45,14 +43,14 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
           productIds.addAll(productList.productIds);
         }
       }
-      
+
       // Fetch products concurrently with timeout
-      final productFutures = productIds.map((productId) => 
-        VendorProductService.getProduct(productId).timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => null,
-        ).catchError((_) => null));
-      
+      final productFutures = productIds.map(
+        (productId) => VendorProductService.getProduct(productId)
+            .timeout(const Duration(seconds: 5), onTimeout: () => null)
+            .catchError((_) => null),
+      );
+
       final productResults = await Future.wait(productFutures);
       final products = productResults.whereType<VendorProduct>().toList();
 
@@ -83,10 +81,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6F9686), // Soft Sage
-                Color(0xFF946C7E), // Mauve
-              ],
+              colors: [HiPopColors.vendorAccent, HiPopColors.primaryDeepSage],
             ),
           ),
         ),
@@ -117,11 +112,11 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                     Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: Colors.orange,
+                          backgroundColor: HiPopColors.vendorAccent,
                           radius: 30,
                           child: Text(
-                            widget.vendorPost.vendorName.isNotEmpty 
-                                ? widget.vendorPost.vendorName[0].toUpperCase() 
+                            widget.vendorPost.vendorName.isNotEmpty
+                                ? widget.vendorPost.vendorName[0].toUpperCase()
                                 : 'V',
                             style: const TextStyle(
                               color: Colors.white,
@@ -137,22 +132,30 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                             children: [
                               Text(
                                 widget.vendorPost.vendorName,
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
+                                  color: HiPopColors.vendorAccent.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                                  border: Border.all(
+                                    color: HiPopColors.vendorAccent.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
                                 ),
                                 child: Text(
                                   'Independent Pop-up',
                                   style: TextStyle(
-                                    color: Colors.orange[700],
+                                    color: HiPopColors.vendorAccentDark,
                                     fontWeight: FontWeight.w500,
                                     fontSize: 12,
                                   ),
@@ -162,21 +165,25 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: widget.vendorPost.isHappening 
-                                ? Colors.green 
-                                : widget.vendorPost.isUpcoming 
-                                    ? Colors.orange 
+                            color:
+                                widget.vendorPost.isHappening
+                                    ? Colors.green
+                                    : widget.vendorPost.isUpcoming
+                                    ? HiPopColors.vendorAccent
                                     : Colors.grey,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            widget.vendorPost.isHappening 
-                                ? 'LIVE NOW' 
-                                : widget.vendorPost.isUpcoming 
-                                    ? 'UPCOMING' 
-                                    : 'PAST EVENT',
+                            widget.vendorPost.isHappening
+                                ? 'LIVE NOW'
+                                : widget.vendorPost.isUpcoming
+                                ? 'UPCOMING'
+                                : 'PAST EVENT',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -190,15 +197,15 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Description
             Text(
               'About',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Card(
@@ -210,28 +217,28 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Products Section
             if (_vendorProducts.isNotEmpty || _isLoadingProducts) ...[
               Text(
                 'Products Available',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               _buildProductsCard(),
               const SizedBox(height: 20),
             ],
-            
+
             // Event Details
             Text(
               'Event Details',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Card(
@@ -259,26 +266,31 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                         'Instagram',
                         '@${widget.vendorPost.instagramHandle!}',
                         null,
-                        onTap: () => _launchInstagram(context, widget.vendorPost.instagramHandle!),
+                        onTap:
+                            () => _launchInstagram(
+                              context,
+                              widget.vendorPost.instagramHandle!,
+                            ),
                       ),
                     ],
                   ],
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Action Buttons
-            if (widget.vendorPost.isHappening || widget.vendorPost.isUpcoming) ...[
+            if (widget.vendorPost.isHappening ||
+                widget.vendorPost.isUpcoming) ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => _launchLocation(context, widget.vendorPost),
                   icon: const Icon(Icons.directions),
-                  label: Text(widget.vendorPost.isHappening ? 'View Location' : 'Save Location'),
+                  label: Text('Directions'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: HiPopColors.vendorAccent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -286,17 +298,21 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            
+
             if (widget.vendorPost.instagramHandle != null) ...[
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => _launchInstagram(context, widget.vendorPost.instagramHandle!),
+                  onPressed:
+                      () => _launchInstagram(
+                        context,
+                        widget.vendorPost.instagramHandle!,
+                      ),
                   icon: const Icon(Icons.alternate_email),
                   label: const Text('Instagram Info'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    side: const BorderSide(color: Colors.orange),
+                    foregroundColor: HiPopColors.vendorAccent,
+                    side: BorderSide(color: HiPopColors.vendorAccent),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                 ),
@@ -321,11 +337,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: Colors.orange,
-              size: 24,
-            ),
+            Icon(icon, color: HiPopColors.vendorAccent, size: 24),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -351,21 +363,14 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
                 ],
               ),
             ),
             if (onTap != null) ...[
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
             ],
           ],
         ),
@@ -373,11 +378,16 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
     );
   }
 
-  Future<void> _launchLocation(BuildContext context, VendorPost vendorPost) async {
+  Future<void> _launchLocation(
+    BuildContext context,
+    VendorPost vendorPost,
+  ) async {
     try {
       // Use coordinates if available for more precise location
-      if (widget.vendorPost.latitude != null && widget.vendorPost.longitude != null) {
-        final url = 'https://maps.google.com/?q=${widget.vendorPost.latitude},${widget.vendorPost.longitude}';
+      if (widget.vendorPost.latitude != null &&
+          widget.vendorPost.longitude != null) {
+        final url =
+            'https://maps.google.com/?q=${widget.vendorPost.latitude},${widget.vendorPost.longitude}';
         await UrlLauncherService.launchWebsite(url);
       } else {
         // Fall back to address search
@@ -390,45 +400,48 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
       }
     }
   }
-  
+
   void _showLocationFallback(BuildContext context, String location) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(location),
-            const SizedBox(height: 16),
-            const Text(
-              'Could not open maps app. Address copied to clipboard.',
-              style: TextStyle(color: Colors.grey),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Location'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(location),
+                const SizedBox(height: 16),
+                const Text(
+                  'Could not open maps app. Address copied to clipboard.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Clipboard.setData(ClipboardData(text: location));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Address copied to clipboard'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: HiPopColors.vendorAccent,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Copy Address'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Clipboard.setData(ClipboardData(text: location));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Address copied to clipboard')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Copy Address'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -442,48 +455,51 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
       }
     }
   }
-  
+
   void _showInstagramFallback(BuildContext context, String handle) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Follow on Instagram'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Instagram: @$handle'),
-            const SizedBox(height: 16),
-            const Text(
-              'Could not open Instagram app. Username copied to clipboard.',
-              style: TextStyle(color: Colors.grey),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Follow on Instagram'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Instagram: @$handle'),
+                const SizedBox(height: 16),
+                const Text(
+                  'Could not open Instagram app. Username copied to clipboard.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Clipboard.setData(ClipboardData(text: '@$handle'));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Instagram handle copied to clipboard'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: HiPopColors.vendorAccent,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Copy Handle'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              Clipboard.setData(ClipboardData(text: '@$handle'));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Instagram handle copied to clipboard')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Copy Handle'),
-          ),
-        ],
-      ),
     );
   }
-  
+
   Widget _buildProductsCard() {
     if (_isLoadingProducts) {
       return const Card(
@@ -503,7 +519,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
         ),
       );
     }
-    
+
     if (_vendorProducts.isEmpty) {
       return const Card(
         child: Padding(
@@ -518,7 +534,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
         ),
       );
     }
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -534,9 +550,9 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            ..._vendorProducts.take(5).map((product) => 
-              _buildProductRow(product)
-            ),
+            ..._vendorProducts
+                .take(5)
+                .map((product) => _buildProductRow(product)),
             if (_vendorProducts.length > 5) ...[
               const SizedBox(height: 8),
               Text(
@@ -553,7 +569,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
       ),
     );
   }
-  
+
   Widget _buildProductRow(VendorProduct product) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -563,28 +579,32 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: HiPopColors.vendorAccent.withValues(alpha: 0.3),
+              ),
             ),
-            child: product.imageUrl != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    product.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
+            child:
+                product.imageUrl != null
+                    ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (context, error, stackTrace) => const Icon(
+                              Icons.shopping_basket,
+                              color: HiPopColors.vendorAccent,
+                              size: 20,
+                            ),
+                      ),
+                    )
+                    : const Icon(
                       Icons.shopping_basket,
-                      color: Colors.orange,
+                      color: HiPopColors.vendorAccent,
                       size: 20,
                     ),
-                  ),
-                )
-              : const Icon(
-                  Icons.shopping_basket,
-                  color: Colors.orange,
-                  size: 20,
-                ),
           ),
           const SizedBox(width: 12),
           Expanded(

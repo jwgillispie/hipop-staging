@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../market/models/market.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 /// Market selection screen for vendors creating market-associated posts
 class SelectMarketScreen extends StatefulWidget {
@@ -44,14 +45,25 @@ class _SelectMarketScreenState extends State<SelectMarketScreen> {
           child: Column(
             children: [
               TextField(
+                style: TextStyle(color: HiPopColors.lightTextPrimary),
                 decoration: InputDecoration(
                   hintText: 'Search markets by name or location...',
-                  prefixIcon: const Icon(Icons.search),
+                  hintStyle: TextStyle(color: HiPopColors.lightTextSecondary),
+                  prefixIcon: Icon(Icons.search, color: HiPopColors.primaryDeepSage),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: HiPopColors.lightBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: HiPopColors.lightBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: HiPopColors.vendorAccent, width: 2),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: HiPopColors.surfacePalePink,
                 ),
                 onChanged: (value) {
                   setState(() {
@@ -66,19 +78,20 @@ class _SelectMarketScreenState extends State<SelectMarketScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
+                    color: HiPopColors.surfacePalePink,
+                    border: Border.all(color: HiPopColors.lightBorder),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.date_range, size: 20),
+                      Icon(Icons.date_range, size: 20, color: HiPopColors.primaryDeepSage),
                       const SizedBox(width: 8),
                       Text(
                         'Dates: ${_formatDate(_startDate)} - ${_formatDate(_endDate)}',
-                        style: const TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: HiPopColors.lightTextPrimary),
                       ),
                       const Spacer(),
-                      const Icon(Icons.arrow_drop_down),
+                      Icon(Icons.arrow_drop_down, color: HiPopColors.lightTextSecondary),
                     ],
                   ),
                 ),
@@ -215,7 +228,7 @@ class _SelectMarketScreenState extends State<SelectMarketScreen> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       image: market.imageUrl != null
                           ? DecorationImage(
@@ -227,7 +240,7 @@ class _SelectMarketScreenState extends State<SelectMarketScreen> {
                     child: market.imageUrl == null
                         ? Icon(
                             Icons.storefront,
-                            color: Theme.of(context).primaryColor,
+                            color: HiPopColors.vendorAccent,
                             size: 30,
                           )
                         : null,
@@ -271,19 +284,19 @@ class _SelectMarketScreenState extends State<SelectMarketScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: HiPopColors.successGreen.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.access_time, size: 16, color: Colors.green[700]),
+                      Icon(Icons.access_time, size: 16, color: HiPopColors.successGreen),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           marketHours,
                           style: TextStyle(
-                            color: Colors.green[700],
+                            color: HiPopColors.successGreen,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

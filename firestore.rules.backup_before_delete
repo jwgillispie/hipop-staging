@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ⚠️ STAGING ONLY - EXTREMELY PERMISSIVE RULES ⚠️
+    // Allow all authenticated access to fix permission issues
+    // NEVER USE IN PRODUCTION
+    
+    // Allow all reads and writes for authenticated users - NO RESTRICTIONS
+    match /{document=**} {
+      allow read, write, create, update, delete: if request.auth != null;
+    }
+    
+    // Also allow some public reads for specific collections
+    match /markets/{marketId} {
+      allow read: if true;
+    }
+    
+    match /vendor_posts/{postId} {
+      allow read: if true;
+    }
+    
+    match /events/{eventId} {
+      allow read: if true;
+    }
+  }
+}

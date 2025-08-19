@@ -11,6 +11,8 @@ import 'package:hipop/features/premium/services/advanced_reporting_service.dart'
 import 'package:hipop/features/premium/widgets/upgrade_to_premium_button.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hipop/core/widgets/hipop_app_bar.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 
 class OrganizerAnalyticsScreen extends StatefulWidget {
@@ -211,15 +213,17 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Analytics Dashboard'),
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
+          backgroundColor: const Color(0xFF0A0A0A),
+          appBar: HiPopAppBar(
+            title: 'Analytics Dashboard',
+            userRole: 'vendor',
+            centerTitle: true,
+            showPremiumBadge: _hasPremiumAccess,
             bottom: _hasPremiumAccess ? TabBar(
               controller: _tabController,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
-              indicatorColor: Colors.white,
+              indicatorColor: HiPopColors.premiumGold,
               tabs: const [
                 Tab(icon: Icon(Icons.analytics), text: 'Overview'),
                 Tab(icon: Icon(Icons.trending_up), text: 'Revenue'),
@@ -276,13 +280,16 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading analytics...'),
+            CircularProgressIndicator(color: HiPopColors.primaryDeepSage),
+            const SizedBox(height: 16),
+            Text(
+              'Loading analytics...',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+            ),
           ],
         ),
       );
@@ -293,17 +300,26 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error, size: 64, color: Colors.red),
+            Icon(Icons.error, size: 64, color: HiPopColors.errorPlum),
             const SizedBox(height: 16),
             Text(
               'Error loading analytics',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(_error!),
+            Text(
+              _error!,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadAnalytics,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: HiPopColors.primaryDeepSage,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -312,8 +328,11 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     }
 
     if (_summary == null || _realTimeMetrics == null) {
-      return const Center(
-        child: Text('No analytics data available'),
+      return Center(
+        child: Text(
+          'No analytics data available',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+        ),
       );
     }
 
@@ -369,7 +388,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Widget _buildRevenueTab() {
     if (_revenueAnalytics == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: HiPopColors.primaryDeepSage),
+      );
     }
 
     return SingleChildScrollView(
@@ -389,7 +410,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Widget _buildIntelligenceTab() {
     if (_marketIntelligence == null || _advancedMetrics == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(color: HiPopColors.primaryDeepSage),
+      );
     }
 
     return SingleChildScrollView(

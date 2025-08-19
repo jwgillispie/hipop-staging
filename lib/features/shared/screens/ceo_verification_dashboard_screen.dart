@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../models/user_profile.dart';
@@ -127,10 +128,15 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('CEO Dashboard'),
+            title: const Text('CEO Verification Dashboard'),
             backgroundColor: Colors.purple,
             foregroundColor: Colors.white,
             actions: [
+              IconButton(
+                icon: const Icon(Icons.analytics),
+                onPressed: () => context.push('/ceo-metrics-dashboard'),
+                tooltip: 'Metrics Dashboard',
+              ),
               IconButton(
                 icon: const Icon(Icons.filter_list),
                 onPressed: _showFilterDialog,

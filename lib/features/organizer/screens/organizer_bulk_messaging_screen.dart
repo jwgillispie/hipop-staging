@@ -9,6 +9,7 @@ import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import '../services/organizer_bulk_messaging_service.dart';
 import '../models/message_template.dart';
 import '../models/bulk_message.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
 
 class OrganizerBulkMessagingScreen extends StatefulWidget {
   const OrganizerBulkMessagingScreen({super.key});
@@ -183,16 +184,10 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          children: [
-            Icon(Icons.campaign, color: Colors.amber),
-            SizedBox(width: 8),
-            Text('Vendor Communication Suite'),
-          ],
-        ),
-        backgroundColor: Colors.deepPurple.shade700,
-        foregroundColor: Colors.white,
+      appBar: HiPopAppBar(
+        title: 'Vendor Communication Suite',
+        userRole: 'vendor',
+        centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

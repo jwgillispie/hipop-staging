@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/vendor/services/managed_vendor_service.dart';
+import 'package:hipop/features/shared/services/real_time_analytics_service.dart';
 import '../models/user_favorite.dart';
 import '../../market/models/market.dart';
 import '../../vendor/models/managed_vendor.dart';
@@ -42,6 +43,22 @@ class FavoritesService {
       );
 
       final docRef = await _favoritesCollection.add(favorite.toFirestore());
+      
+      // Track favorite added analytics
+      try {
+        await RealTimeAnalyticsService.trackEvent(
+          EventTypes.favorite,
+          {
+            'action': 'add',
+            'itemType': type.name,
+            'itemId': itemId,
+          },
+          userId: userId,
+        );
+      } catch (e) {
+        debugPrint('Failed to track favorite add: $e');
+      }
+      
       return docRef.id;
     } catch (e) {
       throw Exception('Failed to add favorite: $e');
@@ -63,6 +80,21 @@ class FavoritesService {
 
       for (final doc in querySnapshot.docs) {
         await doc.reference.delete();
+      }
+      
+      // Track favorite removed analytics
+      try {
+        await RealTimeAnalyticsService.trackEvent(
+          EventTypes.favorite,
+          {
+            'action': 'remove',
+            'itemType': type.name,
+            'itemId': itemId,
+          },
+          userId: userId,
+        );
+      } catch (e) {
+        debugPrint('Failed to track favorite remove: $e');
       }
     } catch (e) {
       throw Exception('Failed to remove favorite: $e');

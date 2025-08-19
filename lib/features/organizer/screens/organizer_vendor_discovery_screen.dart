@@ -10,6 +10,7 @@ import '../services/organizer_vendor_invitation_service.dart';
 import '../services/organizer_vendor_discovery_analytics_service.dart';
 import '../../vendor/services/vendor_contact_service.dart';
 import '../../shared/models/user_profile.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
 
 class OrganizerVendorDiscoveryScreen extends StatefulWidget {
   const OrganizerVendorDiscoveryScreen({super.key});
@@ -252,28 +253,10 @@ class _OrganizerVendorDiscoveryScreenState extends State<OrganizerVendorDiscover
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.diamond,
-                color: Colors.amber[700],
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text('Vendor Discovery'),
-          ],
-        ),
-        backgroundColor: Colors.deepPurple.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      appBar: HiPopAppBar(
+        title: 'Vendor Discovery',
+        userRole: 'vendor',
+        centerTitle: true,
         actions: [
           if (_hasPremiumAccess && _selectedVendors.isNotEmpty)
             IconButton(

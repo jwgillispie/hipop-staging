@@ -11,17 +11,10 @@ class MarketApprovalService {
   static const String _trackingCollection = 'vendor_monthly_tracking';
 
   /// Get pending approvals for market organizer
+  /// NOTE: Market posts are now auto-approved, so this returns empty
   static Stream<List<ApprovalRequest>> getPendingApprovals(String organizerId) {
-    return _firestore
-        .collection(_queueCollection)
-        .where('organizerId', isEqualTo: organizerId)
-        .where('status', isEqualTo: 'pending')
-        .orderBy('priority', descending: true)
-        .orderBy('requestedAt')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ApprovalRequest.fromFirestore(doc))
-            .toList());
+    // Market posts are auto-approved - no pending requests exist
+    return Stream.value(<ApprovalRequest>[]);
   }
 
   /// Approve a single vendor post
@@ -294,14 +287,14 @@ class MarketApprovalService {
     return _firestore
         .collection(_postsCollection)
         .where('associatedMarketId', isEqualTo: marketId)
-        .where('approvalStatus', isEqualTo: 'approved')
+        .where('isActive', isEqualTo: true) // Changed: All active posts are auto-approved
         .where('popUpStartDateTime', isGreaterThanOrEqualTo: startOfDay)
         .where('popUpStartDateTime', isLessThan: endOfDay)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => {
               'id': doc.id,
-              ...doc.data() as Map<String, dynamic>,
+              ...doc.data(),
             })
             .toList());
   }

@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/shared/widgets/debug_database_cleaner.dart';
+import 'package:hipop/core/widgets/hipop_app_bar.dart';
 
 class OrganizerDashboard extends StatefulWidget {
   const OrganizerDashboard({super.key});
@@ -100,10 +102,10 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           }
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Market Organizer Dashboard'),
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
+          appBar: HiPopAppBar(
+            title: 'Market Organizer Dashboard',
+            userRole: 'vendor',
+            centerTitle: true,
             actions: [
               if (_hasPremiumAccess) ...[ 
                 IconButton(
@@ -339,18 +341,19 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+                  color: Colors.white.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -398,18 +401,19 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
+                  color: Colors.white.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -423,37 +427,43 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Row(
           children: [
-            Icon(Icons.diamond, color: Colors.deepPurple),
-            SizedBox(width: 8),
-            Text('Vendor Discovery - Premium Feature'),
+            Icon(Icons.diamond, color: HiPopColors.premiumGold),
+            const SizedBox(width: 8),
+            const Text('Vendor Discovery - Premium Feature',
+              style: TextStyle(color: Colors.white),
+            ),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Vendor Discovery helps you find and invite qualified vendors to your markets using intelligent matching algorithms.',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
             ),
-            SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 16),
+            const Text(
               'Premium features include:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
-            SizedBox(height: 8),
-            Text('• Smart vendor matching by categories'),
-            Text('• Vendor ratings and performance metrics'),
-            Text('• Bulk invitation capabilities'),
-            Text('• Response tracking and analytics'),
-            Text('• Advanced filtering and search'),
+            const SizedBox(height: 8),
+            Text('• Smart vendor matching by categories', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            Text('• Vendor ratings and performance metrics', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            Text('• Bulk invitation capabilities', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            Text('• Response tracking and analytics', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            Text('• Advanced filtering and search', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white.withValues(alpha: 0.7),
+            ),
             child: const Text('Maybe Later'),
           ),
           ElevatedButton(
@@ -465,7 +475,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
+              backgroundColor: HiPopColors.premiumGold,
               foregroundColor: Colors.white,
             ),
             child: const Text('Upgrade to Pro - \$69/month'),

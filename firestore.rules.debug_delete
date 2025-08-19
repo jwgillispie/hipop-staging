@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ⚠️⚠️⚠️ DANGER: DEBUG ONLY - ALLOWS ALL OPERATIONS ⚠️⚠️⚠️
+    // This rule allows ANYONE to read, write, and DELETE everything
+    // ONLY use this temporarily for debugging/cleanup
+    // IMMEDIATELY revert after use!
+    
+    match /{document=**} {
+      allow read, write, create, update, delete: if true;
+    }
+  }
+}

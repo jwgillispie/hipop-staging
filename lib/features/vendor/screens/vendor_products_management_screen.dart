@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dart:io';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../../../core/constants/constants.dart';
 import '../../shared/widgets/common/loading_widget.dart';
-import '../../shared/widgets/common/photo_upload_widget.dart';
-import '../../shared/services/photo_service.dart';
 import '../models/vendor_product.dart';
 import '../models/vendor_market_product_assignment.dart';
 import '../models/vendor_product_list.dart';
@@ -14,7 +11,7 @@ import '../services/vendor_product_service.dart';
 import '../../market/models/market.dart';
 import '../../../core/theme/hipop_colors.dart';
 import '../../market/services/market_service.dart';
-import '../../vendor/services/vendor_application_service.dart';
+import '../../vendor/services/vendor_market_relationship_service.dart';
 import '../../shared/models/user_feedback.dart';
 import '../../shared/services/user_feedback_service.dart';
 
@@ -34,14 +31,13 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
   List<VendorProduct> _products = [];
   List<VendorProductList> _productLists = [];
   List<Market> _approvedMarkets = [];
-  Map<String, List<VendorMarketProductAssignment>> _marketAssignments = {};
   bool _isLoading = true;
   String _currentUserId = '';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadInitialData();
   }
 
@@ -61,18 +57,21 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     });
 
     try {
-      // Load all data in parallel
+      // Load products and product lists
       final futures = await Future.wait([
         VendorProductService.getVendorProducts(_currentUserId),
         VendorProductService.getProductLists(_currentUserId),
-        _loadApprovedMarkets(),
-        _loadMarketAssignments(),
       ]);
+
+      // Load approved markets separately since we need to convert IDs to Market objects
+      final approvedMarketIds = await VendorMarketRelationshipService.getApprovedMarketsForVendor(_currentUserId);
+      final approvedMarkets = await _getMarketsByIds(approvedMarketIds);
 
       if (mounted) {
         setState(() {
           _products = futures[0] as List<VendorProduct>;
           _productLists = futures[1] as List<VendorProductList>;
+          _approvedMarkets = approvedMarkets;
           _isLoading = false;
         });
       }
@@ -84,49 +83,6 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     }
   }
 
-  Future<List<Market>> _loadApprovedMarkets() async {
-    try {
-      // Get applications for this vendor (as Stream, so we take first result)
-      final applicationsStream = VendorApplicationService.getApplicationsForVendor(_currentUserId);
-      final approvedApplications = await applicationsStream.first;
-      final approvedMarketIds = approvedApplications
-          .where((app) => app.status.name == 'approved')
-          .map((app) => app.marketId)
-          .toList();
-
-      final markets = <Market>[];
-      for (final marketId in approvedMarketIds) {
-        final market = await MarketService.getMarket(marketId);
-        if (market != null) markets.add(market);
-      }
-
-      if (mounted) {
-        setState(() => _approvedMarkets = markets);
-      }
-
-      return markets;
-    } catch (e) {
-      debugPrint('Error loading approved markets: $e');
-      return [];
-    }
-  }
-
-  Future<void> _loadMarketAssignments() async {
-    try {
-      final assignments = <String, List<VendorMarketProductAssignment>>{};
-      
-      for (final market in _approvedMarkets) {
-        final marketAssignments = await VendorProductService.getMarketAssignments(_currentUserId, market.id);
-        assignments[market.id] = marketAssignments;
-      }
-
-      if (mounted) {
-        setState(() => _marketAssignments = assignments);
-      }
-    } catch (e) {
-      debugPrint('Error loading market assignments: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +111,6 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           tabs: const [
             Tab(icon: Icon(Icons.inventory), text: 'My Products'),
             Tab(icon: Icon(Icons.list_alt), text: 'Product Lists'),
-            Tab(icon: Icon(Icons.store), text: 'Market Assignments'),
             Tab(icon: Icon(Icons.settings), text: 'Settings'),
           ],
         ),
@@ -167,7 +122,6 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
               children: [
                 _buildMyProductsTab(),
                 _buildProductListsTab(),
-                _buildMarketAssignmentsTab(),
                 _buildSettingsTab(),
               ],
             ),
@@ -180,7 +134,16 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         // Header with stats and add button
         Container(
           padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-          color: Colors.grey[50],
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF6F9686), // Soft Sage (same as AppBar)
+                Color(0xFF946C7E), // Mauve (same as AppBar)
+              ],
+            ),
+          ),
           child: Row(
             children: [
               Expanded(
@@ -191,13 +154,14 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       '${_products.length} Products',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: Colors.white, // White text to match AppBar
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Your global product catalog',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Colors.white.withValues(alpha: 0.9), // Slightly transparent white
                         fontSize: 14,
                       ),
                     ),
@@ -209,8 +173,12 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                 icon: const Icon(Icons.add),
                 label: const Text('Add Product'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: HiPopColors.primaryDeepSage,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2), // Semi-transparent white
                   foregroundColor: Colors.white,
+                  side: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
               ),
             ],
@@ -261,8 +229,16 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
   }
 
   Widget _buildProductCard(VendorProduct product) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A), // Clean dark background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08), // Subtle border
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.mediumSpacing),
         child: Column(
@@ -275,8 +251,12 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: const Color(0xFF2A2A2A), // Darker background for image container
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      width: 1,
+                    ),
                   ),
                   child: product.imageUrl != null
                       ? ClipRRect(
@@ -285,10 +265,10 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                             product.imageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.image, color: HiPopColors.backgroundWarmGray),
+                                Icon(Icons.image, color: Colors.white.withValues(alpha: 0.3)),
                           ),
                         )
-                      : const Icon(Icons.inventory, color: HiPopColors.backgroundWarmGray),
+                      : Icon(Icons.inventory, color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 const SizedBox(width: AppConstants.mediumSpacing),
                 
@@ -668,930 +648,6 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     );
   }
 
-  Widget _buildMarketAssignmentsTab() {
-    if (_approvedMarkets.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.store,
-              size: 64,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No Approved Markets',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Once you\'re approved for markets, you can assign your products to them here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-      itemCount: _approvedMarkets.length,
-      itemBuilder: (context, index) {
-        final market = _approvedMarkets[index];
-        final assignments = _marketAssignments[market.id] ?? [];
-        
-        return _buildMarketAssignmentCard(market, assignments);
-      },
-    );
-  }
-
-  Widget _buildMarketAssignmentCard(Market market, List<VendorMarketProductAssignment> assignments) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
-      child: ExpansionTile(
-        leading: const Icon(Icons.store, color: HiPopColors.primaryDeepSage),
-        title: Text(
-          market.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text('${assignments.length} product${assignments.length == 1 ? '' : 's'} assigned'),
-        children: [
-          if (assignments.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-              child: Column(
-                children: [
-                  Text(
-                    'No products assigned to this market yet',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAssignProductsDialog(market),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Assign Products'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: HiPopColors.primaryDeepSage,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            ...assignments.map((assignment) => _buildAssignmentTile(market, assignment)),
-          
-          // Add more products button
-          if (assignments.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showAssignProductsDialog(market),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Assign More Products'),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAssignmentTile(Market market, VendorMarketProductAssignment assignment) {
-    // Find the product for this assignment
-    final product = _products.firstWhere(
-      (p) => p.id == assignment.productId,
-      orElse: () => VendorProduct(
-        id: assignment.productId,
-        vendorId: assignment.vendorId,
-        name: 'Unknown Product',
-        category: 'Unknown',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    );
-
-    return ListTile(
-      leading: const Icon(Icons.inventory, size: 20),
-      title: Text(product.name),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(assignment.getDisplayPrice(product.basePrice)),
-          Text(
-            assignment.availabilityStatus,
-            style: TextStyle(
-              color: assignment.isAvailable ? HiPopColors.successGreenDark : HiPopColors.errorPlumDark,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          switch (value) {
-            case 'edit':
-              _showEditAssignmentDialog(market, product, assignment);
-              break;
-            case 'remove':
-              _showRemoveAssignmentDialog(market, product, assignment);
-              break;
-          }
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'edit',
-            child: Row(
-              children: [
-                Icon(Icons.edit, size: 16),
-                SizedBox(width: 8),
-                Text('Edit'),
-              ],
-            ),
-          ),
-          const PopupMenuItem(
-            value: 'remove',
-            child: Row(
-              children: [
-                Icon(Icons.remove, size: 16, color: HiPopColors.errorPlum),
-                SizedBox(width: 8),
-                Text('Remove'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingsTab() {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: VendorProductService.getProductStats(_currentUserId),
-      builder: (context, snapshot) {
-        final stats = snapshot.data ?? {};
-        
-        return Padding(
-          padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Product Statistics',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: AppConstants.mediumSpacing),
-              
-              _buildStatCard('Total Products', stats['totalProducts']?.toString() ?? '0', Icons.inventory),
-              _buildStatCard('Market Assignments', stats['totalAssignments']?.toString() ?? '0', Icons.store),
-              _buildStatCard('Active Assignments', stats['activeAssignments']?.toString() ?? '0', Icons.check_circle),
-              _buildStatCard('Markets with Products', stats['marketsWithProducts']?.toString() ?? '0', Icons.location_on),
-              _buildStatCard('Avg Products per Market', stats['averageProductsPerMarket']?.toString() ?? '0', Icons.analytics),
-              
-              const SizedBox(height: AppConstants.largeSpacing),
-              
-              // Actions
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _loadInitialData,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh Data'),
-                ),
-              ),
-              
-              const SizedBox(height: AppConstants.mediumSpacing),
-              
-              // Feedback button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _showFeedbackDialog,
-                  icon: const Icon(Icons.feedback),
-                  label: const Text('Send Feedback'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: HiPopColors.infoBlueGray,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
-      child: ListTile(
-        leading: Icon(icon, color: HiPopColors.primaryDeepSage),
-        title: Text(title),
-        trailing: Text(
-          value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: HiPopColors.primaryDeepSage,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // =============================================================================
-  // DIALOG METHODS
-  // =============================================================================
-
-  void _showAddProductDialog() {
-    _showProductDialog();
-  }
-
-  void _showProductDialog([VendorProduct? existingProduct]) {
-    final isEditing = existingProduct != null;
-    final nameController = TextEditingController(text: existingProduct?.name ?? '');
-    final descriptionController = TextEditingController(text: existingProduct?.description ?? '');
-    final priceController = TextEditingController(
-      text: existingProduct?.basePrice?.toStringAsFixed(2) ?? '',
-    );
-    
-    String selectedCategory = existingProduct?.category ?? VendorProduct.commonCategories.first;
-    List<String> tags = List<String>.from(existingProduct?.tags ?? []);
-    List<File> selectedPhotos = [];
-    String? uploadedImageUrl = existingProduct?.imageUrl;
-
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.95,
-          constraints: const BoxConstraints(maxHeight: 600),
-          child: StatefulBuilder(
-            builder: (context, setState) => Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        HiPopColors.primaryDeepSage,
-                        HiPopColors.secondarySoftSage,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isEditing ? Icons.edit : Icons.add_business,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          isEditing ? 'Edit Product' : 'Add New Product',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Form content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Product Name
-                          TextFormField(
-                            controller: nameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Product Name *',
-                              hintText: 'e.g., Organic Honey, Handmade Scarf',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Product name is required';
-                              }
-                              if (value.trim().length < 2) {
-                                return 'Product name must be at least 2 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Category
-                          DropdownButtonFormField<String>(
-                            value: selectedCategory,
-                            decoration: const InputDecoration(
-                              labelText: 'Category *',
-                              border: OutlineInputBorder(),
-                            ),
-                            items: VendorProduct.commonCategories.map((category) {
-                              return DropdownMenuItem(
-                                value: category,
-                                child: Text(category),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() => selectedCategory = value);
-                              }
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please select a category';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Description
-                          TextFormField(
-                            controller: descriptionController,
-                            maxLines: 3,
-                            decoration: const InputDecoration(
-                              labelText: 'Description (Optional)',
-                              hintText: 'Describe your product, ingredients, materials, etc.',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value != null && value.length > 500) {
-                                return 'Description must be less than 500 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Price
-                          TextFormField(
-                            controller: priceController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Base Price (Optional)',
-                              hintText: '0.00',
-                              prefixText: '\$',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value != null && value.isNotEmpty) {
-                                final price = double.tryParse(value);
-                                if (price == null) {
-                                  return 'Please enter a valid price';
-                                }
-                                if (price < 0) {
-                                  return 'Price cannot be negative';
-                                }
-                                if (price > 999999) {
-                                  return 'Price cannot exceed \$999,999';
-                                }
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Photo Upload Section
-                          Text(
-                            'Product Photo',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          PhotoUploadWidget(
-                            userId: _currentUserId,
-                            userType: 'vendor',
-                            onPhotosSelected: (photos) {
-                              setState(() => selectedPhotos = photos);
-                            },
-                            initialImagePaths: uploadedImageUrl != null ? [uploadedImageUrl] : null,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Tags
-                          Text(
-                            'Tags (Optional)',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          _buildTagsSection(tags, setState),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Footer buttons
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(12),
-                      bottomRight: Radius.circular(12),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () => _saveProduct(
-                                context,
-                                setState,
-                                formKey,
-                                existingProduct,
-                                nameController,
-                                descriptionController,
-                                priceController,
-                                selectedCategory,
-                                tags,
-                                selectedPhotos,
-                                uploadedImageUrl,
-                              ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: HiPopColors.primaryDeepSage,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: Text(isEditing ? 'Update Product' : 'Create Product'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTagsSection(List<String> tags, StateSetter setState) {
-    final tagController = TextEditingController();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: tagController,
-                decoration: const InputDecoration(
-                  hintText: 'Add a tag...',
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: (value) {
-                  final tag = value.trim();
-                  if (tag.isNotEmpty && !tags.contains(tag) && tags.length < 10) {
-                    setState(() => tags.add(tag));
-                    tagController.clear();
-                  }
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                final tag = tagController.text.trim();
-                if (tag.isNotEmpty && !tags.contains(tag) && tags.length < 10) {
-                  setState(() => tags.add(tag));
-                  tagController.clear();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: HiPopColors.infoBlueGray,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-        if (tags.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: tags.map((tag) => Chip(
-              label: Text(
-                tag,
-                style: const TextStyle(fontSize: 12),
-              ),
-              deleteIcon: const Icon(Icons.close, size: 16),
-              onDeleted: () {
-                setState(() => tags.remove(tag));
-              },
-              backgroundColor: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
-              side: BorderSide(color: HiPopColors.infoBlueGray.withValues(alpha: 0.3)),
-            )).toList(),
-          ),
-        ],
-        if (tags.length >= 10)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: const Text(
-              'Maximum 10 tags allowed',
-              style: TextStyle(
-                color: HiPopColors.warningAmber,
-                fontSize: 12,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Future<void> _saveProduct(
-    BuildContext dialogContext,
-    StateSetter setState,
-    GlobalKey<FormState> formKey,
-    VendorProduct? existingProduct,
-    TextEditingController nameController,
-    TextEditingController descriptionController,
-    TextEditingController priceController,
-    String selectedCategory,
-    List<String> tags,
-    List<File> selectedPhotos,
-    String? currentImageUrl,
-  ) async {
-    if (!formKey.currentState!.validate()) return;
-
-    try {
-      setState(() {}); // Trigger loading state
-
-      String? finalImageUrl = currentImageUrl;
-
-      // Upload new photo if selected
-      if (selectedPhotos.isNotEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Uploading photo...')),
-          );
-        }
-
-        finalImageUrl = await PhotoService.uploadPhoto(
-          selectedPhotos.first,
-          'products',
-          _currentUserId,
-        );
-      }
-
-      // Parse price
-      double? price;
-      if (priceController.text.trim().isNotEmpty) {
-        price = double.tryParse(priceController.text.trim());
-      }
-
-      VendorProduct savedProduct;
-
-      if (existingProduct != null) {
-        // Update existing product
-        savedProduct = await VendorProductService.updateProduct(
-          productId: existingProduct.id,
-          name: nameController.text.trim(),
-          category: selectedCategory,
-          description: descriptionController.text.trim().isEmpty 
-              ? null 
-              : descriptionController.text.trim(),
-          basePrice: price,
-          imageUrl: finalImageUrl,
-          tags: tags,
-        );
-      } else {
-        // Create new product
-        savedProduct = await VendorProductService.createProduct(
-          vendorId: _currentUserId,
-          name: nameController.text.trim(),
-          category: selectedCategory,
-          description: descriptionController.text.trim().isEmpty 
-              ? null 
-              : descriptionController.text.trim(),
-          basePrice: price,
-          imageUrl: finalImageUrl,
-          tags: tags,
-        );
-      }
-
-      Navigator.pop(dialogContext);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              existingProduct != null
-                  ? 'Product "${savedProduct.name}" updated successfully!'
-                  : 'Product "${savedProduct.name}" created successfully!',
-            ),
-            backgroundColor: HiPopColors.successGreen,
-          ),
-        );
-
-        // Refresh the products list
-        _loadInitialData();
-      }
-    } catch (e) {
-      if (mounted) {
-        // Check if this is a limit error and show upgrade dialog
-        if (e.toString().contains('Product limit reached')) {
-          _showProductLimitReachedDialog(dialogContext);
-        } else {
-          // Show regular error dialog
-          _showErrorDialog(dialogContext, 'Error saving product', e.toString());
-        }
-      }
-    }
-  }
-
-  void _showEditProductDialog(VendorProduct product) {
-    _showProductDialog(product);
-  }
-
-  void _showProductLimitReachedDialog(BuildContext dialogContext) {
-    showDialog(
-      context: dialogContext,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: HiPopColors.warningAmber.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.upgrade,
-                color: HiPopColors.warningAmber,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Product Limit Reached',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'You\'ve reached your limit of 3 products on the free plan.',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: HiPopColors.premiumGold.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Upgrade to Vendor Premium (\$29/month) to unlock:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: HiPopColors.warningAmber,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('✅ Unlimited products'),
-                  const Text('✅ Unlimited product lists'),
-                  const Text('✅ Advanced analytics'),
-                  const Text('✅ Revenue tracking'),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Maybe Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // TODO: Navigate to premium upgrade flow
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Premium upgrade flow would open here'),
-                  backgroundColor: HiPopColors.infoBlueGray,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: HiPopColors.primaryDeepSage,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Upgrade Now'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showErrorDialog(BuildContext dialogContext, String title, String message) {
-    showDialog(
-      context: dialogContext,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: HiPopColors.errorPlumDark,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteProductDialog(VendorProduct product) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Product'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Are you sure you want to delete "${product.name}"?'),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: HiPopColors.premiumGold.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.3)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.warning, color: HiPopColors.warningAmber, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This will also remove the product from all markets where it\'s currently assigned.',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _deleteProduct(product);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: HiPopColors.errorPlum,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteProduct(VendorProduct product) async {
-    try {
-      // Show loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Deleting "${product.name}"...'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-
-      await VendorProductService.deleteProduct(product.id);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Product "${product.name}" deleted successfully'),
-            backgroundColor: HiPopColors.successGreen,
-          ),
-        );
-
-        // Refresh the products list
-        _loadInitialData();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting product: $e'),
-            backgroundColor: HiPopColors.errorPlum,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showAssignProductsDialog(Market market) {
-    // TODO: Implement assign products dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Assign products to ${market.name} - Coming soon!')),
-    );
-  }
-
-  void _showEditAssignmentDialog(Market market, VendorProduct product, VendorMarketProductAssignment assignment) {
-    // TODO: Implement edit assignment dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Edit ${product.name} assignment to ${market.name} - Coming soon!')),
-    );
-  }
-
-  void _showRemoveAssignmentDialog(Market market, VendorProduct product, VendorMarketProductAssignment assignment) {
-    // TODO: Implement remove assignment dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Remove ${product.name} from ${market.name} - Coming soon!')),
-    );
-  }
 
   // =============================================================================
   // PRODUCT LIST MANAGEMENT METHODS
@@ -1624,7 +680,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
     ).toList();
 
     return Dialog(
-      child: Container(
+      child: SizedBox(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
         child: Column(
@@ -2397,8 +1453,10 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         await _loadInitialData();
         
         // Close and reopen the dialog to show updated data
-        Navigator.pop(context);
-        _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+        if (mounted) {
+          Navigator.pop(context);
+          _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+        }
       }
     } catch (e) {
       debugPrint('Error adding product to list: $e');
@@ -2439,8 +1497,10 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         await _loadInitialData();
         
         // Close and reopen the dialog to show updated data
-        Navigator.pop(context);
-        _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+        if (mounted) {
+          Navigator.pop(context);
+          _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+        }
       }
     } catch (e) {
       debugPrint('Error removing product from list: $e');
@@ -2448,6 +1508,435 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error removing product from list: $e'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Helper method to get Market objects from market IDs
+  Future<List<Market>> _getMarketsByIds(List<String> marketIds) async {
+    if (marketIds.isEmpty) return [];
+    
+    final markets = <Market>[];
+    for (final marketId in marketIds) {
+      try {
+        final market = await MarketService.getMarket(marketId);
+        if (market != null) {
+          markets.add(market);
+        }
+      } catch (e) {
+        debugPrint('Error loading market $marketId: $e');
+      }
+    }
+    return markets;
+  }
+
+  /// Build the Settings tab
+  Widget _buildSettingsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Product Settings',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppConstants.mediumSpacing),
+          
+          // Feedback section
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.feedback, color: HiPopColors.infoBlueGray),
+              title: const Text('Send Feedback'),
+              subtitle: const Text('Help us improve the product management experience'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _showFeedbackDialog,
+            ),
+          ),
+          
+          const SizedBox(height: AppConstants.mediumSpacing),
+          
+          // Product limits info
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info, color: HiPopColors.infoBlueGray),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Product Limits',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Free Plan: Unlimited products, 1 product list\n'
+                    'Vendor Premium: Unlimited products & lists',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog to add a new product
+  void _showAddProductDialog() {
+    final nameController = TextEditingController();
+    final categoryController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final basePriceController = TextEditingController();
+    final tagsController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Product'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Product Name *',
+                  hintText: 'e.g., Handmade Soap',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category *',
+                  hintText: 'e.g., Bath & Body, Food, Art',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  hintText: 'Brief description of your product',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: basePriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Base Price',
+                  hintText: '0.00',
+                  prefixText: '\$',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (optional)',
+                  hintText: 'organic, handmade, local (comma separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final category = categoryController.text.trim();
+              
+              if (name.isEmpty || category.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill in required fields')),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              _createProduct(
+                name: name,
+                category: category,
+                description: descriptionController.text.trim(),
+                basePrice: double.tryParse(basePriceController.text.trim()),
+                tags: tagsController.text.trim().split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HiPopColors.primaryDeepSage,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Create Product'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog to edit an existing product
+  void _showEditProductDialog(VendorProduct product) {
+    final nameController = TextEditingController(text: product.name);
+    final categoryController = TextEditingController(text: product.category);
+    final descriptionController = TextEditingController(text: product.description ?? '');
+    final basePriceController = TextEditingController(text: product.basePrice?.toString() ?? '');
+    final tagsController = TextEditingController(text: product.tags.join(', '));
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Product'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Product Name *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: categoryController,
+                decoration: const InputDecoration(
+                  labelText: 'Category *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: basePriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Base Price',
+                  prefixText: '\$',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (comma separated)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              final category = categoryController.text.trim();
+              
+              if (name.isEmpty || category.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill in required fields')),
+                );
+                return;
+              }
+              
+              Navigator.pop(context);
+              _updateProduct(
+                product: product,
+                name: name,
+                category: category,
+                description: descriptionController.text.trim(),
+                basePrice: double.tryParse(basePriceController.text.trim()),
+                tags: tagsController.text.trim().split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HiPopColors.primaryDeepSage,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Update Product'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show dialog to confirm product deletion
+  void _showDeleteProductDialog(VendorProduct product) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Product'),
+        content: Text('Are you sure you want to delete "${product.name}"?\n\nThis will remove it from all product lists and market assignments.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteProduct(product);
+            },
+            style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show error dialog
+  void _showErrorDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Create a new product
+  Future<void> _createProduct({
+    required String name,
+    required String category,
+    String? description,
+    double? basePrice,
+    List<String>? tags,
+  }) async {
+    try {
+      await VendorProductService.createProduct(
+        vendorId: _currentUserId,
+        name: name,
+        category: category,
+        description: description,
+        basePrice: basePrice,
+        tags: tags ?? [],
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Created "$name"'),
+            backgroundColor: HiPopColors.successGreen,
+          ),
+        );
+        _loadInitialData(); // Refresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating product: $e'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Update an existing product
+  Future<void> _updateProduct({
+    required VendorProduct product,
+    required String name,
+    required String category,
+    String? description,
+    double? basePrice,
+    List<String>? tags,
+  }) async {
+    try {
+      await VendorProductService.updateProduct(
+        productId: product.id,
+        name: name,
+        category: category,
+        description: description,
+        basePrice: basePrice,
+        tags: tags,
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Updated "$name"'),
+            backgroundColor: HiPopColors.successGreen,
+          ),
+        );
+        _loadInitialData(); // Refresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating product: $e'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Delete a product
+  Future<void> _deleteProduct(VendorProduct product) async {
+    try {
+      await VendorProductService.deleteProduct(product.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Deleted "${product.name}"'),
+            backgroundColor: HiPopColors.successGreen,
+          ),
+        );
+        _loadInitialData(); // Refresh data
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting product: $e'),
             backgroundColor: HiPopColors.errorPlum,
           ),
         );

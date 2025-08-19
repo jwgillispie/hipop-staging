@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../shared/models/customer_feedback.dart';
 import '../../shared/widgets/common/loading_widget.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 /// Screen for collecting customer feedback after market visits
 /// This replaces mock customer data with real satisfaction metrics
@@ -65,9 +66,10 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: HiPopColors.darkBackground,
       appBar: AppBar(
         title: Text('Rate Your Market Experience'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: HiPopColors.shopperAccent,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -112,7 +114,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Theme.of(context).primaryColor, Theme.of(context).primaryColor.withValues(alpha: 0.8)],
+          colors: [HiPopColors.shopperAccent, HiPopColors.shopperAccent.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -176,7 +178,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
                   starValue <= _overallRating ? Icons.star : Icons.star_border,
                   color: starValue <= _overallRating 
                       ? Colors.amber 
-                      : Colors.grey[400],
+                      : HiPopColors.darkBorder,
                   size: 36,
                 ),
               ),
@@ -189,7 +191,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
             _getRatingDescription(_overallRating),
             style: TextStyle(
               fontSize: 14,
-              color: _overallRating > 0 ? Theme.of(context).primaryColor : Colors.grey[600],
+              color: _overallRating > 0 ? HiPopColors.shopperAccent : HiPopColors.darkTextSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -228,7 +230,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: HiPopColors.darkBorder!),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -240,7 +242,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
           ),
           Text(
             category.description,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 12, color: HiPopColors.darkTextSecondary),
           ),
           const SizedBox(height: 8),
           Row(
@@ -255,7 +257,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
                 },
                 child: Icon(
                   starValue <= rating ? Icons.star : Icons.star_border,
-                  color: starValue <= rating ? Colors.amber : Colors.grey[400],
+                  color: starValue <= rating ? Colors.amber : HiPopColors.darkBorder,
                   size: 24,
                 ),
               );
@@ -287,7 +289,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
               }
             });
           },
-          activeColor: Theme.of(context).primaryColor,
+          activeColor: HiPopColors.shopperAccent,
         ),
         if (_madeAPurchase) ...[
           const SizedBox(height: 12),
@@ -302,7 +304,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                borderSide: BorderSide(color: HiPopColors.shopperAccent),
               ),
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -339,7 +341,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
               _wouldRecommend = value;
             });
           },
-          activeColor: Theme.of(context).primaryColor,
+          activeColor: HiPopColors.shopperAccent,
         ),
         const SizedBox(height: 16),
         const Text(
@@ -348,7 +350,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
         ),
         const Text(
           'How likely are you to recommend this market to others?',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: HiPopColors.darkTextSecondary),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -365,17 +367,17 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: _npsScore == index ? Theme.of(context).primaryColor : Colors.grey[200],
+                  color: _npsScore == index ? HiPopColors.shopperAccent : HiPopColors.darkSurface,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _npsScore == index ? Theme.of(context).primaryColor : Colors.grey[400]!,
+                    color: _npsScore == index ? HiPopColors.shopperAccent : HiPopColors.darkBorder!,
                   ),
                 ),
                 child: Center(
                   child: Text(
                     '$index',
                     style: TextStyle(
-                      color: _npsScore == index ? Colors.white : Colors.grey[700],
+                      color: _npsScore == index ? Colors.white : HiPopColors.darkTextPrimary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -407,7 +409,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              borderSide: BorderSide(color: HiPopColors.shopperAccent),
             ),
             counterText: '',
           ),
@@ -428,7 +430,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
         ),
         const Text(
           'Help others know what to expect',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: HiPopColors.darkTextSecondary),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -450,16 +452,16 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+                  color: isSelected ? HiPopColors.shopperAccent : HiPopColors.darkSurface,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? Theme.of(context).primaryColor : Colors.grey[400]!,
+                    color: isSelected ? HiPopColors.shopperAccent : HiPopColors.darkBorder!,
                   ),
                 ),
                 child: Text(
                   tag,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey[700],
+                    color: isSelected ? Colors.white : HiPopColors.darkTextPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -482,7 +484,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
         ),
         const Text(
           'Approximately how long did you spend at the market?',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: HiPopColors.darkTextSecondary),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -511,16 +513,16 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+          color: isSelected ? HiPopColors.shopperAccent : HiPopColors.darkSurface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[400]!,
+            color: isSelected ? HiPopColors.shopperAccent : HiPopColors.darkBorder!,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[700],
+            color: isSelected ? Colors.white : HiPopColors.darkTextPrimary,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -546,7 +548,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
               _isAnonymous = value;
             });
           },
-          activeColor: Theme.of(context).primaryColor,
+          activeColor: HiPopColors.shopperAccent,
         ),
       ],
     );
@@ -558,7 +560,7 @@ class _PostMarketFeedbackScreenState extends State<PostMarketFeedbackScreen> {
       child: ElevatedButton(
         onPressed: _overallRating > 0 ? _submitFeedback : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).primaryColor,
+          backgroundColor: HiPopColors.shopperAccent,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(

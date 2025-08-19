@@ -142,8 +142,20 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Vendor Management'),
-            backgroundColor: Colors.indigo,
-            foregroundColor: Colors.white,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    HiPopColors.secondarySoftSage, // Soft Sage
+                    HiPopColors.accentMauve, // Mauve
+                  ],
+                ),
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            foregroundColor: HiPopColors.darkTextPrimary,
             actions: [
               IconButton(
                 icon: const Icon(Icons.filter_list),
@@ -164,8 +176,8 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.shade50,
-                    border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                    color: HiPopColors.darkSurface,
+                    border: Border(bottom: BorderSide(color: HiPopColors.darkBorder)),
                   ),
                   child: Row(
                     children: [
@@ -204,8 +216,8 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
           ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _showCreateVendorDialog(_selectedMarketId!, organizerId),
-            backgroundColor: Colors.indigo,
-            foregroundColor: Colors.white,
+            backgroundColor: HiPopColors.accentMauve,
+            foregroundColor: HiPopColors.darkTextPrimary,
             icon: const Icon(Icons.add),
             label: const Text('Add Vendor'),
           ),
@@ -218,20 +230,27 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: HiPopColors.darkBackground, // Dark background
+        border: Border(bottom: BorderSide(color: HiPopColors.darkBorder)),
       ),
       child: Column(
         children: [
           TextField(
             controller: _searchController,
-            style: const TextStyle(color: Colors.black87),
+            style: const TextStyle(color: HiPopColors.darkTextPrimary), // White text
             decoration: InputDecoration(
               hintText: 'Search vendors...',
-              hintStyle: TextStyle(color: Colors.grey[600]),
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(color: HiPopColors.darkTextTertiary), // Gray placeholder
+              prefixIcon: Icon(Icons.search, color: HiPopColors.darkTextTertiary),
+              filled: true,
+              fillColor: HiPopColors.darkSurface, // Slightly lighter for input
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: HiPopColors.darkBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: HiPopColors.accentMauve), // Mauve on focus
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
@@ -247,10 +266,20 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
               Expanded(
                 child: DropdownButtonFormField<VendorCategory>(
                   value: _selectedCategory,
+                  dropdownColor: HiPopColors.darkSurface, // Dark dropdown
+                  style: const TextStyle(color: HiPopColors.darkTextPrimary), // White text
                   decoration: InputDecoration(
                     labelText: 'Filter by Category',
+                    labelStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                    filled: true,
+                    fillColor: HiPopColors.darkSurface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: HiPopColors.darkBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: HiPopColors.accentMauve),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
@@ -259,14 +288,14 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                       value: null,
                       child: Text(
                         'All Categories',
-                        style: TextStyle(color: Colors.black87),
+                        style: TextStyle(color: HiPopColors.darkTextPrimary),
                       ),
                     ),
                     ...VendorCategory.values.map((category) => DropdownMenuItem(
                           value: category,
                           child: Text(
                             category.displayName,
-                            style: const TextStyle(color: Colors.black87),
+                            style: const TextStyle(color: HiPopColors.darkTextPrimary),
                           ),
                         )),
                   ],
@@ -279,8 +308,19 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
               ),
               const SizedBox(width: 12),
               FilterChip(
-                label: const Text('Active Only'),
+                label: Text(
+                  'Active Only',
+                  style: TextStyle(
+                    color: _showActiveOnly ? HiPopColors.darkTextPrimary : HiPopColors.darkTextTertiary,
+                  ),
+                ),
                 selected: _showActiveOnly,
+                selectedColor: HiPopColors.accentMauve, // Mauve when selected
+                backgroundColor: HiPopColors.darkSurface,
+                checkmarkColor: HiPopColors.darkTextPrimary,
+                side: BorderSide(
+                  color: _showActiveOnly ? HiPopColors.accentMauve : HiPopColors.darkBorder,
+                ),
                 onSelected: (selected) {
                   setState(() {
                     _showActiveOnly = selected;
@@ -378,7 +418,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
           Icon(
             Icons.store_mall_directory,
             size: 64,
-            color: Colors.grey[400],
+            color: HiPopColors.darkTextTertiary,
           ),
           const SizedBox(height: 16),
           const Text(
@@ -408,8 +448,8 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Create First Vendor'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
+              backgroundColor: HiPopColors.accentMauve,
+              foregroundColor: HiPopColors.darkTextPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -420,6 +460,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
 
   Widget _buildVendorCard(ManagedVendor vendor) {
     return Card(
+      color: HiPopColors.darkSurface,
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,139 +470,154 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                // Vendor name and active status
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  vendor.businessName,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                    Text(
+                      vendor.businessName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: HiPopColors.darkTextPrimary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    // Badges row
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (vendor.metadata['isPermissionBased'] == true)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: HiPopColors.accentMauve.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: HiPopColors.accentMauve.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.verified_user,
+                                  size: 14,
+                                  color: HiPopColors.accentMauve,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Permission-Based',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                    color: HiPopColors.accentMauve,
                                   ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (vendor.isFeatured)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: HiPopColors.warningAmber.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: HiPopColors.warningAmber.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  size: 12,
+                                  color: HiPopColors.warningAmber,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Featured',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: HiPopColors.warningAmber,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: vendor.isActive 
+                                ? HiPopColors.successGreen.withValues(alpha: 0.2) 
+                                : HiPopColors.darkSurfaceVariant,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: vendor.isActive 
+                                  ? HiPopColors.successGreen.withValues(alpha: 0.4)
+                                  : HiPopColors.darkBorder,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                vendor.isActive ? Icons.check_circle : Icons.pause_circle,
+                                size: 14,
+                                color: vendor.isActive 
+                                    ? HiPopColors.successGreen 
+                                    : HiPopColors.darkTextTertiary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                vendor.isActive ? 'Active' : 'Inactive',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: vendor.isActive 
+                                      ? HiPopColors.successGreen 
+                                      : HiPopColors.darkTextTertiary,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              if (vendor.metadata['isPermissionBased'] == true) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.purple.shade100,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.verified_user,
-                                        size: 14,
-                                        color: Colors.purple.shade700,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Permission-Based',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.purple.shade700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              if (vendor.isFeatured)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber[100],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.star,
-                                        size: 12,
-                                        color: Colors.amber[800],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Featured',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.amber[800],
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                             ],
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Contact: ${vendor.contactName}',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            vendor.description,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontSize: 14,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: vendor.isActive ? HiPopColors.successGreen.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            vendor.isActive ? Icons.check_circle : Icons.pause_circle,
-                            size: 16,
-                            color: vendor.isActive ? HiPopColors.successGreenDark : Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            vendor.isActive ? 'Active' : 'Inactive',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: vendor.isActive ? HiPopColors.successGreenDark : Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                // Contact and description
+                Text(
+                  'Contact: ${vendor.contactName}',
+                  style: TextStyle(
+                    color: HiPopColors.darkTextSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  vendor.description,
+                  style: TextStyle(
+                    color: HiPopColors.darkTextTertiary,
+                    fontSize: 14,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 12),
                 if (vendor.categories.isNotEmpty)
@@ -571,14 +627,17 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                     children: vendor.categories.take(3).map((category) => Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.indigo[100],
+                        color: HiPopColors.primaryDeepSage.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Text(
                         category.displayName,
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.indigo[800],
+                          color: HiPopColors.primaryDeepSage,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -590,7 +649,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                     'Products: ${vendor.products.take(3).join(', ')}${vendor.products.length > 3 ? '...' : ''}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: HiPopColors.darkTextTertiary,
                     ),
                   ),
                 ],

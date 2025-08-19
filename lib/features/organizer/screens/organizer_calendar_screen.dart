@@ -8,6 +8,8 @@ import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class OrganizerCalendarScreen extends StatefulWidget {
   const OrganizerCalendarScreen({super.key});
@@ -143,10 +145,10 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Market Calendar'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+      appBar: HiPopAppBar(
+        title: 'Market Calendar',
+        userRole: 'vendor',
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -175,7 +177,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
             // Market summary cards
             Container(
               padding: const EdgeInsets.all(16),
-              color: Colors.green.withValues(alpha: 0.1),
+              color: HiPopColors.organizerAccent.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -227,15 +229,15 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
               calendarStyle: const CalendarStyle(
                 outsideDaysVisible: false,
                 markerDecoration: BoxDecoration(
-                  color: Colors.green,
+                  color: HiPopColors.organizerAccent,
                   shape: BoxShape.circle,
                 ),
                 selectedDecoration: BoxDecoration(
-                  color: Colors.orange,
+                  color: HiPopColors.primaryDeepSage,
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
-                  color: Colors.blue,
+                  color: HiPopColors.secondarySoftSage,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -244,10 +246,10 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                 titleCentered: true,
                 formatButtonShowsNext: false,
                 formatButtonDecoration: BoxDecoration(
-                  color: Colors.green,
+                  color: HiPopColors.organizerAccent,
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
-                formatButtonTextStyle: TextStyle(
+                formatButtonTextStyle: const TextStyle(
                   color: Colors.white,
                 ),
               ),
@@ -291,20 +293,20 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
             Icon(
               Icons.calendar_today,
               size: 80,
-              color: Colors.grey[400],
+              color: HiPopColors.darkTextTertiary,
             ),
             const SizedBox(height: 16),
             Text(
               'No Markets Found',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Create your first market to see operating schedules here.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
+                color: HiPopColors.darkTextTertiary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -341,7 +343,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
-                      color: isOpen ? Colors.green : Colors.grey,
+                      color: isOpen ? HiPopColors.organizerAccent : HiPopColors.darkTextTertiary,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -360,7 +362,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                 'Single event market',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[600],
+                  color: HiPopColors.darkTextSecondary,
                 ),
               ),
               const SizedBox(height: 1),
@@ -368,7 +370,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                 market.eventDisplayInfo,
                 style: TextStyle(
                   fontSize: 9,
-                  color: Colors.grey[500],
+                  color: HiPopColors.darkTextTertiary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -425,13 +427,13 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: isCurrentlyOpen 
-                  ? Colors.green.withValues(alpha: 0.1)
-                  : Colors.orange.withValues(alpha: 0.1),
+                  ? HiPopColors.organizerAccent.withValues(alpha: 0.1)
+                  : HiPopColors.warningAmber.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 Icons.storefront,
-                color: isCurrentlyOpen ? Colors.green : Colors.orange,
+                color: isCurrentlyOpen ? HiPopColors.organizerAccent : HiPopColors.warningAmber,
                 size: 20,
               ),
             ),
@@ -454,7 +456,7 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.green,
+                            color: HiPopColors.organizerAccent,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
@@ -475,13 +477,13 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
                       Icon(
                         Icons.access_time,
                         size: 14,
-                        color: Colors.grey[600],
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         event.timeRange,
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                           fontSize: 14,
                         ),
                       ),

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hipop/features/market/models/market.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/vendor/models/vendor_market_relationship.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmailService {
   static const String _supportEmail = 'hipopmarkets@gmail.com';
@@ -147,15 +148,35 @@ class EmailService {
         metadata: metadata,
       );
 
-      debugPrint('📧 Support Email Content:');
+      debugPrint('📧 Opening email client for support request');
       debugPrint('To: $_supportEmail');
       debugPrint('Subject: [HiPop Support] $subject');
-      debugPrint(emailContent);
 
-      // TODO: Integrate with actual email service
-      debugPrint('✅ Support notification sent successfully');
+      // Create mailto URI with proper encoding
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: _supportEmail,
+        query: Uri.encodeFull(
+          'subject=[HiPop Support] $subject&body=$emailContent',
+        ),
+      );
+
+      // Open the user's email client
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+        debugPrint('✅ Email client opened successfully');
+      } else {
+        // Fallback: try with a simpler URI
+        final fallbackUri = Uri.parse('mailto:$_supportEmail?subject=[HiPop Support] $subject');
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri);
+          debugPrint('✅ Email client opened with fallback URI');
+        } else {
+          throw Exception('Could not open email client. Please email us directly at $_supportEmail');
+        }
+      }
     } catch (e) {
-      debugPrint('❌ Failed to send support notification: $e');
+      debugPrint('❌ Failed to open email client: $e');
       rethrow;
     }
   }
@@ -255,5 +276,40 @@ class EmailService {
     buffer.writeln('Contact: $_supportEmail');
 
     return buffer.toString();
+  }
+
+  /// Open email client to contact support directly
+  /// This is a simpler method for support buttons throughout the app
+  static Future<void> contactSupport({
+    String? subject,
+    String? body,
+  }) async {
+    try {
+      final Uri emailUri = Uri(
+        scheme: 'mailto',
+        path: _supportEmail,
+        query: Uri.encodeFull([
+          if (subject != null) 'subject=$subject',
+          if (body != null) 'body=$body',
+        ].join('&')),
+      );
+
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+        debugPrint('✅ Email client opened for support contact');
+      } else {
+        // Try simpler fallback
+        final fallbackUri = Uri.parse('mailto:$_supportEmail');
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri);
+          debugPrint('✅ Email client opened with fallback');
+        } else {
+          throw Exception('Could not open email client. Please email $_supportEmail');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to open email client: $e');
+      rethrow;
+    }
   }
 }
