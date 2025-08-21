@@ -8,6 +8,7 @@ import '../../../shared/services/event_service.dart';
 import '../../../market/models/market.dart';
 import '../../../shared/widgets/common/simple_places_widget.dart';
 import '../../../shared/services/places_service.dart';
+import '../../../../core/theme/hipop_colors.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -147,7 +148,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please select a location for the event'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
         setState(() => _isLoading = false);
@@ -212,7 +213,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Event'),
-        backgroundColor: Colors.red,
+        backgroundColor: HiPopColors.organizerAccent,
         foregroundColor: Colors.white,
         actions: [
           TextButton(
@@ -339,19 +340,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
+                            color: HiPopColors.successGreen.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                            border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.check_circle, color: Colors.green[700], size: 20),
+                              const Icon(Icons.check_circle, color: HiPopColors.successGreenDark, size: 20),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   'Location selected: ${_selectedPlace!.formattedAddress}',
-                                  style: TextStyle(
-                                    color: Colors.green[700],
+                                  style: const TextStyle(
+                                    color: HiPopColors.successGreenDark,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -430,7 +431,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _createEvent,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: HiPopColors.organizerAccent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),

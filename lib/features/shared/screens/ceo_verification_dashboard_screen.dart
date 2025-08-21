@@ -688,7 +688,7 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
       builder: (context) => _ReviewDialog(
         account: account,
         isApproval: true,
-        onSubmit: (notes) => _processApproval(account, notes),
+        onSubmit: (notes) => _processApproval(account, notes, resetWelcome: true),
       ),
     );
   }
@@ -704,15 +704,20 @@ class _CeoVerificationDashboardScreenState extends State<CeoVerificationDashboar
     );
   }
 
-  Future<void> _processApproval(UserProfile account, String? notes) async {
+  Future<void> _processApproval(UserProfile account, String? notes, {bool resetWelcome = false}) async {
     try {
       final authState = context.read<AuthBloc>().state;
       if (authState is! Authenticated) return;
 
-      final updatedProfile = account.approveVerification(
+      var updatedProfile = account.approveVerification(
         authState.user.uid,
         notes: notes,
       );
+      
+      // Reset welcome notification shown flag when approving
+      if (resetWelcome) {
+        updatedProfile = updatedProfile.copyWith(welcomeNotificationShown: false);
+      }
 
       await UserProfileService().updateUserProfile(updatedProfile);
 

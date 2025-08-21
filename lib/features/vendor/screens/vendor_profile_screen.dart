@@ -10,6 +10,7 @@ import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/services/user_data_deletion_service.dart';
 import 'package:hipop/core/widgets/hipop_app_bar.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+import '../widgets/vendor_settings_dropdown.dart';
 
 
 class VendorProfileScreen extends StatefulWidget {
@@ -518,7 +519,8 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                           style: TextStyle(color: Colors.white),
                         ),
                 )
-              else
+              else ...[
+                const VendorSettingsDropdown(),
                 IconButton(
                   onPressed: () {
                     setState(() {
@@ -529,6 +531,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   },
                   icon: const Icon(Icons.edit),
                 ),
+              ],
             ],
           ),
           body: SingleChildScrollView(

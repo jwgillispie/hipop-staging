@@ -669,7 +669,7 @@ class SubscriptionService {
         return [
           {
             'userType': 'vendor',
-            'name': 'Vendor Pro',
+            'name': 'Vendor Premium',
             'description': 'Essential business tools',
             'price': 29.00,
             'currency': 'USD',
@@ -683,7 +683,7 @@ class SubscriptionService {
           },
           {
             'userType': 'vendor',
-            'name': 'Vendor Pro',
+            'name': 'Vendor Premium',
             'description': 'Advanced business intelligence',
             'price': 39.00,
             'currency': 'USD',
@@ -716,7 +716,7 @@ class SubscriptionService {
         return [
           {
             'userType': 'market_organizer',
-            'name': 'Organizer Pro',
+            'name': 'Organizer Premium',
             'description': 'Complete market management and vendor recruitment',
             'price': 69.00,  // Updated pricing
             'currency': 'USD',

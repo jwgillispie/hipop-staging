@@ -108,7 +108,7 @@ class HiPopAppBar extends StatelessWidget implements PreferredSizeWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  'PRO',
+                  'Premium',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -243,7 +243,7 @@ class HiPopSliverAppBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  'PRO',
+                  'Premium',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,

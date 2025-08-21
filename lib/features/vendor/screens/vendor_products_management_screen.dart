@@ -373,20 +373,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 16, color: HiPopColors.warningAmberDark),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Not assigned to any markets yet',
-                          style: TextStyle(
-                            color: HiPopColors.warningAmberDark,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                    )
                   );
                 }
                 
@@ -440,7 +427,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       ),
                     ),
                     Text(
-                      'Create custom product lists like "Grant Park List" for easy market assignment',
+                      'Create custom product lists',
                       style: TextStyle(color: Colors.grey[600]),
                     ),
                   ],
@@ -499,19 +486,37 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                   ),
                 )
               : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.2,
-                    ),
-                    itemCount: _productLists.length,
-                    itemBuilder: (context, index) {
-                      final list = _productLists[index];
-                      return _buildProductListCard(list);
-                    },
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Swipe to see all lists',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 200, // Fixed height for horizontal scrolling
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _productLists.length,
+                          itemBuilder: (context, index) {
+                            final list = _productLists[index];
+                            return Container(
+                              width: 280, // Fixed width for each card
+                              margin: EdgeInsets.only(
+                                right: index < _productLists.length - 1 ? 16 : 0,
+                              ),
+                              child: _buildProductListCard(list),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
         ),
@@ -524,124 +529,193 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ? Color(int.parse(list.color!.substring(1), radix: 16) + 0xFF000000)
         : Theme.of(context).primaryColor;
 
-    return Card(
-      elevation: 4,
-      child: InkWell(
-        onTap: () => _viewProductList(list),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              colors: [
-                color.withAlpha(20),
-                color.withAlpha(5),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+    return Container(
+      height: 200, // Fixed height for horizontal cards
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A), // Clean dark background matching products
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08), // Subtle border
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _viewProductList(list),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row with color indicator and menu
+                Row(
+                  children: [
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        list.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert,
+                        color: Colors.white.withValues(alpha: 0.7),
+                        size: 20,
+                      ),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'edit':
+                            _editProductList(list);
+                            break;
+                          case 'assign':
+                            _assignListToMarket(list);
+                            break;
+                          case 'delete':
+                            _deleteProductList(list);
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: ListTile(
+                            leading: Icon(Icons.edit),
+                            title: Text('Edit List'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'assign',
+                          child: ListTile(
+                            leading: Icon(Icons.store),
+                            title: Text('Assign to Market'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: ListTile(
+                            leading: Icon(Icons.delete),
+                            title: Text('Delete List'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Description
+                if (list.description?.isNotEmpty == true) ...[
+                  Text(
+                    list.description!,
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                      height: 1.3,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                
+                const Spacer(),
+                
+                // Footer with product count and action buttons
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: color.withValues(alpha: 0.2),
+                      width: 1,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      list.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.inventory,
+                            size: 16,
+                            color: color,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${list.productCount} products',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          _editProductList(list);
-                          break;
-                        case 'assign':
-                          _assignListToMarket(list);
-                          break;
-                        case 'delete':
-                          _deleteProductList(list);
-                          break;
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: ListTile(
-                          leading: Icon(Icons.edit),
-                          title: Text('Edit List'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'assign',
-                        child: ListTile(
-                          leading: Icon(Icons.store),
-                          title: Text('Assign to Market'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: ListTile(
-                          leading: Icon(Icons.delete),
-                          title: Text('Delete List'),
-                          contentPadding: EdgeInsets.zero,
-                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                'View Details',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (list.description?.isNotEmpty == true) ...[
-                Text(
-                  list.description!,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
               ],
-              const Spacer(),
-              Row(
-                children: [
-                  Icon(
-                    Icons.inventory,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${list.productCount} products',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),

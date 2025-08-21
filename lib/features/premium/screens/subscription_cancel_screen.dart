@@ -1,13 +1,34 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/payment_state_storage_service.dart';
 
-class SubscriptionCancelScreen extends StatelessWidget {
+class SubscriptionCancelScreen extends StatefulWidget {
   final String? reason;
   
   const SubscriptionCancelScreen({
     super.key,
     this.reason,
   });
+
+  @override
+  State<SubscriptionCancelScreen> createState() => _SubscriptionCancelScreenState();
+}
+
+class _SubscriptionCancelScreenState extends State<SubscriptionCancelScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _handleInitialState();
+  }
+
+  Future<void> _handleInitialState() async {
+    // Clear any stored payment state since payment was cancelled
+    if (kIsWeb) {
+      debugPrint('🗑️ Clearing stored payment state after cancellation');
+      await PaymentStateStorageService.clearStoredPaymentState();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +72,7 @@ class SubscriptionCancelScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              reason ?? 'Your subscription process was cancelled. No charges were made to your account.',
+              widget.reason ?? 'Your subscription process was cancelled. No charges were made to your account.',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.grey.shade600,
               ),

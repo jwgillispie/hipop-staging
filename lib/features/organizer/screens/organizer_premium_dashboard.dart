@@ -98,7 +98,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
         debugPrint('Error loading market posts: $error');
         return <VendorPost>[];
       }),
-    );
+    ).asBroadcastStream();
   }
 
   Future<List<String>> _getOrganizerMarketIds(String organizerId) async {
@@ -131,7 +131,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
             'totalRevenue': 0,
           };
         }),
-    );
+    ).asBroadcastStream();
   }
 
   Future<Map<String, int>> _generateRealAnalytics(String organizerId) async {
@@ -200,7 +200,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     
     return Scaffold(
       appBar: HiPopAppBar(
-        title: 'Organizer Pro Dashboard',
+        title: 'Organizer Premium Dashboard',
         userRole: 'vendor',
         centerTitle: true,
         bottom: _hasPremiumAccess ? TabBar(
@@ -240,7 +240,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Welcome to Organizer Pro! 🎉',
+                    'Welcome to Organizer Premium! 🎉',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.deepPurple.shade700,
@@ -346,7 +346,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           return const LoadingWidget(message: 'Checking subscription features...');
         }
 
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,8 +479,9 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
               ),
               const SizedBox(height: 16),
               
-              // Analytics Preview
-              Expanded(
+              // Analytics Preview - now with fixed height instead of Expanded
+              SizedBox(
+                height: 300,
                 child: _buildAnalyticsPreview(),
               ),
             ],
@@ -491,7 +492,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   }
 
   Widget _buildVendorPostsTab() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -583,96 +584,96 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           const SizedBox(height: 16),
           
           // Vendor Posts Features Preview
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Vendor Post Features',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                    children: [
-                      _buildFeatureCard(
-                        'Smart Targeting',
-                        'Posts automatically appear to vendors in matching categories',
-                        Icons.gps_fixed,
-                        Colors.purple,
-                      ),
-                      _buildFeatureCard(
-                        'Response Management',
-                        'View and manage vendor inquiries and applications',
-                        Icons.inbox,
-                        Colors.blue,
-                      ),
-                      _buildFeatureCard(
-                        'Performance Analytics',
-                        'Track views, response rates, and conversion metrics',
-                        Icons.analytics,
-                        Colors.green,
-                      ),
-                      _buildFeatureCard(
-                        'Integration Benefits',
-                        'Seamlessly integrates with vendor discovery system',
-                        Icons.integration_instructions,
-                        Colors.orange,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          const Text(
+            'Vendor Post Features',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            children: [
+              _buildFeatureListItem(
+                'Smart Targeting',
+                'Your posts are automatically matched to relevant vendors based on their interests and location',
+                Icons.gps_fixed,
+                Colors.purple,
+              ),
+              const SizedBox(height: 8),
+              _buildFeatureListItem(
+                'Response Management',
+                'View and manage all vendor inquiries and applications in one centralized location',
+                Icons.inbox,
+                Colors.blue,
+              ),
+              const SizedBox(height: 8),
+              _buildFeatureListItem(
+                'Performance Analytics',
+                'Track views, responses, and conversion rates for your vendor recruitment posts',
+                Icons.analytics,
+                Colors.green,
+              ),
+              const SizedBox(height: 8),
+              _buildFeatureListItem(
+                'Integration Benefits',
+                'Seamless integration with vendor premium discovery features for maximum visibility',
+                Icons.integration_instructions,
+                Colors.orange,
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureCard(String title, String description, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 24, color: color),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+  Widget _buildFeatureListItem(String title, String description, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
         ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 24, color: color),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -843,7 +844,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Unlock Organizer Pro',
+                  'Unlock Organizer Premium',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -883,7 +884,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
 
           // Benefits section
           const Text(
-            'What You\'ll Get with Organizer Pro',
+            'What You\'ll Get with Organizer Premium',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -953,7 +954,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                 ),
                 SizedBox(height: 12),
                 Text(
-                  'Find just 1-2 quality vendors per month and Pro pays for itself.',
+                  'Find just 1-2 quality vendors per month and Premium pays for itself.',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.black87,
@@ -990,7 +991,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                   Icon(Icons.diamond, size: 24, color: const Color(0xFF0A0A0A)),
                   const SizedBox(width: 12),
                   const Text(
-                    'Upgrade to Organizer Pro - \$69/month',
+                    'Upgrade to Organizer Premium - \$69/month',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

@@ -32,6 +32,7 @@ class UserProfile {
   final String? verifiedBy; // CEO user ID
   final DateTime? verifiedAt;
   final bool profileSubmitted; // Has completed full signup flow
+  final bool? welcomeNotificationShown; // Has seen welcome notification after verification
   
   // Subscription fields
   final bool isPremium;
@@ -67,6 +68,7 @@ class UserProfile {
     this.verifiedBy,
     this.verifiedAt,
     this.profileSubmitted = false,
+    this.welcomeNotificationShown,
     // Subscription parameters
     this.isPremium = false,
     this.stripeCustomerId,
@@ -103,6 +105,7 @@ class UserProfile {
     String? verifiedBy,
     DateTime? verifiedAt,
     bool? profileSubmitted,
+    bool? welcomeNotificationShown,
     // Subscription parameters
     bool? isPremium,
     String? stripeCustomerId,
@@ -137,6 +140,7 @@ class UserProfile {
       verifiedBy: verifiedBy ?? this.verifiedBy,
       verifiedAt: verifiedAt ?? this.verifiedAt,
       profileSubmitted: profileSubmitted ?? this.profileSubmitted,
+      welcomeNotificationShown: welcomeNotificationShown ?? this.welcomeNotificationShown,
       // Subscription fields
       isPremium: isPremium ?? this.isPremium,
       stripeCustomerId: stripeCustomerId ?? this.stripeCustomerId,
@@ -175,6 +179,7 @@ class UserProfile {
       'verifiedBy': verifiedBy,
       'verifiedAt': verifiedAt != null ? Timestamp.fromDate(verifiedAt!) : null,
       'profileSubmitted': profileSubmitted,
+      'welcomeNotificationShown': welcomeNotificationShown,
       // Subscription fields
       'isPremium': isPremium,
       'stripeCustomerId': stripeCustomerId,
@@ -218,6 +223,7 @@ class UserProfile {
       verifiedBy: data['verifiedBy'],
       verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
       profileSubmitted: data['profileSubmitted'] ?? false,
+      welcomeNotificationShown: data['welcomeNotificationShown'],
       // Subscription fields
       isPremium: data['isPremium'] ?? false,
       stripeCustomerId: data['stripeCustomerId'],
@@ -258,6 +264,7 @@ class UserProfile {
       verifiedBy: data['verifiedBy'],
       verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
       profileSubmitted: data['profileSubmitted'] ?? false,
+      welcomeNotificationShown: data['welcomeNotificationShown'],
       // Subscription fields
       isPremium: data['isPremium'] ?? false,
       stripeCustomerId: data['stripeCustomerId'],

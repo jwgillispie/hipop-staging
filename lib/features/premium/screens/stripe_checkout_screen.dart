@@ -150,9 +150,9 @@ class _StripeCheckoutScreenState extends State<StripeCheckoutScreen> {
   String _getTierName(SubscriptionTier tier) {
     switch (tier) {
       case SubscriptionTier.vendorPro:
-        return 'Vendor Pro';
+        return 'Vendor Premium';
       case SubscriptionTier.marketOrganizerPro:
-        return 'Market Organizer Pro';
+        return 'Market Organizer Premium';
       case SubscriptionTier.enterprise:
         return 'Enterprise';
       default:

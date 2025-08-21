@@ -118,7 +118,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
-                            'PRO',
+                            'Premium',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,

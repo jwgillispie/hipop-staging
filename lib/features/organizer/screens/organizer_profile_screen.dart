@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
 import '../../../blocs/auth/auth_event.dart';
@@ -8,6 +8,8 @@ import '../../shared/models/user_feedback.dart';
 import '../../shared/services/user_feedback_service.dart';
 import '../../shared/services/user_profile_service.dart';
 import '../../../core/widgets/hipop_app_bar.dart';
+import '../../../core/theme/hipop_colors.dart';
+import '../widgets/organizer_settings_dropdown.dart';
 
 class OrganizerProfileScreen extends StatefulWidget {
   const OrganizerProfileScreen({super.key});
@@ -17,170 +19,302 @@ class OrganizerProfileScreen extends StatefulWidget {
 }
 
 class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
+  bool _hasPremiumAccess = false;
+  bool _isCheckingPremium = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPremiumAccess();
+  }
+
+  Future<void> _checkPremiumAccess() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      try {
+        final userProfileService = UserProfileService();
+        final userProfile = await userProfileService.getUserProfile(authState.user.uid);
+        
+        final hasAccess = userProfile?.isPremium ?? false;
+        
+        if (mounted) {
+          setState(() {
+            _hasPremiumAccess = hasAccess;
+            _isCheckingPremium = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error checking premium access: $e');
+        if (mounted) {
+          setState(() {
+            _hasPremiumAccess = false;
+            _isCheckingPremium = false;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isCheckingPremium = false;
+        });
+      }
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: HiPopAppBar(
-        title: 'Organizer Profile',
-        userRole: 'vendor',
+        title: 'Profile',
+        userRole: 'organizer',
         centerTitle: true,
+        actions: const [
+          OrganizerSettingsDropdown(),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Profile header
-            const Center(
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.person, size: 64, color: Colors.green),
-                  SizedBox(height: 16),
-                  Text(
-                    'Organizer Profile',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  // Welcome Card
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          if (state is! Authenticated) {
+                            return const SizedBox.shrink();
+                          }
+                          return Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: HiPopColors.organizerAccent,
+                                child: const Icon(Icons.person, color: Colors.white),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Account Settings',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  Text(
+                                    state.user.displayName ?? state.user.email ?? 'Organizer',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 24),
                   Text(
-                    'Manage your organizer profile and market settings.',
-                    textAlign: TextAlign.center,
+                    'Profile Options',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
-            
-            const SizedBox(height: 32),
-            
-            // Settings sections
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildSettingsSection(),
-                  const SizedBox(height: 24),
-                  _buildFeedbackSection(),
-                  const SizedBox(height: 24),
-                  _buildAccountSection(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingsSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Settings',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            ListTile(
-              leading: const Icon(Icons.store, color: Colors.green),
-              title: const Text('Market Management'),
-              subtitle: const Text('Manage your markets and events'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                // TODO: Navigate to market management
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Market management coming soon!')),
-                );
-              },
-            ),
-            
-            ListTile(
-              leading: const Icon(Icons.notifications, color: Colors.green),
-              title: const Text('Notifications'),
-              subtitle: const Text('Manage notification preferences'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                // TODO: Navigate to notifications
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notification settings coming soon!')),
-                );
-              },
-            ),
-            
-            ListTile(
-              leading: const Icon(Icons.analytics, color: Colors.green),
-              title: const Text('Analytics'),
-              subtitle: const Text('View market and vendor analytics'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () {
-                // TODO: Navigate to analytics
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Analytics coming soon!')),
-                );
-              },
-            ),
-            
-            const Divider(),
-            
-            ListTile(
-              leading: Icon(Icons.logout, color: Colors.orange[700]),
-              title: const Text('Sign Out'),
-              subtitle: const Text('Sign out of your account'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _signOut,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeedbackSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Help & Support',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _showFeedbackDialog,
-                icon: const Icon(Icons.feedback),
-                label: const Text('Send Feedback'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                _buildProfileOption(
+                  context,
+                  'Edit Profile',
+                  'Update your profile information',
+                  Icons.edit,
+                  HiPopColors.organizerAccent,
+                  () => _navigateToEditProfile(),
                 ),
-              ),
+                const SizedBox(height: 12),
+                _buildProfileOption(
+                  context,
+                  'Subscription Management',
+                  _isCheckingPremium 
+                    ? 'Loading subscription status...'
+                    : (_hasPremiumAccess ? 'Manage your Premium subscription' : 'Upgrade to Premium'),
+                  Icons.credit_card,
+                  _hasPremiumAccess ? HiPopColors.premiumGold : HiPopColors.primaryDeepSage,
+                  () => _navigateToSubscriptionManagement(),
+                  isPremium: _hasPremiumAccess,
+                ),
+                const SizedBox(height: 12),
+                _buildProfileOption(
+                  context,
+                  'Change Password',
+                  'Update your account password',
+                  Icons.lock_outline,
+                  HiPopColors.infoBlueGray,
+                  () => _navigateToChangePassword(),
+                ),
+                const SizedBox(height: 12),
+                _buildProfileOption(
+                  context,
+                  'Support & Feedback',
+                  'Get help or send us feedback',
+                  Icons.support_agent,
+                  HiPopColors.accentMauve,
+                  () => _showFeedbackDialog(),
+                ),
+                const SizedBox(height: 20),
+                _buildProfileOption(
+                  context,
+                  'Sign Out',
+                  'Sign out of your account',
+                  Icons.logout,
+                  HiPopColors.errorPlum,
+                  () => _signOut(),
+                ),
+              ]),
             ),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              'Help us improve HiPOP by sharing your thoughts, suggestions, or reporting issues.',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileOption(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color iconColor,
+    VoidCallback onTap, {
+    bool isPremium = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: HiPopColors.lightBorder,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                // Icon container on the left
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Title and description in the middle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (isPremium) ...[
+                            Icon(
+                              Icons.diamond,
+                              size: 16,
+                              color: HiPopColors.premiumGold,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: HiPopColors.lightTextPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                // Arrow indicator on the right
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  void _navigateToEditProfile() {
+    // TODO: Navigate to edit profile screen
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Edit profile coming soon!'),
+        backgroundColor: HiPopColors.organizerAccent,
+      ),
+    );
+  }
+
+  void _navigateToSubscriptionManagement() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      context.go('/subscription-management/${authState.user.uid}');
+    }
+  }
+
+  void _navigateToChangePassword() {
+    context.pushNamed('organizerChangePassword');
+  }
+
+
 
   void _showFeedbackDialog() {
     final titleController = TextEditingController();
@@ -274,7 +408,7 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
               _submitFeedback(selectedCategory, title, description);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: HiPopColors.accentMauve,
               foregroundColor: Colors.white,
             ),
             child: const Text('Send Feedback'),
@@ -341,43 +475,6 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
     }
   }
 
-  Widget _buildAccountSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Account Management',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            ListTile(
-              leading: Icon(Icons.logout, color: Colors.orange[700]),
-              title: const Text('Sign Out'),
-              subtitle: const Text('Sign out of your account'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _signOut,
-            ),
-            
-            const Divider(),
-            
-            ListTile(
-              leading: const Icon(Icons.delete_forever, color: Colors.red),
-              title: const Text('Delete Account'),
-              subtitle: const Text('Permanently delete your account and all data'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _showDeleteAccountDialog,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _signOut() {
     showDialog(
@@ -396,7 +493,7 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
               context.read<AuthBloc>().add(LogoutEvent());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange[700],
+              backgroundColor: HiPopColors.errorPlum,
               foregroundColor: Colors.white,
             ),
             child: const Text('Sign Out'),
@@ -406,133 +503,4 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
     );
   }
 
-  void _showDeleteAccountDialog() {
-    final TextEditingController confirmationController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning, color: Colors.red[700]),
-            const SizedBox(width: 8),
-            const Text('Delete Account'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'This action cannot be undone. Deleting your account will:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text('• Remove all your markets and events'),
-            const Text('• Delete all vendor approvals and data'),
-            const Text('• Remove all analytics and reports'),
-            const Text('• Cancel all pending applications'),
-            const SizedBox(height: 16),
-            const Text(
-              'Type "DELETE" to confirm:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: confirmationController,
-              decoration: const InputDecoration(
-                hintText: 'DELETE',
-                border: OutlineInputBorder(),
-              ),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (confirmationController.text.trim() == 'DELETE') {
-                Navigator.pop(context);
-                _deleteAccount();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please type "DELETE" to confirm'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete Forever'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteAccount() async {
-    try {
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Deleting your account...'),
-            ],
-          ),
-        ),
-      );
-
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('No user found');
-      }
-
-      final userProfileService = UserProfileService();
-      
-      // Delete user profile and associated data
-      await userProfileService.deleteUserProfile(user.uid);
-      
-      // Delete Firebase Auth account
-      await user.delete();
-      
-      // Sign out and navigate to auth
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        context.read<AuthBloc>().add(LogoutEvent());
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account deleted successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-      
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting account: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 }

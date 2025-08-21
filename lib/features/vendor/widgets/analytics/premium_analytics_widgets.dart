@@ -87,7 +87,7 @@ class PremiumAnalyticsWidgets {
                     border: Border.all(color: Colors.amber.shade300),
                   ),
                   child: Text(
-                    'PRO',
+                    'Premium',
                     style: TextStyle(
                       color: Colors.amber.shade700,
                       fontSize: 10,

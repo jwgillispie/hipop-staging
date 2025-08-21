@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:go_router/go_router.dart';
 import '../../shared/services/remote_config_service.dart';
+import 'browser_detection_service.dart';
 
 class StripeService {
   // 🔒 SECURITY: All Stripe secret key operations moved to server-side Cloud Functions
@@ -86,6 +90,7 @@ class StripeService {
     required String userId,
     required String userEmail,
     String? couponCode,
+    BuildContext? context,
   }) async {
     try {
       debugPrint('');
@@ -142,16 +147,27 @@ class StripeService {
           : 'hipop://subscription/success?session_id={CHECKOUT_SESSION_ID}&user_id=$userId';
       debugPrint('🔗 Success URL will be: $successUrl');
 
-      // Launch the checkout URL in browser
-      debugPrint('🌐 Launching checkout in browser...');
+      // Launch the checkout URL
+      debugPrint('🌐 Launching checkout...');
       if (kIsWeb) {
-        // On web, open in new tab
-        debugPrint('🌐 Platform: Web - opening in new tab');
-        await _launchUrl(checkoutUrl);
+        // On web, check browser type
+        BrowserDetectionService.initialize();
+        if (BrowserDetectionService.isSafari) {
+          debugPrint('🦁 Safari detected - using same-tab navigation');
+          await _launchUrlSafari(checkoutUrl);
+        } else {
+          debugPrint('🌐 Chrome/Firefox detected - using popup');
+          await _launchUrlPopup(checkoutUrl);
+        }
       } else {
-        // On mobile, open in system browser
-        debugPrint('📱 Platform: Mobile - opening in system browser');
-        await _launchUrl(checkoutUrl);
+        // On mobile, use InAppWebView
+        debugPrint('📱 Platform: Mobile - using InAppWebView');
+        if (context != null) {
+          await _launchInAppWebView(context, checkoutUrl, userId);
+        } else {
+          debugPrint('⚠️ No context provided, falling back to external browser');
+          await _launchUrl(checkoutUrl);
+        }
       }
       
       debugPrint('✅ Checkout launched successfully!');
@@ -269,6 +285,59 @@ class StripeService {
       );
     } else {
       throw Exception('Could not launch checkout URL: $url');
+    }
+  }
+
+  /// Launch URL in Safari using same-tab navigation
+  static Future<void> _launchUrlSafari(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.inAppBrowserView, // Use in-app for Safari
+      );
+    } else {
+      throw Exception('Could not launch checkout URL in Safari: $url');
+    }
+  }
+
+  /// Launch URL in popup for Chrome/Firefox
+  static Future<void> _launchUrlPopup(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication, // External popup
+      );
+    } else {
+      throw Exception('Could not launch checkout URL in popup: $url');
+    }
+  }
+
+  /// Launch URL in InAppWebView for mobile platforms
+  static Future<void> _launchInAppWebView(BuildContext context, String url, String userId) async {
+    if (!context.mounted) {
+      debugPrint('⚠️ Context not mounted, falling back to external browser');
+      await _launchUrl(url);
+      return;
+    }
+
+    try {
+      debugPrint('📱 Opening InAppWebView for: $url');
+      
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (BuildContext context) => _InAppWebViewPayment(
+            url: url,
+            userId: userId,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Error opening InAppWebView: $e');
+      // Fallback to external browser
+      await _launchUrl(url);
     }
   }
 
@@ -508,5 +577,157 @@ class StripeService {
     _lastOperationTime.clear();
     // Debug logging would go here
     debugPrint('Rate limit cache cleared');
+  }
+}
+
+/// InAppWebView widget for mobile payment handling
+class _InAppWebViewPayment extends StatefulWidget {
+  final String url;
+  final String userId;
+
+  const _InAppWebViewPayment({
+    required this.url,
+    required this.userId,
+  });
+
+  @override
+  State<_InAppWebViewPayment> createState() => _InAppWebViewPaymentState();
+}
+
+class _InAppWebViewPaymentState extends State<_InAppWebViewPayment> {
+  bool _isLoading = true;
+  double _progress = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Complete Payment'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        bottom: _isLoading
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(4.0),
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  backgroundColor: Colors.grey[300],
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+              )
+            : null,
+      ),
+      body: InAppWebView(
+        initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+        onLoadStart: (controller, url) {
+          debugPrint('📱 InAppWebView started loading: $url');
+          setState(() {
+            _isLoading = true;
+          });
+        },
+        onProgressChanged: (controller, progress) {
+          setState(() {
+            _progress = progress / 100;
+          });
+        },
+        onLoadStop: (controller, url) async {
+          debugPrint('📱 InAppWebView finished loading: $url');
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (url != null) {
+            await _handleUrlChange(url.toString());
+          }
+        },
+        onReceivedError: (controller, request, error) {
+          debugPrint('❌ InAppWebView error: ${error.description}');
+          setState(() {
+            _isLoading = false;
+          });
+        },
+        shouldOverrideUrlLoading: (controller, navigationAction) async {
+          final url = navigationAction.request.url;
+          if (url != null) {
+            await _handleUrlChange(url.toString());
+          }
+          return NavigationActionPolicy.ALLOW;
+        },
+        initialSettings: InAppWebViewSettings(
+          useShouldOverrideUrlLoading: true,
+          javaScriptEnabled: true,
+          allowsInlineMediaPlayback: true,
+          supportZoom: true,
+          useOnLoadResource: true,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleUrlChange(String url) async {
+    debugPrint('📱 URL changed to: $url');
+
+    // Check for success URL
+    if (url.contains('/subscription/success') && url.contains('session_id=')) {
+      debugPrint('✅ Payment success detected, closing WebView');
+      final sessionId = _extractSessionId(url);
+      if (sessionId != null) {
+        // Navigate to success screen and close WebView
+        if (mounted && context.mounted) {
+          Navigator.of(context).pop();
+          context.go('/subscription/success?session_id=$sessionId&user_id=${widget.userId}');
+        }
+      }
+      return;
+    }
+
+    // Check for cancel URL
+    if (url.contains('/subscription/cancel')) {
+      debugPrint('❌ Payment cancelled, closing WebView');
+      if (mounted && context.mounted) {
+        Navigator.of(context).pop();
+        context.go('/subscription/cancel');
+      }
+      return;
+    }
+
+    // Check for custom scheme redirects (mobile deep links)
+    if (url.startsWith('hipop://')) {
+      debugPrint('🔗 Deep link detected: $url');
+      if (url.contains('subscription/success') && url.contains('session_id=')) {
+        final sessionId = _extractSessionId(url);
+        if (sessionId != null && mounted && context.mounted) {
+          Navigator.of(context).pop();
+          context.go('/subscription/success?session_id=$sessionId&user_id=${widget.userId}');
+        }
+      } else if (url.contains('subscription/cancel')) {
+        if (mounted && context.mounted) {
+          Navigator.of(context).pop();
+          context.go('/subscription/cancel');
+        }
+      }
+      return;
+    }
+  }
+
+  String? _extractSessionId(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      return uri.queryParameters['session_id'];
+    }
+    
+    // Fallback regex extraction
+    final match = RegExp(r'session_id=([^&]+)').firstMatch(url);
+    return match?.group(1);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

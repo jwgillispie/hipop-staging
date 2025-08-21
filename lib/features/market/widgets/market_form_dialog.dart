@@ -10,6 +10,7 @@ import '../../market/services/market_service.dart';
 import '../../premium/services/subscription_service.dart';
 import '../../shared/services/places_service.dart';
 import '../../shared/services/real_time_analytics_service.dart';
+import '../../shared/services/location_data_service.dart';
 import '../../vendor/services/vendor_application_service.dart';
 import '../../vendor/services/managed_vendor_service.dart';
 import '../../shared/widgets/common/simple_places_widget.dart';
@@ -255,6 +256,15 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     // Parse address components from selected place
     final addressComponents = _parseAddressComponents(_selectedPlace!.formattedAddress);
     
+    // Create optimized location data for new markets
+    final locationData = LocationDataService.createLocationData(
+      locationString: _selectedPlace!.formattedAddress,
+      latitude: _selectedPlace!.latitude,
+      longitude: _selectedPlace!.longitude,
+      placeId: _selectedPlace!.placeId,
+      locationName: _selectedPlace!.name,
+    );
+    
     // Create the market with simple date/time
     final market = Market(
       id: '',
@@ -281,6 +291,8 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       vendorSpotsAvailable: _recruitmentData['vendorSpotsAvailable'],
       applicationDeadline: _recruitmentData['applicationDeadline'],
       vendorRequirements: _recruitmentData['vendorRequirements'],
+      // Optimized Location Data
+      locationData: locationData,
     );
 
     // Get auth state before async gap
@@ -307,6 +319,15 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     // Parse address components from selected place
     final addressComponents = _parseAddressComponents(_selectedPlace!.formattedAddress);
     
+    // Create optimized location data for updated market
+    final locationData = LocationDataService.createLocationData(
+      locationString: _selectedPlace!.formattedAddress,
+      latitude: _selectedPlace!.latitude,
+      longitude: _selectedPlace!.longitude,
+      placeId: _selectedPlace!.placeId,
+      locationName: _selectedPlace!.name,
+    );
+    
     // Update market with simple date/time
     final updatedMarket = market.copyWith(
       name: _nameController.text.trim(),
@@ -331,6 +352,8 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       vendorSpotsAvailable: _recruitmentData['vendorSpotsAvailable'],
       applicationDeadline: _recruitmentData['applicationDeadline'],
       vendorRequirements: _recruitmentData['vendorRequirements'],
+      // Optimized Location Data
+      locationData: locationData,
     );
     
     await MarketService.updateMarket(market.id, updatedMarket.toFirestore());

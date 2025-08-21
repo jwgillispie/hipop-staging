@@ -228,7 +228,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Business Name and Categories
+          // Top Row - Business Name and Featured Badge
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -241,16 +241,18 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
                     if (_vendor!.slogan != null && _vendor!.slogan!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         _vendor!.slogan!,
                         style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
+                          fontSize: 15,
+                          color: Colors.grey[700],
                           fontStyle: FontStyle.italic,
+                          height: 1.3,
                         ),
                       ),
                     ],
@@ -259,22 +261,35 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
               ),
               if (_vendor!.isFeatured)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  margin: const EdgeInsets.only(left: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.amber[100],
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [Colors.amber[600]!, Colors.amber[700]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amber.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.star, size: 16, color: Colors.amber[800]),
+                      const Icon(Icons.star, size: 14, color: Colors.white),
                       const SizedBox(width: 4),
-                      Text(
+                      const Text(
                         'Featured',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.amber[800],
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -282,49 +297,95 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           
-          // Categories
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _vendor!.categories.take(4).map((category) {
-              return Chip(
-                label: Text(
-                  category.displayName,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                backgroundColor: _getCategoryColor(category).withValues(alpha: 0.1),
-                labelStyle: TextStyle(color: _getCategoryColor(category)),
-              );
-            }).toList(),
+          // Categories Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _vendor!.categories.take(5).map((category) {
+                final color = _getCategoryColor(category);
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: color.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _getCategoryIcon(category),
+                        size: 14,
+                        color: color,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        category.displayName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: color,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
           
           const SizedBox(height: 16),
           
-          // Quick Info Row
-          Row(
-            children: [
-              _buildInfoChip(
-                Icons.location_on,
-                _vendor!.city ?? 'Location',
-                Colors.blue,
-              ),
-              const SizedBox(width: 12),
-              if (_vendor!.priceRange != null && _vendor!.priceRange!.isNotEmpty)
-                _buildInfoChip(
-                  Icons.attach_money,
-                  _vendor!.priceRange!,
-                  Colors.green,
+          // Quick Info Row - Improved Layout
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildEnhancedInfoChip(
+                  Icons.location_on,
+                  _vendor!.city ?? 'Location',
+                  HiPopColors.primaryDeepSage,
                 ),
-              const SizedBox(width: 12),
-              if (_vendor!.isOrganic)
-                _buildInfoChip(
-                  Icons.eco,
-                  'Organic',
-                  Colors.green,
-                ),
-            ],
+                if (_vendor!.priceRange != null && _vendor!.priceRange!.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  _buildEnhancedInfoChip(
+                    Icons.attach_money,
+                    _vendor!.priceRange!,
+                    Colors.green[700]!,
+                  ),
+                ],
+                if (_vendor!.isOrganic) ...[
+                  const SizedBox(width: 8),
+                  _buildEnhancedInfoChip(
+                    Icons.eco,
+                    'Organic',
+                    Colors.green[600]!,
+                  ),
+                ],
+                if (_vendor!.acceptsOrders) ...[
+                  const SizedBox(width: 8),
+                  _buildEnhancedInfoChip(
+                    Icons.shopping_cart,
+                    'Accepts Orders',
+                    Colors.blue[600]!,
+                  ),
+                ],
+                if (_vendor!.canDeliver) ...[
+                  const SizedBox(width: 8),
+                  _buildEnhancedInfoChip(
+                    Icons.local_shipping,
+                    'Delivery',
+                    Colors.purple[600]!,
+                  ),
+                ],
+              ],
+            ),
           ),
           
           const SizedBox(height: 16),
@@ -345,24 +406,36 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String text, Color color) {
+  Widget _buildEnhancedInfoChip(IconData icon, String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 4),
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
           Text(
             text,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: color,
               fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
           ),
         ],

@@ -37,11 +37,8 @@ Future<void> _initializeApp() async {
     // Initialize Firebase
     await _initializeFirebase();
     
-    // Initialize Stripe (now supports web too)
-    await _initializeStripe();
-    
-    // Initialize Remote Config and wait for it to complete
-    // This ensures price IDs are available when needed
+    // Initialize Remote Config BEFORE Stripe
+    // This ensures config values are available for Stripe initialization
     try {
       await RemoteConfigService.instance;
       debugPrint('✅ Remote Config initialized successfully during app startup');
@@ -55,6 +52,9 @@ Future<void> _initializeApp() async {
       // Continue with app startup, fallback to .env values will be used
     }
     
+    // Initialize Stripe AFTER Remote Config
+    await _initializeStripe();
+    
     // Initialize Analytics with consent
     await _initializeAnalytics();
   } catch (e) {
@@ -65,15 +65,23 @@ Future<void> _initializeApp() async {
 
 Future<void> _initializeStripe() async {
   try {
-    String publishableKey = '';
+    // Try to get key from Remote Config first (following the pattern of other working functions)
+    String publishableKey = await RemoteConfigService.getStripePublishableKey();
     
-    // For web, use hardcoded key (dotenv doesn't work in production)
-    if (kIsWeb) {
-      // This is your live publishable key - safe to expose
-      publishableKey = 'pk_live_51RsQNrC8FCSHt0iKEEfaV2Kd98wwFHAw0d6rcvLR7kxGzvfWuOxhaOvYOD2GRvODOR5eAQnFC7p622ech7BDGddy00IP3xtXun';
+    // If Remote Config fails or returns empty, use platform-specific fallbacks
+    if (publishableKey.isEmpty) {
+      if (kIsWeb) {
+        // Fallback for web - only if Remote Config fails
+        // This is your live publishable key - safe to expose
+        publishableKey = 'pk_live_51RsQNrC8FCSHt0iKEEfaV2Kd98wwFHAw0d6rcvLR7kxGzvfWuOxhaOvYOD2GRvODOR5eAQnFC7p622ech7BDGddy00IP3xtXun';
+        debugPrint('⚠️ Using hardcoded fallback key for web (Remote Config failed)');
+      } else {
+        // For mobile, try to load from .env
+        publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+        debugPrint('⚠️ Using .env fallback key for mobile (Remote Config failed)');
+      }
     } else {
-      // For mobile, try to load from .env
-      publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+      debugPrint('✅ Using Stripe key from Remote Config');
     }
     
     if (publishableKey.isNotEmpty) {
@@ -167,24 +175,24 @@ class HiPopApp extends StatelessWidget {
                 }
               },
               child: MaterialApp.router(
-                title: 'HiPop - STAGING',
+                title: 'HiPop',
                 debugShowCheckedModeBanner: false,
                 theme: HiPopTheme.lightTheme,
                 darkTheme: HiPopTheme.darkTheme,
                 themeMode: ThemeMode.system,
-                builder: (context, child) {
-                  return Banner(
-                    message: 'STAGING',
-                    location: BannerLocation.topStart,
-                    color: Colors.pink,
-                    textStyle: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    child: child!,
-                  );
-                },
+                // builder: (context, child) {
+                //   return Banner(
+                //     message: 'STAGING',
+                //     location: BannerLocation.topStart,
+                //     color: Colors.pink,
+                //     textStyle: const TextStyle(
+                //       color: Colors.white,
+                //       fontSize: 12,
+                //       fontWeight: FontWeight.bold,
+                //     ),
+                //     child: child!,
+                //   );
+                // },
                 routerConfig: AppRouter.createRouter(authBloc),
               ),
             );

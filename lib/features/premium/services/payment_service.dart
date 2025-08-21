@@ -4,6 +4,7 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import '../models/user_subscription.dart';
+import '../../shared/services/remote_config_service.dart';
 
 // Web-safe platform detection using kIsWeb and defaultTargetPlatform
 bool get isWebPlatform => kIsWeb;
@@ -66,16 +67,24 @@ class PaymentService {
   static Future<void> _initializeForWeb() async {
     debugPrint('🔍 Initializing Stripe for web...');
     
-    // For web, use hardcoded key directly (dotenv doesn't work after build)
-    // This is your live publishable key - safe to expose
-    const publishableKey = 'pk_live_51RsQNrC8FCSHt0iKEEfaV2Kd98wwFHAw0d6rcvLR7kxGzvfWuOxhaOvYOD2GRvODOR5eAQnFC7p622ech7BDGddy00IP3xtXun';
+    // Try Remote Config first (following the pattern of other working functions)
+    String publishableKey = await RemoteConfigService.getStripePublishableKey();
+    
+    // If Remote Config fails, use hardcoded fallback
+    if (publishableKey.isEmpty) {
+      // Fallback - This is your live publishable key - safe to expose
+      publishableKey = 'pk_live_51RsQNrC8FCSHt0iKEEfaV2Kd98wwFHAw0d6rcvLR7kxGzvfWuOxhaOvYOD2GRvODOR5eAQnFC7p622ech7BDGddy00IP3xtXun';
+      debugPrint('⚠️ Using hardcoded fallback key for web (Remote Config failed)');
+    } else {
+      debugPrint('✅ Using Stripe key from Remote Config');
+    }
     
     if (publishableKey.isEmpty) {
       throw Exception('Stripe publishable key not found');
     }
 
     Stripe.publishableKey = publishableKey;
-    debugPrint('🌐 Web platform initialization complete with live key');
+    debugPrint('🌐 Web platform initialization complete');
   }
 
   /// Initialize Stripe for mobile platforms (iOS/Android)

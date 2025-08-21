@@ -734,18 +734,19 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         const SizedBox(height: 16),
         
         // Add vendor notes field for market posts
-        if (_popupType == 'market' || (_selectedMarket != null && !_isIndependent)) ...[
-          HiPopTextField(
-            controller: _vendorNotesController,
-            labelText: 'Message to Market Organizer (Optional)',
-            hintText: 'Add any special requests or information for the organizer...',
-            prefixIcon: const Icon(Icons.message),
-            maxLines: 3,
-            textCapitalization: TextCapitalization.sentences,
-            validator: null, // Optional field
-          ),
-          const SizedBox(height: 16),
-        ],
+        // Commented out for now - message to market organizer
+        // if (_popupType == 'market' || (_selectedMarket != null && !_isIndependent)) ...[
+        //   HiPopTextField(
+        //     controller: _vendorNotesController,
+        //     labelText: 'Message to Market Organizer (Optional)',
+        //     hintText: 'Add any special requests or information for the organizer...',
+        //     prefixIcon: const Icon(Icons.message),
+        //     maxLines: 3,
+        //     textCapitalization: TextCapitalization.sentences,
+        //     validator: null, // Optional field
+        //   ),
+        //   const SizedBox(height: 16),
+        // ],
         
         PhotoUploadWidget(
           onPhotosSelected: (photos) {
@@ -2106,9 +2107,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           photoUrls: photoUrls,
           marketId: _selectedMarket?.id,
           productListIds: _selectedProductLists.map((list) => list.id).toList(),
-          vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
-              ? _vendorNotesController.text.trim() 
-              : null,
+          // vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
+          //     ? _vendorNotesController.text.trim() 
+          //     : null,
+          vendorNotes: null, // Commented out for now
           updatedAt: now,
         );
         
@@ -2160,9 +2162,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           associatedMarketId: _selectedMarket?.id,
           associatedMarketName: _selectedMarket?.name,
           productListIds: _selectedProductLists.map((list) => list.id).toList(),
-          vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
-              ? _vendorNotesController.text.trim() 
-              : null,
+          // vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
+          //     ? _vendorNotesController.text.trim() 
+          //     : null,
+          vendorNotes: null, // Commented out for now
           createdAt: now,
           updatedAt: now,
         );

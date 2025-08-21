@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
+import '../../shared/models/location_data.dart';
 
 class Market extends Equatable {
   final String id;
@@ -29,6 +30,9 @@ class Market extends Equatable {
   final int? vendorSpotsTotal;
   final DateTime? applicationDeadline;
   final String? vendorRequirements;
+  
+  // Optimized Location Data
+  final LocationData? locationData;
 
   const Market({
     required this.id,
@@ -57,6 +61,7 @@ class Market extends Equatable {
     this.vendorSpotsTotal,
     this.applicationDeadline,
     this.vendorRequirements,
+    this.locationData,
   });
 
   factory Market.fromFirestore(DocumentSnapshot doc) {
@@ -92,6 +97,9 @@ class Market extends Equatable {
         vendorSpotsTotal: data['vendorSpotsTotal'],
         applicationDeadline: (data['applicationDeadline'] as Timestamp?)?.toDate(),
         vendorRequirements: data['vendorRequirements'],
+        locationData: data['locationData'] != null 
+            ? LocationData.fromFirestore(data['locationData'])
+            : null,
       );
     } catch (e) {
       // Error parsing Market from Firestore
@@ -128,6 +136,7 @@ class Market extends Equatable {
           ? Timestamp.fromDate(applicationDeadline!) 
           : null,
       'vendorRequirements': vendorRequirements,
+      'locationData': locationData?.toFirestore(),
     };
   }
 
@@ -157,6 +166,7 @@ class Market extends Equatable {
     int? vendorSpotsTotal,
     DateTime? applicationDeadline,
     String? vendorRequirements,
+    LocationData? locationData,
   }) {
     return Market(
       id: id ?? this.id,
@@ -184,6 +194,7 @@ class Market extends Equatable {
       vendorSpotsTotal: vendorSpotsTotal ?? this.vendorSpotsTotal,
       applicationDeadline: applicationDeadline ?? this.applicationDeadline,
       vendorRequirements: vendorRequirements ?? this.vendorRequirements,
+      locationData: locationData ?? this.locationData,
     );
   }
 
@@ -286,5 +297,6 @@ class Market extends Equatable {
         vendorSpotsTotal,
         applicationDeadline,
         vendorRequirements,
+        locationData,
       ];
 }

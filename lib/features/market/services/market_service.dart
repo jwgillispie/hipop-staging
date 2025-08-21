@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hipop/features/vendor/models/vendor_market.dart';
 import '../../market/models/market.dart';
+import '../../shared/services/location_data_service.dart';
 
 class MarketService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -126,8 +127,47 @@ class MarketService {
       final normalizedSearchCity = _normalizeSearchCity(searchCity);
       debugPrint('MarketService: Normalized search city: "$searchCity" -> "$normalizedSearchCity"');
       
-      // Filter markets with flexible matching
+      // Filter markets with flexible matching using optimized locationData
       final matchingMarkets = allMarkets.where((market) {
+        // First try optimized location data if available (new markets)
+        if (market.locationData != null) {
+          final locationData = market.locationData!;
+          
+          // Direct city match using optimized data (fastest)
+          if (locationData.city != null) {
+            final cityLower = locationData.city!.toLowerCase();
+            if (cityLower == normalizedSearchCity || 
+                cityLower.contains(normalizedSearchCity) ||
+                normalizedSearchCity.contains(cityLower)) {
+              return true;
+            }
+          }
+          
+          // Metro area match using optimized data
+          if (locationData.metroArea != null && 
+              locationData.metroArea!.toLowerCase().contains(normalizedSearchCity)) {
+            return true;
+          }
+          
+          // Search keywords match (pre-computed for efficiency)
+          if (locationData.searchKeywords.any((keyword) => 
+              keyword.toLowerCase().contains(normalizedSearchCity) ||
+              normalizedSearchCity.contains(keyword.toLowerCase()))) {
+            return true;
+          }
+          
+          // State match using optimized data
+          if (locationData.state != null) {
+            final stateLower = locationData.state!.toLowerCase();
+            if (normalizedSearchCity.length == 2 && stateLower.startsWith(normalizedSearchCity)) {
+              return true;
+            }
+          }
+          
+          return false;
+        }
+        
+        // Fallback to legacy search for older markets
         final marketCity = market.city.toLowerCase().trim();
         final marketState = market.state.toLowerCase().trim();
         final marketAddress = market.address.toLowerCase().trim();
@@ -194,7 +234,7 @@ class MarketService {
       
       return querySnapshot.docs
           .map((doc) => Market.fromFirestore(doc))
-          .where((market) => !(market.isRecruitmentOnly ?? false)) // Filter out recruitment-only posts
+          .where((market) => !market.isRecruitmentOnly) // Filter out recruitment-only posts
           .toList();
     } catch (e) {
       throw Exception('Failed to get all markets: $e');
@@ -214,13 +254,62 @@ class MarketService {
 
   static Stream<List<Market>> getMarketsByCityStream(String city) {
     return _marketsCollection
-        .where('city', isEqualTo: city)
         .where('isActive', isEqualTo: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Market.fromFirestore(doc))
-            .where((market) => !market.isRecruitmentOnly) // Filter out recruitment-only posts
-            .toList());
+        .map((snapshot) {
+          final allMarkets = snapshot.docs
+              .map((doc) => Market.fromFirestore(doc))
+              .where((market) => !market.isRecruitmentOnly) // Filter out recruitment-only posts
+              .toList();
+              
+          debugPrint('MarketService Stream: Total active markets: ${allMarkets.length}');
+          
+          // Normalize search city for comparison (handles aliases)
+          final normalizedSearchCity = _normalizeSearchCity(city);
+          debugPrint('MarketService Stream: Normalized search city: "$city" -> "$normalizedSearchCity"');
+          
+          // Filter markets with optimized location data first, then legacy fallback
+          final matchingMarkets = allMarkets.where((market) {
+            // First try optimized location data if available (new markets)
+            if (market.locationData != null) {
+              final locationData = market.locationData!;
+              
+              // Direct city match using optimized data (fastest)
+              if (locationData.city != null) {
+                final cityLower = locationData.city!.toLowerCase();
+                if (cityLower == normalizedSearchCity || 
+                    cityLower.contains(normalizedSearchCity) ||
+                    normalizedSearchCity.contains(cityLower)) {
+                  return true;
+                }
+              }
+              
+              // Metro area match using optimized data
+              if (locationData.metroArea != null && 
+                  locationData.metroArea!.toLowerCase().contains(normalizedSearchCity)) {
+                return true;
+              }
+              
+              // Search keywords match (pre-computed for efficiency)
+              if (locationData.searchKeywords.any((keyword) => 
+                  keyword.toLowerCase().contains(normalizedSearchCity) ||
+                  normalizedSearchCity.contains(keyword.toLowerCase()))) {
+                return true;
+              }
+              
+              return false;
+            }
+            
+            // Fallback to legacy search for older markets
+            final marketCity = market.city.toLowerCase().trim();
+            return marketCity == normalizedSearchCity || 
+                   marketCity.contains(normalizedSearchCity) ||
+                   normalizedSearchCity.contains(marketCity);
+          }).toList();
+          
+          debugPrint('MarketService Stream: Optimized search found ${matchingMarkets.length} markets');
+          return matchingMarkets;
+        });
   }
 
   static Stream<List<Market>> getMarketsByIdsStream(List<String> marketIds) {

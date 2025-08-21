@@ -378,7 +378,7 @@ class PremiumAccessControls {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
-                      'PRO',
+                      'Premium',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 10,

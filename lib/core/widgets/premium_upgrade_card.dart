@@ -115,7 +115,7 @@ class PremiumUpgradeCard extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Text(
-                                  'PRO',
+                                  'Premium',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -262,7 +262,7 @@ class PremiumBadge extends StatelessWidget {
           if (showText) ...[
             const SizedBox(width: 4),
             Text(
-              'PRO',
+              'Premium',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: size * 0.6,

@@ -107,7 +107,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
           children: [
             Icon(Icons.diamond, color: HiPopColors.premiumGold),
             SizedBox(width: 8),
-            Text('Vendor Pro Dashboard'),
+            Text('Vendor Premium Dashboard'),
           ],
         ),
         flexibleSpace: Container(
@@ -156,7 +156,7 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
       children: [
         VendorPremiumDashboardComponents.buildPremiumHeader(
           context,
-          title: 'Welcome to Vendor Pro!',
+          title: 'Welcome to Vendor Premium!',
           subtitle: 'Professional tools to grow your vendor business and maximize revenue opportunities.',
         ),
         VendorPremiumDashboardComponents.buildValueProposition(context),

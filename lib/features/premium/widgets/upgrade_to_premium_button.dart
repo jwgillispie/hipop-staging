@@ -183,6 +183,7 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
         userType: widget.userType,
         userId: userId,
         userEmail: userEmail,
+        context: context,
       );
 
       widget.onSuccess?.call();

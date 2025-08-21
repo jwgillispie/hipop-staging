@@ -303,6 +303,9 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   }
 
   Widget _buildProductChipFilter() {
+    // Temporarily hidden - will be improved in future update
+    return const SizedBox.shrink();
+    
     // Only show for vendors filter or all filter
     if (_selectedFilter != FeedFilter.vendors && _selectedFilter != FeedFilter.all) {
       return const SizedBox.shrink();
@@ -381,30 +384,40 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 ),
               )
             else
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _availableProductChips.map((chip) {
-                  final isSelected = _selectedProductChips.contains(chip);
-                  return FilterChip(
-                    label: Text(
-                      chip,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected ? Colors.white : HiPopColors.darkTextSecondary,
+              SizedBox(
+                height: 40, // Fixed height for the horizontal slider
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _availableProductChips.length,
+                  itemBuilder: (context, index) {
+                    final chip = _availableProductChips[index];
+                    final isSelected = _selectedProductChips.contains(chip);
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        left: index == 0 ? 0 : 4,
+                        right: index == _availableProductChips.length - 1 ? 0 : 4,
                       ),
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) => _toggleProductChip(chip),
-                    backgroundColor: HiPopColors.darkSurface,
-                    selectedColor: HiPopColors.successGreen,
-                    checkmarkColor: Colors.white,
-                    side: BorderSide(
-                      color: isSelected ? HiPopColors.successGreen : HiPopColors.darkTextSecondary.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  );
-                }).toList(),
+                      child: FilterChip(
+                        label: Text(
+                          chip,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? Colors.white : HiPopColors.darkTextSecondary,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onSelected: (selected) => _toggleProductChip(chip),
+                        backgroundColor: HiPopColors.darkSurface,
+                        selectedColor: HiPopColors.successGreen,
+                        checkmarkColor: Colors.white,
+                        side: BorderSide(
+                          color: isSelected ? HiPopColors.successGreen : HiPopColors.darkTextSecondary.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             if (_selectedProductChips.isNotEmpty) ...[
               const SizedBox(height: 12),

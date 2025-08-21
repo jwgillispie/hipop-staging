@@ -470,9 +470,9 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
       case SubscriptionTier.shopperPro:
         return 'Shopper Pro';
       case SubscriptionTier.vendorPro:
-        return 'Vendor Pro';
+        return 'Vendor Premium';
       case SubscriptionTier.marketOrganizerPro:
-        return 'Market Organizer Pro';
+        return 'Market Organizer Premium';
       case SubscriptionTier.enterprise:
         return 'Enterprise';
     }
@@ -724,7 +724,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           {
             'icon': Icons.discount,
             'title': '50% off for 6 months',
-            'description': 'Get Vendor Pro for just \$14.50/month for the next 6 months.',
+            'description': 'Get Vendor Premium for just \$14.50/month for the next 6 months.',
           },
           {
             'icon': Icons.help_outline,
@@ -742,7 +742,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           {
             'icon': Icons.discount,
             'title': '40% off for 3 months',
-            'description': 'Get Organizer Pro for just \$41.40/month for the next 3 months.',
+            'description': 'Get Organizer Premium for just \$41.40/month for the next 3 months.',
           },
           {
             'icon': Icons.support_agent,

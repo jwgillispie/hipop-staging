@@ -7,6 +7,8 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/shared/services/user_profile_service.dart';
+import 'package:hipop/features/shared/services/welcome_notification_service.dart';
+import 'package:hipop/features/shared/widgets/welcome_notification_dialog.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/shared/widgets/debug_database_cleaner.dart';
 import 'package:hipop/core/widgets/hipop_app_bar.dart';
@@ -19,6 +21,7 @@ class OrganizerDashboard extends StatefulWidget {
 }
 
 class _OrganizerDashboardState extends State<OrganizerDashboard> {
+  final WelcomeNotificationService _welcomeService = WelcomeNotificationService();
   bool _hasPremiumAccess = false;
   bool _isCheckingPremium = true;
 
@@ -27,6 +30,34 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     super.initState();
     _checkOnboarding();
     _checkPremiumAccess();
+    _checkWelcomeNotification();
+  }
+  
+  Future<void> _checkWelcomeNotification() async {
+    // Delay slightly to let the dashboard render first
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (!mounted) return;
+    
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+    
+    try {
+      final ceoNotes = await _welcomeService.checkAndGetWelcomeNotes(authState.user.uid);
+      
+      if (ceoNotes != null && mounted) {
+        await WelcomeNotificationDialog.show(
+          context: context,
+          ceoNotes: ceoNotes,
+          userType: 'market_organizer',
+          onDismiss: () async {
+            await _welcomeService.markWelcomeNotificationShown(authState.user.uid);
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('Error checking welcome notification: $e');
+    }
   }
 
   Future<void> _checkOnboarding() async {
@@ -103,11 +134,23 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
         return Scaffold(
           appBar: HiPopAppBar(
-            title: 'Market Organizer Dashboard',
-            userRole: 'vendor',
+            title: 'Market Dashboard',
+            userRole: 'organizer',
             centerTitle: true,
             actions: [
-              if (_hasPremiumAccess) ...[ 
+              if (_isCheckingPremium) ...[
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+              ] else if (_hasPremiumAccess) ...[
                 IconButton(
                   icon: const Icon(Icons.diamond),
                   tooltip: 'Premium Dashboard',
@@ -119,192 +162,156 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                   },
                 ),
               ],
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.settings),
-                tooltip: 'Settings',
-                onSelected: (String value) {
-                  switch (value) {
-                    case 'onboarding':
-                      context.pushNamed('organizerOnboarding');
-                      break;
-                    case 'reset-onboarding':
-                      _resetOnboarding();
-                      break;
-                    case 'profile':
-                      context.pushNamed('organizerProfile');
-                      break;
-                    case 'change-password':
-                      context.pushNamed('organizerChangePassword');
-                      break;
-                    case 'logout':
-                      context.read<AuthBloc>().add(LogoutEvent());
-                      break;
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  const PopupMenuItem<String>(
-                    value: 'onboarding',
-                    child: Row(
-                      children: [
-                        Icon(Icons.help_outline, color: Colors.blue),
-                        SizedBox(width: 12),
-                        Text('View Tutorial'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'profile',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_outline, color: Colors.grey),
-                        SizedBox(width: 12),
-                        Text('Profile'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem<String>(
-                    value: 'change-password',
-                    child: Row(
-                      children: [
-                        Icon(Icons.lock_outline, color: Colors.grey),
-                        SizedBox(width: 12),
-                        Text('Change Password'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem<String>(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout, color: Colors.grey),
-                        SizedBox(width: 12),
-                        Text('Sign Out'),
-                      ],
-                    ),
-                  ),
-                ],
+              IconButton(
+                icon: const Icon(Icons.logout),
+                tooltip: 'Sign Out',
+                onPressed: () => context.read<AuthBloc>().add(LogoutEvent()),
               ),
             ],
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Debug Account Switcher
-                const DebugAccountSwitcher(),
-                // Debug Database Cleaner
-                const DebugDatabaseCleaner(),
-                // Debug Market Creator
-
-                // Welcome Card
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              backgroundColor: Colors.green,
-                              child: Icon(Icons.storefront, color: Colors.white),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome back!',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                                Text(
-                                  state.user.displayName ?? state.user.email ?? 'Organizer',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[600],
+          body: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Debug Account Switcher
+                      const DebugAccountSwitcher(),
+                      // Debug Database Cleaner
+                      const DebugDatabaseCleaner(),
+                      
+                      // Welcome Card
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: HiPopColors.organizerAccent,
+                                    child: const Icon(Icons.storefront, color: Colors.white),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back!',
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                      Text(
+                                        state.user.displayName ?? state.user.email ?? 'Organizer',
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Dashboard',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-
-                // Quick Actions
-                Text(
-                  'Quick Actions',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.1,
-                  children: [
-                    _buildActionCard(
-                      'Market Management',
-                      'Create and manage markets',
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Prominent Create Market button
+                    _buildCreateMarketButton(context),
+                    const SizedBox(height: 20),
+                    _buildDashboardOption(
+                      context,
+                      'My Markets',
+                      'View and manage your markets',
                       Icons.storefront,
-                      Colors.teal,
+                      HiPopColors.organizerAccent,
                       () => context.pushNamed('marketManagement'),
                     ),
-                    _buildActionCard(
-                      'Vendor Management',
-                      'Create and manage vendors',
-                      Icons.store_mall_directory,
-                      Colors.indigo,
-                      () => context.pushNamed('vendorManagement'),
-                    ),
-                    _buildActionCard(
-                      'Event Management',
-                      'Create special events',
-                      Icons.event,
-                      Colors.red,
-                      () => context.pushNamed('eventManagement'),
-                    ),
-                    _buildActionCard(
-                      'Vendor Connections',
-                      'Connect with vendors',
-                      Icons.people_alt,
-                      Colors.orange,
-                      () => context.pushNamed('vendorApplications'),
-                    ),
-                    _buildPremiumActionCard(
-                      'Pro Dashboard',
-                      'Premium analytics & insights',
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
+                      'Analytics',
+                      'View performance insights',
                       Icons.analytics,
                       Colors.deepPurple,
                       () => context.pushNamed('organizerPremiumDashboard'),
+                      isPremium: true,
                     ),
-                    _buildActionCard(
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
+                      'Vendor Management',
+                      'Manage vendors and their posts',
+                      Icons.store_mall_directory,
+                      HiPopColors.primaryDeepSage,
+                      () => context.pushNamed('vendorManagement'),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
+                      'Vendor Connections',
+                      'Review and manage vendor connections',
+                      Icons.people_alt,
+                      HiPopColors.accentMauve,
+                      () => context.pushNamed('vendorApplications'),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
+                      'Event Management',
+                      'Create and manage special events',
+                      Icons.event,
+                      HiPopColors.warningAmber,
+                      () => context.pushNamed('eventManagement'),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
                       'Market Calendar',
-                      'View market schedules',
+                      'View market schedules and events',
                       Icons.calendar_today,
-                      Colors.teal,
+                      HiPopColors.infoBlueGray,
                       () => context.pushNamed('organizerCalendar'),
                     ),
-                    // Custom Items feature temporarily disabled
-                    // _buildActionCard(
-                    //   'Custom Items',
-                    //   'Manage custom content',
-                    //   Icons.tune,
-                    //   Colors.purple,
-                    //   () => context.pushNamed('customItems'),
-                    // ),
-                  ],
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
+                      'Settings',
+                      'Manage account and preferences',
+                      Icons.settings,
+                      HiPopColors.accentDustyPlum,
+                      () => _showSettingsMenu(context),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDashboardOption(
+                      context,
+                      'Profile',
+                      'Edit your organizer profile',
+                      Icons.person,
+                      HiPopColors.successGreen,
+                      () => context.pushNamed('organizerProfile'),
+                    ),
+                  ]),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
@@ -324,163 +331,255 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     }
   }
 
-  Widget _buildActionCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPremiumActionCard(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, color: color, size: 28),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber.shade300),
-                    ),
-                    child: Text(
-                      'PRO',
-                      style: TextStyle(
-                        color: Colors.amber.shade700,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showVendorDiscoveryUpgrade() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Row(
-          children: [
-            Icon(Icons.diamond, color: HiPopColors.premiumGold),
-            const SizedBox(width: 8),
-            const Text('Vendor Discovery - Premium Feature',
-              style: TextStyle(color: Colors.white),
-            ),
+  Widget _buildCreateMarketButton(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            HiPopColors.organizerAccent,
+            HiPopColors.primaryDeepSage,
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vendor Discovery helps you find and invite qualified vendors to your markets using intelligent matching algorithms.',
-              style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Premium features include:',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            Text('• Smart vendor matching by categories', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
-            Text('• Vendor ratings and performance metrics', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
-            Text('• Bulk invitation capabilities', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
-            Text('• Response tracking and analytics', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
-            Text('• Advanced filtering and search', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white.withValues(alpha: 0.7),
-            ),
-            child: const Text('Maybe Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final authState = context.read<AuthBloc>().state;
-              if (authState is Authenticated) {
-                context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${authState.user.uid}');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: HiPopColors.premiumGold,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Upgrade to Pro - \$69/month'),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.organizerAccent.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.pushNamed('marketManagement'),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(
+                    Icons.add_business,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Create Market',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Post a new market!',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDashboardOption(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color iconColor,
+    VoidCallback onTap, {
+    bool isPremium = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: HiPopColors.lightBorder,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              children: [
+                // Icon container on the left
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Title and description in the middle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          if (isPremium) ...[
+                            Icon(
+                              Icons.diamond,
+                              size: 16,
+                              color: HiPopColors.premiumGold,
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: HiPopColors.lightTextPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                // Arrow indicator on the right
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSettingsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Settings',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.help_outline, color: Colors.blue),
+              title: const Text('View Tutorial'),
+              onTap: () {
+                Navigator.pop(context);
+                context.pushNamed('organizerOnboarding');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.refresh, color: Colors.orange),
+              title: const Text('Reset Tutorial'),
+              onTap: () {
+                Navigator.pop(context);
+                _resetOnboarding();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock_outline, color: Colors.grey),
+              title: const Text('Change Password'),
+              onTap: () {
+                Navigator.pop(context);
+                context.pushNamed('organizerChangePassword');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Sign Out'),
+              onTap: () {
+                Navigator.pop(context);
+                context.read<AuthBloc>().add(LogoutEvent());
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'organizer/create_event_screen.dart';
 import 'organizer/edit_event_screen.dart';
 import '../../../core/widgets/hipop_app_bar.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class OrganizerEventManagementScreen extends StatefulWidget {
   const OrganizerEventManagementScreen({super.key});
@@ -56,59 +57,81 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
             );
           }
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.event, color: Colors.red, size: 32),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Welcome Header
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
                             children: [
-                              Text(
-                                'Event Management',
-                                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              CircleAvatar(
+                                backgroundColor: HiPopColors.warningAmber,
+                                child: const Icon(Icons.event, color: Colors.white),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Create and manage special events for your markets',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Event Management',
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Create and manage special events',
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: () => _showCreateEventDialog(context),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Create Event'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Create Event Button
+                      _buildCreateEventButton(context),
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Events',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                sliver:
 
-                // Events List
-                Expanded(
-                  child: StreamBuilder<List<Event>>(
-                    stream: _eventsStream,
-                    builder: (context, snapshot) {
+                StreamBuilder<List<Event>>(
+                  stream: _eventsStream,
+                  builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
@@ -164,7 +187,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                                 icon: const Icon(Icons.add),
                                 label: const Text('Create Event'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: HiPopColors.organizerAccent,
                                   foregroundColor: Colors.white,
                                 ),
                               ),
@@ -173,20 +196,104 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                         );
                       }
 
-                      return ListView.builder(
-                        itemCount: events.length,
-                        itemBuilder: (context, index) {
-                          final event = events[index];
-                          return _buildEventCard(event);
-                        },
+                      return SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final event = events[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: _buildEventCard(event),
+                            );
+                          },
+                          childCount: events.length,
+                        ),
                       );
-                    },
+                  },
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCreateEventButton(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            HiPopColors.warningAmber,
+            HiPopColors.warningAmberDark,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.warningAmber.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showCreateEventDialog(context),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  child: const Icon(
+                    Icons.add_circle,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Create New Event',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Start a new special event for your markets',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  size: 20,
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -195,134 +302,187 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
     final dateFormat = DateFormat('MMM d, yyyy');
     final timeFormat = DateFormat('h:mm a');
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          backgroundColor: Colors.red,
-          child: Icon(
-            event.isCurrentlyActive ? Icons.event_available : Icons.event,
-            color: Colors.white,
+    // Determine event status and colors
+    Color statusColor;
+    String statusText;
+    IconData eventIcon;
+    Color iconColor = HiPopColors.warningAmber;
+    
+    if (event.isCurrentlyActive) {
+      statusColor = HiPopColors.successGreen;
+      statusText = 'Active';
+      eventIcon = Icons.event_available;
+      iconColor = HiPopColors.successGreen;
+    } else if (event.isUpcoming) {
+      statusColor = HiPopColors.infoBlueGray;
+      statusText = 'Upcoming';
+      eventIcon = Icons.schedule;
+      iconColor = HiPopColors.infoBlueGray;
+    } else {
+      statusColor = Colors.grey;
+      statusText = 'Ended';
+      eventIcon = Icons.event_busy;
+      iconColor = Colors.grey;
+    }
+
+    String subtitle = '${dateFormat.format(event.startDateTime)} at ${timeFormat.format(event.startDateTime)}';
+    if (event.description.isNotEmpty) {
+      subtitle = '${event.description}\n$subtitle';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: HiPopColors.lightBorder,
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
-        ),
-        title: Text(
-          event.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.description.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                event.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: 8),
-            Row(
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showEventDetails(event),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
               children: [
-                Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(
-                  '${dateFormat.format(event.startDateTime)} at ${timeFormat.format(event.startDateTime)}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    event.address,
-                    style: TextStyle(color: Colors.grey[600]),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
+                // Icon container on the left
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: event.isCurrentlyActive ? Colors.green : 
-                           event.isUpcoming ? Colors.blue : Colors.grey,
+                    color: iconColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    event.isCurrentlyActive ? 'Active' : 
-                    event.isUpcoming ? 'Upcoming' : 'Ended',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Icon(
+                    eventIcon,
+                    color: iconColor,
+                    size: 24,
                   ),
                 ),
-                const Spacer(),
-                if (!event.isActive) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                    ),
-                    child: Text(
-                      'Inactive',
-                      style: TextStyle(
-                        color: Colors.red[700],
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                const SizedBox(width: 16),
+                // Title and description in the middle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              event.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: HiPopColors.lightTextPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: statusColor.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              statusText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: statusColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (!event.isActive) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Inactive',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: HiPopColors.errorPlum,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // Options menu on the right
+                PopupMenuButton<String>(
+                  onSelected: (value) => _handleEventAction(event, value),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: Colors.grey[400],
+                  ),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 18),
+                          SizedBox(width: 12),
+                          Text('Edit Event'),
+                        ],
                       ),
                     ),
-                  ),
-                ],
+                    PopupMenuItem(
+                      value: event.isActive ? 'deactivate' : 'activate',
+                      child: Row(
+                        children: [
+                          Icon(
+                            event.isActive ? Icons.visibility_off : Icons.visibility,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(event.isActive ? 'Deactivate' : 'Activate'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 18, color: HiPopColors.errorPlum),
+                          SizedBox(width: 12),
+                          Text('Delete', style: TextStyle(color: HiPopColors.errorPlum)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) => _handleEventAction(event, value),
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit, size: 20),
-                  SizedBox(width: 12),
-                  Text('Edit'),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: event.isActive ? 'deactivate' : 'activate',
-              child: Row(
-                children: [
-                  Icon(event.isActive ? Icons.visibility_off : Icons.visibility, size: 20),
-                  const SizedBox(width: 12),
-                  Text(event.isActive ? 'Deactivate' : 'Activate'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete, size: 20, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -356,6 +516,217 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
       MaterialPageRoute(
         builder: (context) => EditEventScreen(event: event),
       ),
+    );
+  }
+
+  void _showEventDetails(Event event) {
+    final dateFormat = DateFormat('MMM d, yyyy');
+    final timeFormat = DateFormat('h:mm a');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
+        minChildSize: 0.3,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Event header
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: HiPopColors.warningAmber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      event.isCurrentlyActive ? Icons.event_available :
+                      event.isUpcoming ? Icons.schedule : Icons.event_busy,
+                      color: HiPopColors.warningAmber,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.name,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: event.isCurrentlyActive ? HiPopColors.successGreen :
+                                   event.isUpcoming ? HiPopColors.infoBlueGray : Colors.grey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            event.isCurrentlyActive ? 'Active' :
+                            event.isUpcoming ? 'Upcoming' : 'Ended',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // Event details
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (event.description.isNotEmpty) ...[
+                        Text(
+                          'Description',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          event.description,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                      
+                      Text(
+                        'Event Details',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      _buildDetailRow(
+                        Icons.schedule,
+                        'Date & Time',
+                        '${dateFormat.format(event.startDateTime)} at ${timeFormat.format(event.startDateTime)}',
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      _buildDetailRow(
+                        Icons.location_on,
+                        'Location',
+                        event.address,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      _buildDetailRow(
+                        Icons.visibility,
+                        'Status',
+                        event.isActive ? 'Active' : 'Inactive',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Action buttons
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showEditEventDialog(event);
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _toggleEventStatus(event);
+                      },
+                      icon: Icon(event.isActive ? Icons.visibility_off : Icons.visibility),
+                      label: Text(event.isActive ? 'Deactivate' : 'Activate'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: event.isActive ? Colors.grey : HiPopColors.successGreen,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[600]),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -395,7 +766,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                 Navigator.of(context).pop();
                 _deleteEvent(event);
               },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
               child: const Text('Delete'),
             ),
           ],

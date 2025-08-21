@@ -24,6 +24,7 @@ import '../../features/shopper/screens/market_rating_screen.dart';
 import '../../features/vendor/screens/vendor_dashboard.dart';
 import '../../features/vendor/screens/vendor_my_popups_screen.dart';
 import '../../features/vendor/screens/vendor_profile_screen.dart';
+import '../../features/vendor/screens/vendor_settings_screen.dart';
 import '../../features/vendor/screens/vendor_post_detail_screen.dart';
 import '../../features/vendor/screens/vendor_applications_screen.dart';
 import '../../features/vendor/screens/vendor_management_screen.dart';
@@ -52,7 +53,6 @@ import '../../features/organizer/screens/organizer_vendor_discovery_screen.dart'
 import '../../features/organizer/screens/organizer_bulk_messaging_screen.dart';
 import '../../features/organizer/screens/create_vendor_recruitment_post_screen.dart';
 import '../../features/organizer/screens/organizer_vendor_posts_screen.dart';
-import '../../features/organizer/screens/create_vendor_post_screen.dart';
 import '../../features/organizer/screens/vendor_post_responses_screen.dart';
 // Shared screens
 import '../../features/shared/screens/create_popup_screen.dart';
@@ -328,6 +328,11 @@ class AppRouter {
               name: 'selectMarket',
               builder: (context, state) => const SelectMarketScreen(),
             ),
+            GoRoute(
+              path: 'settings',
+              name: 'vendorSettings',
+              builder: (context, state) => const VendorSettingsScreen(),
+            ),
           ],
         ),
         GoRoute(
@@ -414,17 +419,12 @@ class AppRouter {
               builder: (context, state) => const OrganizerVendorPostsScreen(),
               routes: [
                 GoRoute(
-                  path: 'create',
-                  name: 'createOrganizerVendorPost',
-                  builder: (context, state) => const CreateVendorPostScreen(),
-                ),
-                GoRoute(
                   path: ':postId/edit',
                   name: 'editOrganizerVendorPost',
                   builder: (context, state) {
                     final postId = state.pathParameters['postId']!;
-                    // TODO: Update CreateVendorPostScreen to support editing
-                    return const CreateVendorPostScreen();
+                    // Redirect to vendor recruitment create with edit mode
+                    return const CreateVendorRecruitmentPostScreen();
                   },
                 ),
                 GoRoute(

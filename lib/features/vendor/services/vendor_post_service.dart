@@ -5,7 +5,11 @@ import '../models/vendor_post.dart';
 import '../models/post_type.dart';
 import '../../organizer/models/approval_request.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../../shared/services/location_data_service.dart';
 import '../../market/models/market.dart';
+import '../models/managed_vendor.dart';
+import '../services/managed_vendor_service.dart';
+import '../../market/services/market_service.dart';
 import 'vendor_monthly_tracking_service.dart';
 
 /// Service for creating and managing vendor posts with unified post-approval workflow
@@ -46,6 +50,15 @@ class VendorPostService {
     final tracking = await VendorMonthlyTrackingService.getOrCreateMonthlyTracking(vendorId);
     final monthlyPostNumber = tracking.totalPosts + 1;
     
+    // 4.1. Create optimized location data for new posts
+    final locationData = LocationDataService.createLocationData(
+      locationString: postData.location,
+      latitude: postData.latitude,
+      longitude: postData.longitude,
+      placeId: postData.placeId,
+      locationName: postData.locationName,
+    );
+    
     final post = VendorPost(
       id: postId,
       vendorId: vendorId,
@@ -78,6 +91,7 @@ class VendorPostService {
       monthlyPostNumber: monthlyPostNumber,
       countsTowardLimit: true,
       version: 2,
+      locationData: locationData,
     );
     
     // 5. Execute in transaction
@@ -115,13 +129,187 @@ class VendorPostService {
   }
 
   /// Automatically add vendor to market's vendor list when they create a market post
+  /// This bridges VendorPost and ManagedVendor systems
   static Future<void> _addVendorToMarketAutomatically(
     String vendorId, 
     String marketId, 
     dynamic vendorProfile,
   ) async {
     try {
-      // Check if vendor is already in the market's vendor list
+      debugPrint('🔄 Starting auto-add vendor $vendorId to market $marketId');
+      
+      // Check if a ManagedVendor already exists for this vendor/market combination
+      final existingVendors = await ManagedVendorService.getVendorsForMarketAsync(marketId);
+      final existingVendor = existingVendors.where((v) => v.userProfileId == vendorId).firstOrNull;
+      
+      if (existingVendor != null) {
+        debugPrint('✅ ManagedVendor already exists for vendor $vendorId in market $marketId');
+        await _ensureVendorInMarketAssociatedIds(marketId, vendorId);
+        return;
+      }
+      
+      // Get market information for organizer context
+      final market = await MarketService.getMarket(marketId);
+      if (market == null) {
+        debugPrint('❌ Market $marketId not found, cannot create ManagedVendor');
+        return;
+      }
+      
+      // Create a new ManagedVendor record
+      final now = DateTime.now();
+      final managedVendor = ManagedVendor(
+        id: '', // Will be set by Firestore
+        marketId: marketId,
+        organizerId: 'system_auto_creation', // Mark as system-created
+        userProfileId: vendorId, // Link to the vendor's UserProfile
+        businessName: vendorProfile.businessName ?? vendorProfile.displayName ?? 'Vendor',
+        vendorName: vendorProfile.displayName,
+        contactName: vendorProfile.displayName ?? 'Vendor',
+        description: vendorProfile.bio ?? 'Auto-created from vendor post',
+        categories: _mapCategoriesToVendorCategories(vendorProfile.categories),
+        email: vendorProfile.email,
+        phoneNumber: vendorProfile.phoneNumber,
+        website: vendorProfile.website,
+        instagramHandle: vendorProfile.instagramHandle,
+        products: vendorProfile.categories, // Use categories as initial products
+        specificProducts: vendorProfile.specificProducts,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+        metadata: {
+          'autoCreated': true,
+          'createdVia': 'vendor_post',
+          'sourcePostType': 'market',
+          'linkedUserProfileId': vendorId,
+        },
+      );
+      
+      // Create the ManagedVendor record
+      final managedVendorId = await ManagedVendorService.createVendor(managedVendor);
+      debugPrint('✅ Created ManagedVendor $managedVendorId for vendor $vendorId in market $marketId');
+      
+      // Update market's associatedVendorIds array
+      await _ensureVendorInMarketAssociatedIds(marketId, vendorId);
+      
+      // Also create the legacy vendor-market relationship for backward compatibility
+      await _createLegacyVendorMarketRelationship(vendorId, marketId, vendorProfile);
+      
+      debugPrint('✅ Successfully bridged VendorPost to ManagedVendor for vendor $vendorId in market $marketId');
+    } catch (e) {
+      debugPrint('❌ Error auto-adding vendor to market: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
+      // Don't rethrow - this shouldn't block post creation
+    }
+  }
+  
+  /// Map string categories to VendorCategory enum values
+  static List<VendorCategory> _mapCategoriesToVendorCategories(List<String> stringCategories) {
+    return stringCategories.map((categoryString) {
+      final normalizedCategory = categoryString.toLowerCase().trim();
+      
+      // Map common category strings to VendorCategory enum values
+      switch (normalizedCategory) {
+        case 'produce':
+        case 'fruits':
+        case 'vegetables':
+        case 'fresh produce':
+          return VendorCategory.produce;
+        case 'dairy':
+        case 'milk':
+        case 'cheese':
+          return VendorCategory.dairy;
+        case 'meat':
+        case 'poultry':
+        case 'beef':
+        case 'chicken':
+          return VendorCategory.meat;
+        case 'bakery':
+        case 'bread':
+        case 'baked goods':
+          return VendorCategory.bakery;
+        case 'prepared foods':
+        case 'ready to eat':
+        case 'hot food':
+          return VendorCategory.prepared_foods;
+        case 'beverages':
+        case 'drinks':
+        case 'coffee':
+        case 'tea':
+          return VendorCategory.beverages;
+        case 'flowers':
+        case 'plants':
+        case 'garden':
+          return VendorCategory.flowers;
+        case 'crafts':
+        case 'handmade':
+        case 'artisan':
+          return VendorCategory.crafts;
+        case 'skincare':
+        case 'beauty':
+        case 'cosmetics':
+          return VendorCategory.skincare;
+        case 'clothing':
+        case 'apparel':
+        case 'fashion':
+          return VendorCategory.clothing;
+        case 'jewelry':
+        case 'accessories':
+          return VendorCategory.jewelry;
+        case 'art':
+        case 'artwork':
+        case 'paintings':
+          return VendorCategory.art;
+        case 'honey':
+        case 'beekeeping':
+          return VendorCategory.honey;
+        case 'preserves':
+        case 'jams':
+        case 'jellies':
+          return VendorCategory.preserves;
+        case 'spices':
+        case 'seasonings':
+        case 'herbs':
+          return VendorCategory.spices;
+        default:
+          return VendorCategory.other;
+      }
+    }).toList();
+  }
+  
+  /// Ensure vendor is in market's associatedVendorIds array
+  static Future<void> _ensureVendorInMarketAssociatedIds(String marketId, String vendorId) async {
+    try {
+      final marketDoc = await _firestore.collection('markets').doc(marketId).get();
+      if (!marketDoc.exists) {
+        debugPrint('❌ Market $marketId not found when updating associatedVendorIds');
+        return;
+      }
+      
+      final marketData = marketDoc.data() as Map<String, dynamic>;
+      final currentVendorIds = List<String>.from(marketData['associatedVendorIds'] ?? []);
+      
+      if (!currentVendorIds.contains(vendorId)) {
+        currentVendorIds.add(vendorId);
+        await _firestore.collection('markets').doc(marketId).update({
+          'associatedVendorIds': currentVendorIds,
+        });
+        debugPrint('✅ Added vendor $vendorId to market $marketId associatedVendorIds');
+      } else {
+        debugPrint('✅ Vendor $vendorId already in market $marketId associatedVendorIds');
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating market associatedVendorIds: $e');
+    }
+  }
+  
+  /// Create legacy vendor-market relationship for backward compatibility
+  static Future<void> _createLegacyVendorMarketRelationship(
+    String vendorId, 
+    String marketId, 
+    dynamic vendorProfile,
+  ) async {
+    try {
+      // Check if relationship already exists
       final vendorListQuery = await _firestore
           .collection('vendor_market_relationships')
           .where('vendorId', isEqualTo: vendorId)
@@ -130,11 +318,11 @@ class VendorPostService {
           .get();
       
       if (vendorListQuery.docs.isNotEmpty) {
-        debugPrint('Vendor $vendorId already in market $marketId vendor list');
+        debugPrint('✅ Legacy vendor-market relationship already exists');
         return;
       }
       
-      // Create vendor-market relationship for management purposes
+      // Create vendor-market relationship for backward compatibility
       await _firestore.collection('vendor_market_relationships').add({
         'vendorId': vendorId,
         'marketId': marketId,
@@ -147,13 +335,12 @@ class VendorPostService {
         'approvedBy': 'system_auto_approval',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        'notes': 'Automatically added when vendor created market post',
+        'notes': 'Legacy relationship - auto-created when vendor created market post',
       });
       
-      debugPrint('✅ Automatically added vendor $vendorId to market $marketId');
+      debugPrint('✅ Created legacy vendor-market relationship for backward compatibility');
     } catch (e) {
-      debugPrint('❌ Error auto-adding vendor to market: $e');
-      // Don't rethrow - this shouldn't block post creation
+      debugPrint('❌ Error creating legacy vendor-market relationship: $e');
     }
   }
   

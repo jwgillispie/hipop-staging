@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../services/subscription_success_service.dart';
 import '../models/user_subscription.dart';
 import '../../shared/services/user_profile_service.dart';
+import '../services/payment_state_storage_service.dart';
 import '../../../core/theme/hipop_colors.dart';
 
 class SubscriptionSuccessScreen extends StatefulWidget {
@@ -23,26 +26,73 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
   bool _isProcessing = true;
   String? _errorMessage;
   UserSubscription? _subscription;
+  Timer? _timeoutTimer;
+  bool _isTimeout = false;
+  
+  static const int _processingTimeoutSeconds = 30;
 
   @override
   void initState() {
     super.initState();
-    _processSuccessfulSubscription();
+    _handleInitialState();
+    _startTimeoutTimer();
+  }
+  
+  @override
+  void dispose() {
+    _timeoutTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimeoutTimer() {
+    _timeoutTimer = Timer(Duration(seconds: _processingTimeoutSeconds), () {
+      if (mounted && _isProcessing) {
+        setState(() {
+          _isTimeout = true;
+          _errorMessage = 'Processing is taking longer than expected. Your payment was successful, but we\'re still setting up your account.';
+          _isProcessing = false;
+        });
+        debugPrint('⏰ Subscription processing timed out after $_processingTimeoutSeconds seconds');
+      }
+    });
+  }
+
+  Future<void> _handleInitialState() async {
+    // Clear any stored payment state since we're now in success screen
+    if (kIsWeb) {
+      await PaymentStateStorageService.clearStoredPaymentState();
+    }
+    
+    // Process the successful subscription
+    await _processSuccessfulSubscription();
   }
 
   Future<void> _processSuccessfulSubscription() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isProcessing = true;
+      _errorMessage = null;
+      _isTimeout = false;
+    });
+    
     try {
       debugPrint('🎉 Processing successful subscription...');
       debugPrint('Session ID: ${widget.sessionId}');
       debugPrint('User ID: ${widget.userId}');
 
-      // Process the successful subscription
+      // Process the successful subscription with timeout
       final result = await SubscriptionSuccessService.processSuccessfulSubscription(
         sessionId: widget.sessionId,
         userId: widget.userId,
-      );
+      ).timeout(Duration(seconds: _processingTimeoutSeconds), onTimeout: () {
+        return {'success': false, 'error': 'Processing timeout'};
+      });
+
+      if (!mounted) return;
 
       if (result['success'] == true) {
+        _timeoutTimer?.cancel(); // Cancel timeout since we succeeded
         setState(() {
           _subscription = result['subscription'] as UserSubscription?;
           _isProcessing = false;
@@ -55,9 +105,10 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           _errorMessage = result['error'] ?? 'Unknown error occurred';
           _isProcessing = false;
         });
-        debugPrint('❌ Subscription processing failed: ${_errorMessage}');
+        debugPrint('❌ Subscription processing failed: $_errorMessage');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Failed to process subscription: $e';
         _isProcessing = false;
@@ -127,6 +178,26 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
               fontSize: 14,
             ),
           ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => context.go('/'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Continue to App',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -169,6 +240,40 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
             ),
             textAlign: TextAlign.center,
           ),
+          if (_isTimeout) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: HiPopColors.warningAmber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: HiPopColors.warningAmber.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: HiPopColors.warningAmber,
+                    size: 20,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your payment was processed successfully. The premium features will be available shortly.',
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? HiPopColors.darkTextPrimary 
+                          : HiPopColors.lightTextPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 48),
           SizedBox(
             width: double.infinity,
@@ -182,9 +287,9 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                'Try Again',
-                style: TextStyle(
+              child: Text(
+                _isTimeout ? 'Check Again' : 'Try Again',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -442,10 +547,11 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
       final userProfile = await userProfileService.getUserProfile(widget.userId);
       
       if (!mounted) return;
+      final localContext = this.context;
       
       if (userProfile == null) {
         // Fallback to shopper dashboard (most common case)
-        context.go('/shopper');
+        localContext.go('/shopper');
         return;
       }
       
@@ -454,26 +560,26 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
       if (_subscription != null && _subscription!.isPremium) {
         switch (userType) {
           case 'vendor':
-            context.go('/vendor'); // Vendor dashboard shows premium features when user has subscription
+            localContext.go('/vendor'); // Vendor dashboard shows premium features when user has subscription
             break;
           case 'market_organizer':
           case 'organizer':
-            context.go('/organizer'); // Organizer dashboard shows premium features when user has subscription
+            localContext.go('/organizer'); // Organizer dashboard shows premium features when user has subscription
             break;
           case 'shopper':
           default:
-            context.go('/shopper'); // Shopper dashboard shows premium features when user has subscription
+            localContext.go('/shopper'); // Shopper dashboard shows premium features when user has subscription
             break;
         }
       } else {
         // If no premium subscription, redirect to appropriate dashboard
-        _navigateToUserDashboard(context, userType: userType);
+        await _navigateToUserDashboard(localContext, userType: userType);
       }
     } catch (e) {
       debugPrint('Error navigating to premium features: $e');
       if (!mounted) return;
       // Fallback navigation to shopper dashboard (safest default)
-      context.go('/shopper');
+      this.context.go('/shopper');
     }
   }
   
@@ -488,25 +594,26 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
       }
       
       if (!mounted) return;
+      final localContext = this.context;
       
       // Navigate to appropriate user dashboard
       switch (userType) {
         case 'vendor':
-          context.go('/vendor');
+          localContext.go('/vendor');
           break;
         case 'market_organizer':
-          context.go('/organizer');
+          localContext.go('/organizer');
           break;
         case 'shopper':
         default:
-          context.go('/shopper');
+          localContext.go('/shopper');
           break;
       }
     } catch (e) {
       debugPrint('Error navigating to user dashboard: $e');
       if (!mounted) return;
       // Fallback to shopper dashboard
-      context.go('/shopper');
+      this.context.go('/shopper');
     }
   }
 
@@ -515,9 +622,9 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
       case SubscriptionTier.shopperPro:
         return 'Shopper Pro';
       case SubscriptionTier.vendorPro:
-        return 'Vendor Pro';
+        return 'Vendor Premium';
       case SubscriptionTier.marketOrganizerPro:
-        return 'Market Organizer Pro';
+        return 'Market Organizer Premium';
       case SubscriptionTier.enterprise:
         return 'Enterprise';
       case SubscriptionTier.free:

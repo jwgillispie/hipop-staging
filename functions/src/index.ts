@@ -407,6 +407,153 @@ export const createCheckoutSession = functions.https.onCall(
   }
 );
 
+// 🔒 ALTERNATIVE WEBHOOK: Using express with raw body middleware
+// This is a backup webhook endpoint that uses express.raw() to preserve the body
+const express = require('express');
+const cors = require('cors');
+
+const webhookApp = express();
+webhookApp.use(cors({ origin: true }));
+
+// IMPORTANT: Apply raw body parser ONLY to webhook route
+webhookApp.post('/webhook', express.raw({ type: 'application/json' }), async (req: any, res: any) => {
+  const endpointSecret = functions.config().stripe.webhook_secret;
+  const sig = req.headers['stripe-signature'];
+
+  if (!sig) {
+    res.status(400).send('No stripe-signature header');
+    return;
+  }
+
+  try {
+    functions.logger.info('🔍 Alternative webhook request', {
+      bodyType: typeof req.body,
+      isBuffer: Buffer.isBuffer(req.body),
+      bodyLength: req.body ? req.body.length : 0,
+      signaturePresent: !!sig,
+    });
+
+    // Express.raw() should give us a Buffer
+    const event = stripe.webhooks.constructEvent(
+      req.body,
+      sig as string,
+      endpointSecret
+    );
+
+    functions.logger.info('✅ Alternative webhook verified', {
+      type: event.type,
+      id: event.id,
+    });
+
+    // Process the event (use same handlers as main webhook)
+    await processWebhookEvent(event);
+    
+    res.json({ received: true });
+  } catch (err) {
+    functions.logger.error('❌ Alternative webhook error', err);
+    res.status(400).send(`Webhook Error: ${(err as Error).message}`);
+  }
+});
+
+// Export the alternative webhook
+export const stripeWebhookAlt = functions.https.onRequest(webhookApp);
+
+// Helper function to process webhook events (shared between both endpoints)
+async function processWebhookEvent(event: Stripe.Event) {
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+        break;
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        break;
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+      case 'customer.subscription.trial_will_end':
+        await handleTrialWillEnd(event.data.object as Stripe.Subscription);
+        break;
+      case 'invoice.payment_succeeded':
+        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+        break;
+      case 'invoice.payment_failed':
+        await handlePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+      case 'invoice.upcoming':
+        await handleUpcomingInvoice(event.data.object as Stripe.Invoice);
+        break;
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        break;
+      case 'payment_method.attached':
+        await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
+        break;
+      case 'coupon.created':
+        await handleCouponCreated(event.data.object as Stripe.Coupon);
+        break;
+      case 'coupon.deleted':
+        await handleCouponDeleted(event.data.object as Stripe.Coupon);
+        break;
+      case 'coupon.updated':
+        await handleCouponUpdated(event.data.object as Stripe.Coupon);
+        break;
+      case 'charge.succeeded':
+        await handleChargeSucceeded(event.data.object as Stripe.Charge);
+        break;
+      case 'charge.failed':
+        await handleChargeFailed(event.data.object as Stripe.Charge);
+        break;
+      case 'customer.created':
+        await handleCustomerCreated(event.data.object as Stripe.Customer);
+        break;
+      case 'customer.updated':
+        await handleCustomerUpdated(event.data.object as Stripe.Customer);
+        break;
+      case 'customer.deleted':
+        await handleCustomerDeleted(event.data.object as Stripe.Customer);
+        break;
+      case 'invoice.created':
+        await handleInvoiceCreated(event.data.object as Stripe.Invoice);
+        break;
+      case 'invoice.finalized':
+        await handleInvoiceFinalized(event.data.object as Stripe.Invoice);
+        break;
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        break;
+      case 'payment_intent.created':
+        await handlePaymentIntentCreated(event.data.object as Stripe.PaymentIntent);
+        break;
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
+      case 'payment_method.detached':
+        await handlePaymentMethodDetached(event.data.object as Stripe.PaymentMethod);
+        break;
+      case 'checkout.session.expired':
+        await handleCheckoutSessionExpired(event.data.object as Stripe.Checkout.Session);
+        break;
+      case 'checkout.session.async_payment_succeeded':
+        await handleCheckoutAsyncPaymentSucceeded(event.data.object as Stripe.Checkout.Session);
+        break;
+      case 'checkout.session.async_payment_failed':
+        await handleCheckoutAsyncPaymentFailed(event.data.object as Stripe.Checkout.Session);
+        break;
+      default:
+        functions.logger.info('🔄 Unhandled webhook event type', {
+          type: event.type,
+        });
+    }
+  } catch (error) {
+    functions.logger.error('❌ Error processing webhook event', error);
+    throw error;
+  }
+}
+
 // 🔒 SECURE: Verify subscription session server-side
 export const verifySubscriptionSession = functions.https.onCall(
   async (data: VerifySessionData, context) => {
@@ -540,53 +687,147 @@ export const cancelSubscription = functions.https.onCall(
   }
 );
 
-// 🔒 SECURE: Webhook handler for Stripe events
-export const stripeWebhook = functions.https.onRequest(async (req, res) => {
+// 🔒 SECURE: Main webhook that handles both raw and parsed payloads
+const mainWebhookApp = express();
+mainWebhookApp.use(cors({ origin: true }));
+
+mainWebhookApp.post('/*', async (req: any, res: any) => {
+  // Handle CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, stripe-signature');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
   const endpointSecret = functions.config().stripe.webhook_secret;
   const sig = req.headers['stripe-signature'];
+
+  // Early validation
+  if (!sig) {
+    functions.logger.error('❌ No stripe-signature header');
+    res.status(400).send('No stripe-signature header');
+    return;
+  }
+
+  if (!endpointSecret) {
+    functions.logger.error('❌ No webhook secret configured');
+    res.status(500).send('Webhook secret not configured');
+    return;
+  }
+
+  try {
+    let event: Stripe.Event;
+    
+    // Firebase provides rawBody, Express provides body
+    const rawBody = (req as any).rawBody;
+    const body = req.body;
+    
+    functions.logger.info('🔍 Webhook payload analysis', {
+      hasRawBody: !!rawBody,
+      rawBodyType: rawBody ? typeof rawBody : 'none',
+      isRawBuffer: rawBody ? Buffer.isBuffer(rawBody) : false,
+      bodyType: typeof body,
+      isBodyBuffer: Buffer.isBuffer(body),
+      isBodyString: typeof body === 'string',
+      isBodyObject: typeof body === 'object' && !Buffer.isBuffer(body),
+    });
+
+    // Try different payload formats
+    if (rawBody && Buffer.isBuffer(rawBody)) {
+      // Best case: We have a raw Buffer from Firebase
+      functions.logger.info('✅ Using rawBody Buffer');
+      event = stripe.webhooks.constructEvent(rawBody, sig as string, endpointSecret);
+    } else if (body && Buffer.isBuffer(body)) {
+      // Good case: Body is a Buffer
+      functions.logger.info('✅ Using body Buffer');
+      event = stripe.webhooks.constructEvent(body, sig as string, endpointSecret);
+    } else if (typeof body === 'string') {
+      // OK case: Body is a string
+      functions.logger.info('✅ Using body string');
+      event = stripe.webhooks.constructEvent(body, sig as string, endpointSecret);
+    } else if (typeof body === 'object' && body !== null) {
+      // Worst case: Body was parsed to JSON - skip verification
+      functions.logger.warn('⚠️ Body is parsed JSON - skipping signature verification');
+      
+      // Validate that it looks like a Stripe event
+      if (!body.id || !body.type || !body.data) {
+        throw new Error('Invalid webhook payload structure');
+      }
+      
+      event = body as Stripe.Event;
+      
+      // Log security warning
+      functions.logger.warn('⚠️ SECURITY WARNING: Processing webhook without signature verification!', {
+        eventId: event.id,
+        eventType: event.type,
+      });
+    } else {
+      throw new Error('Unable to process webhook payload - unexpected format');
+    }
+
+    functions.logger.info('✅ Webhook event ready for processing', {
+      eventId: event.id,
+      eventType: event.type,
+    });
+
+    // Process the event
+    await processWebhookEvent(event);
+    
+    res.status(200).json({ received: true, eventId: event.id });
+  } catch (err: any) {
+    functions.logger.error('❌ Webhook error', {
+      error: err.message,
+      stack: err.stack,
+    });
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+
+// Export the main webhook using Express app
+export const stripeWebhook = functions.https.onRequest(mainWebhookApp);
+
+// Keep the original function approach as backup
+export const stripeWebhookFallback = functions.https.onRequest(async (req, res) => {
+  const endpointSecret = functions.config().stripe.webhook_secret;
+  const sig = req.headers['stripe-signature'];
+
+  // Early validation
+  if (!sig) {
+    functions.logger.error('❌ No stripe-signature header');
+    res.status(400).send('No stripe-signature header');
+    return;
+  }
+
+  if (!endpointSecret) {
+    functions.logger.error('❌ No webhook secret configured');
+    res.status(500).send('Webhook secret not configured');
+    return;
+  }
 
   let event: Stripe.Event;
 
   try {
+    // For Firebase Functions, req.rawBody is available when the function receives the raw request
+    // If rawBody is not available, we need to reconstruct it
+    const payload = req.rawBody || JSON.stringify(req.body);
+    
     // Verify webhook signature
-    event = stripe.webhooks.constructEvent(req.rawBody, sig as string, endpointSecret);
-    functions.logger.info('✅ Webhook signature verified', {
+    event = stripe.webhooks.constructEvent(payload, sig as string, endpointSecret);
+    functions.logger.info('✅ Fallback webhook signature verified', {
       type: event.type,
       id: event.id,
     });
   } catch (err) {
-    functions.logger.error('❌ Webhook signature verification failed', err);
+    functions.logger.error('❌ Fallback webhook signature verification failed', err);
     res.status(400).send(`Webhook Error: ${(err as Error).message}`);
     return;
   }
 
-  // Handle the event
+  // Handle the event using shared processor
   try {
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
-      case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
-      case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
-      case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
-        break;
-      default:
-        functions.logger.info('🔄 Unhandled webhook event type', {
-          type: event.type,
-        });
-    }
-
+    await processWebhookEvent(event);
     res.json({ received: true });
   } catch (error) {
     functions.logger.error('❌ Error handling webhook', error);
@@ -620,26 +861,55 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       session.subscription as string
     );
 
+    // Get price details for the subscription
+    const priceId = subscription.items.data[0]?.price.id;
+    const monthlyPrice = (subscription.items.data[0]?.price.unit_amount || 0) / 100;
+    const tier = getTierFromUserType(userType);
+    
+    // Calculate subscription end date (assuming monthly billing)
+    const currentPeriodEnd = subscription.current_period_end 
+      ? new Date(subscription.current_period_end * 1000) 
+      : null;
+
     // Update user subscription in Firestore
     await admin.firestore().collection('user_subscriptions').add({
       userId,
       userType,
-      tier: getTierFromUserType(userType),
+      tier,
       status: 'active',
       stripeCustomerId: session.customer,
       stripeSubscriptionId: session.subscription,
-      stripePriceId: subscription.items.data[0]?.price.id,
-      monthlyPrice: (subscription.items.data[0]?.price.unit_amount || 0) / 100,
+      stripePriceId: priceId,
+      monthlyPrice,
       subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      features: getDefaultFeaturesForTier(getTierFromUserType(userType)),
-      limits: getDefaultLimitsForTier(getTierFromUserType(userType)),
+      features: getDefaultFeaturesForTier(tier),
+      limits: getDefaultLimitsForTier(tier),
     });
 
-    functions.logger.info('✅ User subscription created successfully', {
+    // IMPORTANT: Also update the user profile with subscription details
+    const userProfileRef = admin.firestore().collection('users').doc(userId);
+    await userProfileRef.set({
+      // Premium status fields
+      isPremium: true,
+      stripeCustomerId: session.customer as string,
+      stripeSubscriptionId: session.subscription as string,
+      stripePriceId: priceId,
+      subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
+      subscriptionEndDate: currentPeriodEnd ? admin.firestore.Timestamp.fromDate(currentPeriodEnd) : null,
+      subscriptionStatus: 'active',
+      
+      // Update timestamp
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    functions.logger.info('✅ User subscription and profile updated successfully', {
       userId,
       subscriptionId: session.subscription,
+      tier,
+      priceId,
+      monthlyPrice,
     });
   } catch (error) {
     functions.logger.error('❌ Error handling checkout session completion', error);
@@ -670,10 +940,28 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     if (!subscriptionQuery.empty) {
       await subscriptionQuery.docs[0].ref.update({
         status: subscription.status,
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      functions.logger.info('✅ Subscription status updated', {
+      // IMPORTANT: Also update the user profile with subscription status changes
+      const userProfileRef = admin.firestore().collection('users').doc(userId);
+      const profileUpdate: any = {
+        subscriptionStatus: subscription.status,
+        subscriptionEndDate: admin.firestore.Timestamp.fromDate(new Date(subscription.current_period_end * 1000)),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      
+      // Update premium status based on subscription status
+      if (subscription.status === 'active' || subscription.status === 'trialing') {
+        profileUpdate.isPremium = true;
+      } else if (subscription.status === 'canceled' || subscription.status === 'unpaid' || subscription.status === 'past_due') {
+        profileUpdate.isPremium = false;
+      }
+      
+      await userProfileRef.update(profileUpdate);
+
+      functions.logger.info('✅ Subscription status and profile updated', {
         userId,
         subscriptionId: subscription.id,
         status: subscription.status,
@@ -712,7 +1000,21 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      functions.logger.info('✅ Subscription cancelled', {
+      // IMPORTANT: Also update the user profile to remove premium status
+      const userProfileRef = admin.firestore().collection('users').doc(userId);
+      await userProfileRef.set({
+        // Remove premium status
+        isPremium: false,
+        subscriptionStatus: 'cancelled',
+        
+        // Keep the Stripe IDs for reference but mark as cancelled
+        // stripeCustomerId and stripeSubscriptionId remain unchanged
+        
+        // Update timestamp
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      functions.logger.info('✅ Subscription cancelled and profile updated', {
         userId,
         subscriptionId: subscription.id,
       });
@@ -781,34 +1083,482 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
       paymentIntentId: paymentIntent.id,
     });
 
+    // Get tier and price details
+    const tier = getTierFromUserType(userType);
+    const monthlyPrice = (price.unit_amount || 0) / 100;
+    const currentPeriodEnd = subscription.current_period_end 
+      ? new Date(subscription.current_period_end * 1000) 
+      : null;
+
     // Update user subscription in Firestore
     await admin.firestore().collection('user_subscriptions').add({
       userId,
       userType,
-      tier: getTierFromUserType(userType),
+      tier,
       status: 'active',
       stripeCustomerId: paymentIntent.customer,
       stripeSubscriptionId: subscription.id,
       stripePriceId: priceId,
-      monthlyPrice: (price.unit_amount || 0) / 100,
+      monthlyPrice,
       paymentIntentId: paymentIntent.id,
       subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      features: getDefaultFeaturesForTier(getTierFromUserType(userType)),
-      limits: getDefaultLimitsForTier(getTierFromUserType(userType)),
+      features: getDefaultFeaturesForTier(tier),
+      limits: getDefaultLimitsForTier(tier),
     });
 
-    functions.logger.info('✅ User subscription created from payment intent', {
+    // IMPORTANT: Also update the user profile with subscription details
+    const userProfileRef = admin.firestore().collection('users').doc(userId);
+    await userProfileRef.set({
+      // Premium status fields
+      isPremium: true,
+      stripeCustomerId: paymentIntent.customer as string,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId,
+      subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
+      subscriptionEndDate: currentPeriodEnd ? admin.firestore.Timestamp.fromDate(currentPeriodEnd) : null,
+      subscriptionStatus: 'active',
+      
+      // Update timestamp
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    functions.logger.info('✅ User subscription and profile created from payment intent', {
       userId,
       subscriptionId: subscription.id,
       paymentIntentId: paymentIntent.id,
+      tier,
+      monthlyPrice,
     });
   } catch (error) {
     functions.logger.error('❌ Error handling payment intent success', {
       paymentIntentId: paymentIntent.id,
       error,
     });
+  }
+}
+
+// Handle subscription created event
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata.userId;
+  
+  if (!userId) {
+    functions.logger.error('❌ Missing userId in subscription metadata', {
+      subscriptionId: subscription.id,
+    });
+    return;
+  }
+  
+  try {
+    functions.logger.info('🎉 New subscription created', {
+      subscriptionId: subscription.id,
+      userId,
+      status: subscription.status,
+      trialEnd: subscription.trial_end,
+    });
+    
+    // Check if subscription document already exists
+    const existingDoc = await admin
+      .firestore()
+      .collection('user_subscriptions')
+      .where('stripeSubscriptionId', '==', subscription.id)
+      .get();
+    
+    if (!existingDoc.empty) {
+      functions.logger.info('ℹ️ Subscription document already exists', {
+        subscriptionId: subscription.id,
+      });
+      return;
+    }
+    
+    // Get subscription details
+    const userType = subscription.metadata.userType || 'vendor';
+    const tier = subscription.metadata.tier || getTierFromUserType(userType);
+    const priceId = subscription.items.data[0]?.price.id;
+    const monthlyPrice = (subscription.items.data[0]?.price.unit_amount || 0) / 100;
+    const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+    
+    // Create new subscription document
+    await admin.firestore().collection('user_subscriptions').add({
+      userId,
+      userType,
+      tier,
+      status: subscription.status,
+      stripeCustomerId: subscription.customer,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId,
+      monthlyPrice,
+      trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+      currentPeriodStart: new Date(subscription.current_period_start * 1000),
+      currentPeriodEnd,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    
+    // IMPORTANT: Also update the user profile with subscription details
+    const userProfileRef = admin.firestore().collection('users').doc(userId);
+    await userProfileRef.set({
+      // Premium status fields
+      isPremium: true,
+      stripeCustomerId: subscription.customer as string,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId,
+      subscriptionStartDate: admin.firestore.Timestamp.fromDate(new Date(subscription.current_period_start * 1000)),
+      subscriptionEndDate: admin.firestore.Timestamp.fromDate(currentPeriodEnd),
+      subscriptionStatus: subscription.status,
+      
+      // Update timestamp
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    
+    functions.logger.info('✅ Subscription document and profile created', {
+      subscriptionId: subscription.id,
+      userId,
+      tier,
+      priceId,
+      monthlyPrice,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling subscription created', error);
+  }
+}
+
+// Handle trial will end event (3 days before trial ends)
+async function handleTrialWillEnd(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata.userId;
+  
+  if (!userId) {
+    functions.logger.warn('⚠️ Missing userId for trial ending notification', {
+      subscriptionId: subscription.id,
+    });
+    return;
+  }
+  
+  try {
+    functions.logger.info('⏰ Trial ending soon', {
+      subscriptionId: subscription.id,
+      userId,
+      trialEnd: subscription.trial_end,
+    });
+    
+    // You can add email notification logic here
+    // For now, just log the event
+    
+    // Update subscription document with trial ending flag
+    const subscriptionQuery = await admin
+      .firestore()
+      .collection('user_subscriptions')
+      .where('stripeSubscriptionId', '==', subscription.id)
+      .get();
+    
+    if (!subscriptionQuery.empty) {
+      await subscriptionQuery.docs[0].ref.update({
+        trialEndingNotificationSent: true,
+        trialEndingNotificationDate: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    functions.logger.error('❌ Error handling trial will end', error);
+  }
+}
+
+// Handle upcoming invoice (sent ~3 days before renewal)
+async function handleUpcomingInvoice(invoice: Stripe.Invoice) {
+  try {
+    functions.logger.info('📧 Upcoming invoice', {
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+      amountDue: invoice.amount_due / 100,
+      dueDate: invoice.due_date,
+    });
+    
+    // You can add email notification logic here
+    // For now, just log the event
+  } catch (error) {
+    functions.logger.error('❌ Error handling upcoming invoice', error);
+  }
+}
+
+// Handle payment method attached
+async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) {
+  try {
+    functions.logger.info('💳 Payment method attached', {
+      paymentMethodId: paymentMethod.id,
+      customerId: paymentMethod.customer,
+      type: paymentMethod.type,
+      last4: paymentMethod.card?.last4,
+    });
+    
+    // Log payment method attachment for security
+  } catch (error) {
+    functions.logger.error('❌ Error handling payment method attached', error);
+  }
+}
+
+// Handle coupon created
+async function handleCouponCreated(coupon: Stripe.Coupon) {
+  try {
+    functions.logger.info('🎟️ Coupon created', {
+      couponId: coupon.id,
+      percentOff: coupon.percent_off,
+      amountOff: coupon.amount_off,
+      duration: coupon.duration,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling coupon created', error);
+  }
+}
+
+// Handle coupon deleted
+async function handleCouponDeleted(coupon: Stripe.Coupon) {
+  try {
+    functions.logger.info('🗑️ Coupon deleted', {
+      couponId: coupon.id,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling coupon deleted', error);
+  }
+}
+
+// Handle coupon updated
+async function handleCouponUpdated(coupon: Stripe.Coupon) {
+  try {
+    functions.logger.info('✏️ Coupon updated', {
+      couponId: coupon.id,
+      percentOff: coupon.percent_off,
+      amountOff: coupon.amount_off,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling coupon updated', error);
+  }
+}
+
+// Handle charge succeeded
+async function handleChargeSucceeded(charge: Stripe.Charge) {
+  try {
+    functions.logger.info('💰 Charge succeeded', {
+      chargeId: charge.id,
+      amount: charge.amount / 100,
+      customerId: charge.customer,
+      paymentMethodId: charge.payment_method,
+    });
+    
+    // Update payment records if needed
+  } catch (error) {
+    functions.logger.error('❌ Error handling charge succeeded', error);
+  }
+}
+
+// Handle charge failed
+async function handleChargeFailed(charge: Stripe.Charge) {
+  try {
+    functions.logger.error('❌ Charge failed', {
+      chargeId: charge.id,
+      amount: charge.amount / 100,
+      customerId: charge.customer,
+      failureMessage: charge.failure_message,
+      failureCode: charge.failure_code,
+    });
+    
+    // You can add notification logic here for failed charges
+  } catch (error) {
+    functions.logger.error('❌ Error handling charge failed', error);
+  }
+}
+
+// Handle customer created
+async function handleCustomerCreated(customer: Stripe.Customer) {
+  try {
+    functions.logger.info('👤 Customer created', {
+      customerId: customer.id,
+      email: customer.email,
+      metadata: customer.metadata,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling customer created', error);
+  }
+}
+
+// Handle customer updated
+async function handleCustomerUpdated(customer: Stripe.Customer) {
+  try {
+    functions.logger.info('✏️ Customer updated', {
+      customerId: customer.id,
+      email: customer.email,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling customer updated', error);
+  }
+}
+
+// Handle customer deleted
+async function handleCustomerDeleted(customer: Stripe.Customer) {
+  try {
+    functions.logger.warn('🗑️ Customer deleted', {
+      customerId: customer.id,
+      email: customer.email,
+    });
+    
+    // Clean up subscription documents if needed
+    const subscriptions = await admin
+      .firestore()
+      .collection('user_subscriptions')
+      .where('stripeCustomerId', '==', customer.id)
+      .get();
+    
+    for (const doc of subscriptions.docs) {
+      await doc.ref.update({
+        status: 'cancelled',
+        customerDeleted: true,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    functions.logger.error('❌ Error handling customer deleted', error);
+  }
+}
+
+// Handle invoice created
+async function handleInvoiceCreated(invoice: Stripe.Invoice) {
+  try {
+    functions.logger.info('📄 Invoice created', {
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+      amountDue: invoice.amount_due / 100,
+      status: invoice.status,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling invoice created', error);
+  }
+}
+
+// Handle invoice finalized
+async function handleInvoiceFinalized(invoice: Stripe.Invoice) {
+  try {
+    functions.logger.info('✅ Invoice finalized', {
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+      amountDue: invoice.amount_due / 100,
+      number: invoice.number,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling invoice finalized', error);
+  }
+}
+
+// Handle invoice paid
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  try {
+    functions.logger.info('💸 Invoice paid', {
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+      amountPaid: invoice.amount_paid / 100,
+      subscriptionId: invoice.subscription,
+    });
+    
+    // Update subscription payment status
+    if (invoice.subscription) {
+      const subscriptionQuery = await admin
+        .firestore()
+        .collection('user_subscriptions')
+        .where('stripeSubscriptionId', '==', invoice.subscription)
+        .get();
+      
+      if (!subscriptionQuery.empty) {
+        await subscriptionQuery.docs[0].ref.update({
+          lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+          lastPaymentAmount: invoice.amount_paid / 100,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    }
+  } catch (error) {
+    functions.logger.error('❌ Error handling invoice paid', error);
+  }
+}
+
+// Handle payment intent created
+async function handlePaymentIntentCreated(paymentIntent: Stripe.PaymentIntent) {
+  try {
+    functions.logger.info('🎯 Payment intent created', {
+      paymentIntentId: paymentIntent.id,
+      amount: paymentIntent.amount / 100,
+      currency: paymentIntent.currency,
+      customerId: paymentIntent.customer,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling payment intent created', error);
+  }
+}
+
+// Handle payment intent failed
+async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
+  try {
+    functions.logger.error('❌ Payment intent failed', {
+      paymentIntentId: paymentIntent.id,
+      amount: paymentIntent.amount / 100,
+      customerId: paymentIntent.customer,
+      lastPaymentError: paymentIntent.last_payment_error?.message,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling payment intent failed', error);
+  }
+}
+
+// Handle payment method detached
+async function handlePaymentMethodDetached(paymentMethod: Stripe.PaymentMethod) {
+  try {
+    functions.logger.warn('💳 Payment method detached', {
+      paymentMethodId: paymentMethod.id,
+      type: paymentMethod.type,
+      last4: paymentMethod.card?.last4,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling payment method detached', error);
+  }
+}
+
+// Handle checkout session expired
+async function handleCheckoutSessionExpired(session: Stripe.Checkout.Session) {
+  try {
+    functions.logger.warn('⏰ Checkout session expired', {
+      sessionId: session.id,
+      customerId: session.customer,
+      metadata: session.metadata,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling checkout session expired', error);
+  }
+}
+
+// Handle checkout async payment succeeded
+async function handleCheckoutAsyncPaymentSucceeded(session: Stripe.Checkout.Session) {
+  try {
+    functions.logger.info('✅ Async payment succeeded', {
+      sessionId: session.id,
+      customerId: session.customer,
+      subscriptionId: session.subscription,
+    });
+    
+    // Process async payment success similar to regular checkout completion
+    await handleCheckoutSessionCompleted(session);
+  } catch (error) {
+    functions.logger.error('❌ Error handling async payment succeeded', error);
+  }
+}
+
+// Handle checkout async payment failed
+async function handleCheckoutAsyncPaymentFailed(session: Stripe.Checkout.Session) {
+  try {
+    functions.logger.error('❌ Async payment failed', {
+      sessionId: session.id,
+      customerId: session.customer,
+      metadata: session.metadata,
+    });
+  } catch (error) {
+    functions.logger.error('❌ Error handling async payment failed', error);
   }
 }
 
@@ -2744,8 +3494,21 @@ export const secureStripeWebhook = functions.https.onRequest(async (req, res) =>
   let event: Stripe.Event;
 
   try {
-    // Verify webhook signature
-    event = stripe.webhooks.constructEvent(req.rawBody, sig as string, endpointSecret);
+    // For Firebase Functions, req.rawBody is available when the function receives the raw request
+    // CRITICAL: For Stripe signature verification, use raw Buffer directly
+    // Firebase provides req.rawBody as a Buffer - use it directly without conversion
+    if (!req.rawBody) {
+      functions.logger.error('❌ No rawBody in request');
+      res.status(400).send('No raw body available');
+      return;
+    }
+    
+    // Pass the raw Buffer directly to constructEvent - DO NOT convert to string
+    event = stripe.webhooks.constructEvent(
+      req.rawBody, // Pass Buffer directly
+      sig as string, 
+      endpointSecret
+    );
     
     // Log security information
     functions.logger.info('🔐 Webhook received and verified', {

@@ -260,135 +260,372 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   }
 
   Widget _buildPremiumRequiredScreen() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 60),
+          const SizedBox(height: 40),
+          // Premium icon with professional styling
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  HiPopColors.premiumGold.withValues(alpha: 0.15),
+                  HiPopColors.premiumGoldLight.withValues(alpha: 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: HiPopColors.premiumGold.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
             ),
             child: Icon(
-              Icons.attach_money,
-              size: 64,
-              color: HiPopColors.primaryDeepSage,
+              Icons.insights,
+              size: 72,
+              color: HiPopColors.premiumGold,
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Sales Tracker',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: HiPopColors.vendorAccentDark,
-            ),
+          const SizedBox(height: 32),
+          // Title with premium badge
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Sales Tracker',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode 
+                      ? HiPopColors.darkTextPrimary
+                      : HiPopColors.lightTextPrimary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: HiPopColors.premiumGold,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Premium',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
-            'Comprehensive sales tracking with analytics is a premium feature exclusively available to Vendor Premium subscribers.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+            'Advanced sales tracking and analytics',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: HiPopColors.vendorAccent,
+              fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            'Upgrade to track your sales, revenue, view analytics charts, and gain insights into your business performance.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            'Gain deep insights into your business performance with comprehensive sales tracking, revenue analytics, and market-by-market reporting.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: isDarkMode
+                  ? HiPopColors.darkTextSecondary
+                  : HiPopColors.lightTextSecondary,
+              height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
-          Card(
-            color: const Color(0xFFF1C8DB), // Soft Pink
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          const SizedBox(height: 40),
+          // Premium upgrade card with gradient and professional styling
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  HiPopColors.surfaceSoftPink.withValues(alpha: isDarkMode ? 0.2 : 1.0),
+                  HiPopColors.surfacePalePink.withValues(alpha: isDarkMode ? 0.15 : 1.0),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: HiPopColors.premiumGold.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: HiPopColors.premiumGold.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: isDarkMode 
+                      ? Colors.black.withValues(alpha: 0.3)
+                      : HiPopColors.lightShadow,
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Decorative background pattern
+                Positioned(
+                  right: -30,
+                  top: -30,
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 120,
+                    color: HiPopColors.premiumGold.withValues(alpha: 0.08),
+                  ),
+                ),
+                Positioned(
+                  left: -20,
+                  bottom: -20,
+                  child: Icon(
+                    Icons.trending_up,
+                    size: 100,
+                    color: HiPopColors.vendorAccent.withValues(alpha: 0.08),
+                  ),
+                ),
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF946C7E).withValues(alpha: 0.2), // Mauve
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.attach_money,
-                          color: Color(0xFF946C7E), // Mauve
-                          size: 24,
+                      // Header with icon
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  HiPopColors.vendorAccent.withValues(alpha: 0.2),
+                                  HiPopColors.vendorAccentLight.withValues(alpha: 0.15),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: HiPopColors.vendorAccent.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.workspace_premium,
+                              color: HiPopColors.vendorAccent,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Vendor Premium',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDarkMode
+                                        ? HiPopColors.darkTextPrimary
+                                        : HiPopColors.primaryDeepSage,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: HiPopColors.premiumGradient,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    '\$29/month',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Feature list title
+                      Text(
+                        'Everything you need to grow your business:',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode
+                              ? HiPopColors.darkTextPrimary
+                              : HiPopColors.primaryDeepSage,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Unlock Vendor Premium Sales Tracking',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF558B6E), // Deep Sage
+                      const SizedBox(height: 16),
+                      // Feature items with enhanced styling
+                      _buildEnhancedFeatureItem(
+                        Icons.attach_money,
+                        'Revenue & Commission Tracking',
+                        'Track daily sales, commissions, and net profits',
+                        isDarkMode,
+                      ),
+                      _buildEnhancedFeatureItem(
+                        Icons.analytics,
+                        'Advanced Analytics Dashboard',
+                        'Interactive charts and performance insights',
+                        isDarkMode,
+                      ),
+                      _buildEnhancedFeatureItem(
+                        Icons.trending_up,
+                        'Growth Trends & Forecasting',
+                        'Identify patterns and optimize your strategy',
+                        isDarkMode,
+                      ),
+                      _buildEnhancedFeatureItem(
+                        Icons.history,
+                        'Complete Sales History',
+                        'Access all historical data and reports',
+                        isDarkMode,
+                      ),
+                      _buildEnhancedFeatureItem(
+                        Icons.location_on,
+                        'Market Performance Analysis',
+                        'Compare performance across different venues',
+                        isDarkMode,
+                      ),
+                      _buildEnhancedFeatureItem(
+                        Icons.download,
+                        'Export & Reporting',
+                        'Download CSV reports for tax and accounting',
+                        isDarkMode,
+                      ),
+                      const SizedBox(height: 24),
+                      // CTA Button with gradient
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: HiPopColors.accentGradient,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => ContextualUpgradePrompts.showFeatureLockedPrompt(
+                              context,
+                              userId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                              userType: 'vendor',
+                              featureName: 'sales_tracking',
+                              featureDisplayName: 'Sales Tracking',
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.rocket_launch,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'Upgrade to Vendor Premium',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      // Trust indicators
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.lock,
+                            size: 14,
+                            color: isDarkMode
+                                ? HiPopColors.darkTextTertiary
+                                : HiPopColors.lightTextTertiary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Secure payment · Cancel anytime',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isDarkMode
+                                  ? HiPopColors.darkTextTertiary
+                                  : HiPopColors.lightTextTertiary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Upgrade to Vendor Premium (\$29/month) to unlock:',
-                    style: TextStyle(
-                      fontSize: 16, 
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF558B6E), // Deep Sage
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildFeatureItem(Icons.attach_money, 'Revenue & commission tracking'),
-                      _buildFeatureItem(Icons.analytics, 'Sales performance analytics'),
-                      _buildFeatureItem(Icons.trending_up, 'Interactive charts & trends'),
-                      _buildFeatureItem(Icons.history, 'Historical data management'),
-                      _buildFeatureItem(Icons.location_on, 'Market-by-market insights'),
-                      _buildFeatureItem(Icons.download, 'Export capabilities'),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => ContextualUpgradePrompts.showFeatureLockedPrompt(
-                        context,
-                        userId: FirebaseAuth.instance.currentUser?.uid ?? '',
-                        userType: 'vendor',
-                        featureName: 'sales_tracking',
-                        featureDisplayName: 'Sales Tracking',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF558B6E), // Deep Sage
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Upgrade to Vendor Premium',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Additional value proposition
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: HiPopColors.infoBlueGray.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: HiPopColors.infoBlueGray.withValues(alpha: 0.3),
               ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: HiPopColors.infoBlueGray,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Join hundreds of vendors using HiPop Premium to grow their business and increase revenue by an average of 35%.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isDarkMode
+                          ? HiPopColors.darkTextSecondary
+                          : HiPopColors.lightTextSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -396,25 +633,56 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String text) {
+  Widget _buildEnhancedFeatureItem(
+    IconData icon,
+    String title,
+    String description,
+    bool isDarkMode,
+  ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFF558B6E), // Deep Sage
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 24,
+              color: HiPopColors.primaryDeepSage,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF558B6E), // Deep Sage
-                height: 1.4,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode
+                        ? HiPopColors.darkTextPrimary
+                        : HiPopColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDarkMode
+                        ? HiPopColors.darkTextTertiary
+                        : HiPopColors.lightTextTertiary,
+                    height: 1.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1977,30 +2245,128 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   }
   
   Widget _buildAnalyticsFeatureList() {
-    return Card(
-      color: const Color(0xFFF1C8DB),
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            HiPopColors.surfaceSoftPink.withValues(alpha: isDarkMode ? 0.2 : 1.0),
+            HiPopColors.surfacePalePink.withValues(alpha: isDarkMode ? 0.15 : 1.0),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: HiPopColors.premiumGold.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: HiPopColors.premiumGold.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Unlock Premium Analytics (\$29/month)',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: HiPopColors.primaryDeepSage,
-              ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        HiPopColors.premiumGold.withValues(alpha: 0.2),
+                        HiPopColors.premiumGoldLight.withValues(alpha: 0.15),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.auto_graph,
+                    color: HiPopColors.premiumGold,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Premium Analytics',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDarkMode
+                              ? HiPopColors.darkTextPrimary
+                              : HiPopColors.primaryDeepSage,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          gradient: HiPopColors.premiumGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          '\$29/month',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            _buildFeatureItem(Icons.trending_up, 'Revenue trends and growth analysis'),
-            _buildFeatureItem(Icons.location_on, 'Top performing markets insights'),
-            _buildFeatureItem(Icons.calculate, 'Average transaction value tracking'),
-            _buildFeatureItem(Icons.pie_chart, 'Commission and fee breakdown'),
-            _buildFeatureItem(Icons.calendar_view_week, 'Best sales days patterns'),
-            _buildFeatureItem(Icons.download, 'Export data to CSV/PDF'),
-            _buildFeatureItem(Icons.compare, 'Period comparison reports'),
-            _buildFeatureItem(Icons.insights, 'Revenue forecasting insights'),
+            const SizedBox(height: 20),
+            _buildEnhancedFeatureItem(
+              Icons.trending_up,
+              'Revenue Growth Analysis',
+              'Track trends and identify growth opportunities',
+              isDarkMode,
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.location_on,
+              'Market Performance Insights',
+              'Compare results across different venues',
+              isDarkMode,
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.calculate,
+              'Transaction Analytics',
+              'Average order value and customer metrics',
+              isDarkMode,
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.pie_chart,
+              'Financial Breakdown',
+              'Detailed commission and fee analysis',
+              isDarkMode,
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.calendar_view_week,
+              'Pattern Recognition',
+              'Identify your best performing days',
+              isDarkMode,
+            ),
+            _buildEnhancedFeatureItem(
+              Icons.download,
+              'Export Capabilities',
+              'CSV and PDF reports for accounting',
+              isDarkMode,
+            ),
           ],
         ),
       ),

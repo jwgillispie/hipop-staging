@@ -14,6 +14,7 @@ import 'package:hipop/features/vendor/models/managed_vendor.dart';
 import 'package:hipop/features/vendor/services/managed_vendor_service.dart';
 import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
 import '../../market/models/market.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 
 class MarketDetailScreen extends StatefulWidget {
@@ -76,7 +77,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.market.name),
-        backgroundColor: Colors.orange,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: HiPopColors.primaryGradient,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         actions: [
           BlocBuilder<FavoritesBloc, FavoritesState>(
@@ -96,7 +102,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: HiPopColors.errorPlum,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         constraints: const BoxConstraints(
@@ -180,12 +186,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
+                          color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.storefront,
-                          color: Colors.orange,
+                          color: HiPopColors.primaryDeepSage,
                           size: 32,
                         ),
                       ),
@@ -217,8 +223,8 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                                       padding: const EdgeInsets.symmetric(vertical: 2),
                                       child: Text(
                                         widget.market.address,
-                                        style: TextStyle(
-                                          color: Colors.blue[700],
+                                        style: const TextStyle(
+                                          color: HiPopColors.primaryDeepSage,
                                           fontSize: 14,
                                           decoration: TextDecoration.underline,
                                         ),
@@ -331,8 +337,8 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         widget.market.isHappeningToday ? Icons.check_circle : 
                         widget.market.isFutureEvent ? Icons.schedule : Icons.history,
                         size: 16,
-                        color: widget.market.isHappeningToday ? Colors.green : 
-                               widget.market.isFutureEvent ? Colors.orange : Colors.grey,
+                        color: widget.market.isHappeningToday ? HiPopColors.successGreen : 
+                               widget.market.isFutureEvent ? HiPopColors.warningAmber : Colors.grey,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -347,8 +353,8 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         widget.market.isHappeningToday ? 'Happening Today' : 
                         widget.market.isFutureEvent ? 'Upcoming' : 'Past Event',
                         style: TextStyle(
-                          color: widget.market.isHappeningToday ? Colors.green : 
-                                 widget.market.isFutureEvent ? Colors.orange : Colors.grey,
+                          color: widget.market.isHappeningToday ? HiPopColors.successGreen : 
+                                 widget.market.isFutureEvent ? HiPopColors.warningAmber : Colors.grey,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -376,7 +382,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                 'Total Vendors',
                 '$vendorCount',
                 Icons.store,
-                Colors.green,
+                HiPopColors.successGreen,
               );
             },
           ),
@@ -391,7 +397,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                 'Active Vendors',
                 '$activeCount',
                 Icons.check_circle,
-                Colors.blue,
+                HiPopColors.infoBlueGray,
               );
             },
           ),
@@ -400,19 +406,23 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, MaterialColor color) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
+      elevation: 2,
+      color: Theme.of(context).brightness == Brightness.dark 
+          ? HiPopColors.darkSurfaceVariant 
+          : HiPopColors.lightSurface,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Icon(icon, color: color.shade600, size: 32),
+            Icon(icon, color: color, size: 32),
             const SizedBox(height: 8),
             Text(
               value,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: color.shade700,
+                color: color,
               ),
             ),
             const SizedBox(height: 4),
@@ -512,12 +522,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
+                    color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
                     Icons.store,
-                    color: Colors.green,
+                    color: HiPopColors.vendorAccent,
                     size: 20,
                   ),
                 ),
@@ -565,23 +575,23 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
+                      color: HiPopColors.premiumGold.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.star,
                           size: 12,
-                          color: Colors.amber[800],
+                          color: HiPopColors.premiumGoldDark,
                         ),
                         const SizedBox(width: 4),
-                        Text(
+                        const Text(
                           'FEATURED',
                           style: TextStyle(
                             fontSize: 10,
-                            color: Colors.amber[800],
+                            color: HiPopColors.premiumGoldDark,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -613,7 +623,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         Icon(
                           Icons.local_grocery_store,
                           size: 14,
-                          color: Colors.green[600],
+                          color: HiPopColors.successGreen,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -621,7 +631,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.green[700],
+                            color: HiPopColors.successGreenDark,
                           ),
                         ),
                       ],
@@ -670,7 +680,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                           vendor.phoneNumber!,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.blue[700],
+                            color: HiPopColors.primaryDeepSage,
                             decoration: TextDecoration.underline,
                           ),
                         ),
@@ -692,7 +702,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                             vendor.email!,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.blue[700],
+                              color: HiPopColors.primaryDeepSage,
                               decoration: TextDecoration.underline,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -743,7 +753,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not open maps: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -758,7 +768,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not make call: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -773,7 +783,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not send email: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -788,7 +798,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not open Instagram: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }

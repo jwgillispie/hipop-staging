@@ -7,6 +7,7 @@ import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
 import '../../premium/services/subscription_service.dart';
 import '../../../core/widgets/hipop_app_bar.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class OrganizerVendorPostsScreen extends StatefulWidget {
   const OrganizerVendorPostsScreen({super.key});
@@ -178,7 +179,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: HiPopColors.darkBackground,
       appBar: HiPopAppBar(
         title: 'Vendor Posts',
         userRole: 'vendor',
@@ -187,7 +188,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
           if (_hasPremiumAccess)
             IconButton(
               onPressed: () {
-                context.go('/organizer/vendor-posts/create');
+                context.go('/organizer/vendor-recruitment/create');
               },
               icon: const Icon(Icons.add),
               tooltip: 'Create New Post',
@@ -217,9 +218,9 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
       floatingActionButton: _hasPremiumAccess && !_isLoading
           ? FloatingActionButton(
               onPressed: () {
-                context.go('/organizer/vendor-posts/create');
+                context.go('/organizer/vendor-recruitment/create');
               },
-              backgroundColor: Colors.deepPurple,
+              backgroundColor: HiPopColors.organizerAccent,
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
@@ -319,7 +320,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: HiPopColors.organizerAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -358,7 +359,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
 
   Widget _buildFilterSection() {
     return Container(
-      color: Colors.white,
+      color: HiPopColors.darkSurface,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,6 +368,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
             'Filter Posts',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: HiPopColors.darkTextPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -384,8 +386,8 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                       _loadPosts();
                     }
                   },
-                  selectedColor: Colors.deepPurple.withValues(alpha: 0.2),
-                  checkmarkColor: Colors.deepPurple[700],
+                  selectedColor: HiPopColors.organizerAccent.withValues(alpha: 0.2),
+                  checkmarkColor: HiPopColors.organizerAccent,
                 ),
               )).toList(),
             ),
@@ -710,12 +712,12 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                context.go('/organizer/vendor-posts/create');
+                context.go('/organizer/vendor-recruitment/create');
               },
               icon: const Icon(Icons.add),
               label: const Text('Create Your First Post'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
+                backgroundColor: HiPopColors.organizerAccent,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),

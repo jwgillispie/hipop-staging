@@ -250,7 +250,7 @@ class _SubscriptionTierBadgeState extends State<SubscriptionTierBadge>
       
       case SubscriptionTier.vendorPro:
         return TierConfiguration(
-          displayName: 'Vendor Pro',
+          displayName: 'Vendor Premium',
           primaryColor: Colors.orange.shade600,
           backgroundColor: Colors.orange.shade50,
           textColor: Colors.white,
@@ -260,7 +260,7 @@ class _SubscriptionTierBadgeState extends State<SubscriptionTierBadge>
       
       case SubscriptionTier.marketOrganizerPro:
         return TierConfiguration(
-          displayName: 'Organizer Pro',
+          displayName: 'Organizer Premium',
           primaryColor: Colors.purple.shade600,
           backgroundColor: Colors.purple.shade50,
           textColor: Colors.white,

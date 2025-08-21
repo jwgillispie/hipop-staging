@@ -468,6 +468,7 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
         userEmail: widget.userEmail,
         userType: widget.userType,
         couponCode: _appliedCoupon,
+        context: context,
       );
       
       // The user will be redirected to Stripe Checkout

@@ -10,6 +10,7 @@ import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
 import '../../premium/services/subscription_service.dart';
 import '../../shared/services/real_time_analytics_service.dart';
+import '../../../core/widgets/premium_upgrade_card.dart';
 
 /// Optimized Vendor Market Discovery Screen
 /// Shows ONLY markets actively looking for vendors (isLookingForVendors = true)
@@ -31,6 +32,7 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
   List<Market> _markets = [];
   DocumentSnapshot? _lastDocument;
   bool _hasMore = true;
+  bool _hasPremiumAccess = false;
   
   // Pagination
   static const int _pageSize = 10;
@@ -68,6 +70,19 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('Please log in to access Market Discovery');
+      }
+      
+      // Check premium access for market discovery feature
+      final hasAccess = await SubscriptionService.hasFeature(user.uid, 'market_discovery');
+      _hasPremiumAccess = hasAccess;
+      
+      // If no premium access, set loading to false and show upgrade prompt
+      if (!hasAccess) {
+        setState(() {
+          _isLoading = false;
+          _markets = [];
+        });
+        return;
       }
       
       // Query ONLY markets actively looking for vendors
@@ -124,7 +139,7 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
   
   /// Load more markets with pagination
   Future<void> _loadMoreMarkets() async {
-    if (_isLoadingMore || !_hasMore || _lastDocument == null) return;
+    if (_isLoadingMore || !_hasMore || _lastDocument == null || !_hasPremiumAccess) return;
     
     setState(() => _isLoadingMore = true);
     
@@ -373,15 +388,17 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
       appBar: _buildAppBar(),
       body: _isLoading
           ? const LoadingWidget(message: 'Finding markets looking for vendors...')
-          : _error != null
-              ? ErrorDisplayWidget(
-                  title: 'Unable to Load Markets',
-                  message: _error!,
-                  onRetry: _loadMarkets,
-                )
-              : _markets.isEmpty
-                  ? _buildEmptyState()
-                  : _buildMarketsList(),
+          : !_hasPremiumAccess
+              ? _buildUpgradePrompt()
+              : _error != null
+                  ? ErrorDisplayWidget(
+                      title: 'Unable to Load Markets',
+                      message: _error!,
+                      onRetry: _loadMarkets,
+                    )
+                  : _markets.isEmpty
+                      ? _buildEmptyState()
+                      : _buildMarketsList(),
     );
   }
   
@@ -425,8 +442,70 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
     );
   }
   
+  Widget _buildUpgradePrompt() {
+    final user = FirebaseAuth.instance.currentUser;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Spacer to center content
+            SizedBox(height: MediaQuery.of(context).size.height * 0.1),
+            
+            // Use the existing PremiumUpgradeCard component
+            PremiumUpgradeCard(
+              title: 'Unlock Market Discovery',
+              subtitle: 'Find markets actively looking for vendors like you',
+              customMessage: 'Market Discovery is a premium feature that helps vendors find opportunities faster. Upgrade to access real-time market recruitment updates and apply directly to markets seeking your products.',
+              features: [
+                'Smart market recommendations based on your products',
+                'Real-time recruitment notifications',
+                'Direct application links and contact info',
+                'Application deadline tracking',
+                'Estimated fees and requirements',
+                'Priority visibility to market organizers',
+              ],
+              onUpgrade: () {
+                if (user != null) {
+                  context.go('/premium/upgrade?tier=vendor&userId=${user.uid}');
+                }
+              },
+              icon: Icons.diamond,
+              showDismiss: false,
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Secondary action - continue browsing markets without discovery features
+            TextButton.icon(
+              onPressed: () {
+                // Navigate to regular markets (public markets)
+                context.go('/markets');
+              },
+              icon: Icon(
+                Icons.explore,
+                color: HiPopColors.darkTextSecondary,
+              ),
+              label: Text(
+                'Browse Public Markets Instead',
+                style: TextStyle(
+                  color: HiPopColors.darkTextSecondary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
-    return Center(
+    final user = FirebaseAuth.instance.currentUser;
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -476,6 +555,95 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
+              ),
+            ),
+            
+            const SizedBox(height: 48),
+            
+            // Premium upgrade suggestion even for premium users (for advanced features)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    HiPopColors.accentMauve.withValues(alpha: 0.1),
+                    HiPopColors.primaryDeepSage.withValues(alpha: 0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: HiPopColors.accentMauve.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        color: HiPopColors.accentMauve,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Get Notified When Markets Are Recruiting',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: HiPopColors.darkTextPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Set up instant notifications and priority access to new market opportunities. Be the first to know when markets in your area start looking for vendors.',
+                    style: TextStyle(
+                      color: HiPopColors.darkTextSecondary,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            // Navigate to notification settings
+                            context.go('/settings/notifications');
+                          },
+                          icon: const Icon(Icons.notifications_outlined, size: 18),
+                          label: const Text('Setup Notifications'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: HiPopColors.accentMauve,
+                            side: BorderSide(color: HiPopColors.accentMauve),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (user != null) {
+                              context.go('/premium/upgrade?tier=vendor&userId=${user.uid}&feature=advanced_notifications');
+                            }
+                          },
+                          icon: const Icon(Icons.diamond, size: 18),
+                          label: const Text('Upgrade'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: HiPopColors.accentMauve,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],

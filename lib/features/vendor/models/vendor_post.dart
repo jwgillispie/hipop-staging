@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 import '../services/vendor_contact_service.dart';
 import 'post_type.dart';
+import '../../shared/models/location_data.dart';
 
 class VendorPost extends Equatable {
   final String id;
@@ -48,6 +49,9 @@ class VendorPost extends Equatable {
   final int monthlyPostNumber;
   final bool countsTowardLimit;
   final int version;
+  
+  // NEW FIELDS - Optimized Location Data
+  final LocationData? locationData;
 
   const VendorPost({
     required this.id,
@@ -85,6 +89,7 @@ class VendorPost extends Equatable {
     this.monthlyPostNumber = 0,
     this.countsTowardLimit = true,
     this.version = 2,
+    this.locationData,
   });
 
   factory VendorPost.fromFirestore(DocumentSnapshot doc) {
@@ -141,6 +146,9 @@ class VendorPost extends Equatable {
         monthlyPostNumber: data['monthlyPostNumber'] ?? 0,
         countsTowardLimit: data['countsTowardLimit'] ?? true,
         version: data['version'] ?? 1,
+        locationData: data['locationData'] != null 
+            ? LocationData.fromFirestore(data['locationData'])
+            : null,
       );
     } catch (e) {
       rethrow;
@@ -183,6 +191,7 @@ class VendorPost extends Equatable {
       'monthlyPostNumber': monthlyPostNumber,
       'countsTowardLimit': countsTowardLimit,
       'version': version,
+      'locationData': locationData?.toFirestore(),
     };
   }
 
@@ -222,6 +231,7 @@ class VendorPost extends Equatable {
     int? monthlyPostNumber,
     bool? countsTowardLimit,
     int? version,
+    LocationData? locationData,
   }) {
     return VendorPost(
       id: id ?? this.id,
@@ -259,6 +269,7 @@ class VendorPost extends Equatable {
       monthlyPostNumber: monthlyPostNumber ?? this.monthlyPostNumber,
       countsTowardLimit: countsTowardLimit ?? this.countsTowardLimit,
       version: version ?? this.version,
+      locationData: locationData ?? this.locationData,
     );
   }
 
@@ -410,5 +421,6 @@ class VendorPost extends Equatable {
         monthlyPostNumber,
         countsTowardLimit,
         version,
+        locationData,
       ];
 }

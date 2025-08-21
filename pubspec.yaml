@@ -57,6 +57,9 @@ dependencies:
   google_places_flutter: ^2.0.9
   http: ^1.2.2
   
+  # Animations
+  confetti: ^0.7.0
+  
   # Image caching and optimization
   cached_network_image: ^3.3.1
   flutter_cache_manager: ^3.3.1
@@ -90,6 +93,9 @@ dependencies:
   # Cryptographic functions
   crypto: ^3.0.3
   google_fonts: ^6.3.0
+  
+  # In-app web view for Safari payment handling
+  flutter_inappwebview: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -108,6 +114,9 @@ dev_dependencies:
   
   # App icon generation
   flutter_launcher_icons: ^0.14.4
+  
+  # Native splash screen
+  flutter_native_splash: ^2.4.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -170,3 +179,22 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: "assets/images/hipop_logo.PNG"
+
+# Native splash screen configuration
+flutter_native_splash:
+  color: "#F5F0E8"
+  image: assets/images/hipop_logo.PNG
+  
+  # Android 12+ splash screen
+  android_12:
+    color: "#F5F0E8"
+    image: assets/images/hipop_logo.PNG
+    
+  # iOS splash screen
+  ios: true
+  
+  # Web splash screen
+  web: true
+  
+  # Full screen mode
+  fullscreen: true

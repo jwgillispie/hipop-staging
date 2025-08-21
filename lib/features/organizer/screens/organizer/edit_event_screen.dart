@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../shared/models/event.dart';
 import '../../../shared/services/event_service.dart';
 import '../../../market/models/market.dart';
+import '../../../../core/theme/hipop_colors.dart';
 
 class EditEventScreen extends StatefulWidget {
   final Event event;
@@ -28,7 +29,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
   late DateTime _startDateTime;
   late DateTime _endDateTime;
   Market? _selectedMarket;
-  List<Market> _availableMarkets = [];
+  final List<Market> _availableMarkets = [];
   bool _isLoading = false;
   double? _latitude;
   double? _longitude;
@@ -164,7 +165,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Event'),
-        backgroundColor: Colors.red,
+        backgroundColor: HiPopColors.organizerAccent,
         foregroundColor: Colors.white,
         actions: [
           TextButton(
@@ -403,7 +404,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _updateEvent,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
+                    backgroundColor: HiPopColors.organizerAccent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),

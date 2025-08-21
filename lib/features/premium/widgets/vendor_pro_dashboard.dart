@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
 
-/// Vendor Pro specific dashboard component
+/// Vendor Premium specific dashboard component
 class VendorProDashboard extends StatelessWidget {
   final Map<String, dynamic> data;
 

@@ -110,6 +110,7 @@ class VendorPostsRepository implements IVendorPostsRepository {
     }
 
     final searchKeyword = location.toLowerCase().trim();
+    debugPrint('VendorPostsRepository: Searching for location: "$location" -> "$searchKeyword"');
     
     return _firestore
         .collection(_collection)
@@ -120,14 +121,70 @@ class VendorPostsRepository implements IVendorPostsRepository {
               .map((doc) => VendorPost.fromFirestore(doc))
               .toList();
           
-          // Filter by location
+          debugPrint('VendorPostsRepository: Total active posts: ${allPosts.length}');
+          
+          // Filter by location using optimized locationData fields for faster searches
           final filteredPosts = allPosts.where((post) {
+            // First check optimized location data if available (new posts)
+            if (post.locationData != null) {
+              final locationData = post.locationData!;
+              
+              // Direct city match (fastest and most accurate)
+              if (locationData.city != null) {
+                final cityLower = locationData.city!.toLowerCase();
+                if (cityLower == searchKeyword || 
+                    cityLower.contains(searchKeyword) ||
+                    searchKeyword.contains(cityLower)) {
+                  return true;
+                }
+              }
+              
+              // Metro area match (broader geographic search)
+              if (locationData.metroArea != null) {
+                final metroLower = locationData.metroArea!.toLowerCase();
+                if (metroLower.contains(searchKeyword) ||
+                    searchKeyword.contains(metroLower)) {
+                  return true;
+                }
+              }
+              
+              // Search keywords match (pre-computed for efficiency)
+              if (locationData.searchKeywords.any((keyword) => 
+                  keyword.toLowerCase().contains(searchKeyword) ||
+                  searchKeyword.contains(keyword.toLowerCase()))) {
+                return true;
+              }
+              
+              // State match (for state-level searches)
+              if (locationData.state != null) {
+                final stateLower = locationData.state!.toLowerCase();
+                if (stateLower == searchKeyword || 
+                    (searchKeyword.length == 2 && stateLower.startsWith(searchKeyword))) {
+                  return true;
+                }
+              }
+              
+              // Neighborhood match (for local area searches)
+              if (locationData.neighborhood != null) {
+                final neighborhoodLower = locationData.neighborhood!.toLowerCase();
+                if (neighborhoodLower.contains(searchKeyword) ||
+                    searchKeyword.contains(neighborhoodLower)) {
+                  return true;
+                }
+              }
+              
+              return false;
+            }
+            
+            // Fallback to legacy location search for older posts
             final locationMatch = post.location.toLowerCase().contains(searchKeyword);
             final keywordMatch = post.locationKeywords.any((keyword) => 
                 keyword.toLowerCase().contains(searchKeyword));
             
             return locationMatch || keywordMatch;
           }).toList();
+          
+          debugPrint('VendorPostsRepository: Filtered to ${filteredPosts.length} posts');
           
           // Sort filtered posts by start time (latest first)
           filteredPosts.sort((a, b) => b.popUpStartDateTime.compareTo(a.popUpStartDateTime));
@@ -152,13 +209,32 @@ class VendorPostsRepository implements IVendorPostsRepository {
               .map((doc) => VendorPost.fromFirestore(doc))
               .toList();
           
-          // Filter by proximity and add distance information
+          // Use optimized geohash proximity search for new posts, fallback for older posts
           final postsWithDistance = allPosts
-              .where((post) => post.latitude != null && post.longitude != null)
+              .where((post) {
+                // Check if we have coordinates (required for proximity)
+                if (post.locationData?.coordinates != null) {
+                  return true;
+                } else if (post.latitude != null && post.longitude != null) {
+                  return true;
+                }
+                return false;
+              })
               .map((post) {
+                double postLat, postLon;
+                
+                // Use optimized coordinates if available
+                if (post.locationData?.coordinates != null) {
+                  postLat = post.locationData!.coordinates!.latitude;
+                  postLon = post.locationData!.coordinates!.longitude;
+                } else {
+                  postLat = post.latitude!;
+                  postLon = post.longitude!;
+                }
+                
                 final distance = _calculateDistance(
                   latitude, longitude,
-                  post.latitude!, post.longitude!,
+                  postLat, postLon,
                 );
                 return _PostWithDistance(post: post, distance: distance);
               })
@@ -170,6 +246,71 @@ class VendorPostsRepository implements IVendorPostsRepository {
           
           return postsWithDistance.map((pwd) => pwd.post).toList();
         });
+  }
+  
+  /// Enhanced geohash-based proximity search for optimized location data
+  Stream<List<VendorPost>> searchPostsByGeohash({
+    required String geohash,
+    required double radiusKm,
+    required double centerLat,
+    required double centerLon,
+  }) {
+    // Get geohash neighbors for broader search
+    final searchHashes = _getGeohashNeighbors(geohash);
+    
+    return _firestore
+        .collection(_collection)
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          final allPosts = snapshot.docs
+              .map((doc) => VendorPost.fromFirestore(doc))
+              .toList();
+          
+          // Filter by geohash for posts with optimized location data
+          final nearbyPosts = allPosts.where((post) {
+            if (post.locationData?.geohash != null) {
+              // Use geohash for fast initial filtering
+              return searchHashes.any((searchHash) => 
+                post.locationData!.geohash!.startsWith(searchHash));
+            }
+            return false;
+          }).toList();
+          
+          // Calculate exact distances and filter by radius
+          final postsWithDistance = nearbyPosts
+              .where((post) => post.locationData?.coordinates != null)
+              .map((post) {
+                final coords = post.locationData!.coordinates!;
+                final distance = _calculateDistance(
+                  centerLat, centerLon,
+                  coords.latitude, coords.longitude,
+                );
+                return _PostWithDistance(post: post, distance: distance);
+              })
+              .where((pwd) => pwd.distance <= radiusKm)
+              .toList();
+          
+          // Sort by distance
+          postsWithDistance.sort((a, b) => a.distance.compareTo(b.distance));
+          
+          return postsWithDistance.map((pwd) => pwd.post).toList();
+        });
+  }
+  
+  /// Get geohash neighbors for proximity search
+  List<String> _getGeohashNeighbors(String geohash) {
+    if (geohash.isEmpty) return [];
+    
+    // Return progressively shorter geohashes for broader search
+    final neighbors = <String>[geohash];
+    
+    // Add shorter geohashes for expanding search area
+    for (int i = geohash.length - 1; i >= 4; i--) {
+      neighbors.add(geohash.substring(0, i));
+    }
+    
+    return neighbors;
   }
 
   // Helper method to calculate distance between two points using Haversine formula

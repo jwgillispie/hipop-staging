@@ -101,7 +101,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Card
+            // Header Card - Improved Organization
             Card(
               elevation: 4,
               child: Padding(
@@ -109,11 +109,13 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Top Row - Avatar and Vendor Name
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CircleAvatar(
                           backgroundColor: HiPopColors.vendorAccent,
-                          radius: 30,
+                          radius: 32,
                           child: Text(
                             widget.vendorPost.vendorName.isNotEmpty
                                 ? widget.vendorPost.vendorName[0].toUpperCase()
@@ -121,7 +123,7 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 24,
+                              fontSize: 26,
                             ),
                           ),
                         ),
@@ -130,65 +132,117 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Vendor Name
                               Text(
                                 widget.vendorPost.vendorName,
                                 style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 22,
+                                    ),
                               ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: HiPopColors.vendorAccent.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: HiPopColors.vendorAccent.withValues(
-                                      alpha: 0.3,
+                              const SizedBox(height: 8),
+                              // Tags Row
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: [
+                                  // Independent Pop-up Tag
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: HiPopColors.vendorAccent.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                        color: HiPopColors.vendorAccent.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.storefront,
+                                          size: 14,
+                                          color: HiPopColors.vendorAccentDark,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Independent Pop-up',
+                                          style: TextStyle(
+                                            color: HiPopColors.vendorAccentDark,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                child: Text(
-                                  'Independent Pop-up',
-                                  style: TextStyle(
-                                    color: HiPopColors.vendorAccentDark,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 12,
+                                  // Status Badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          widget.vendorPost.isHappening
+                                              ? Colors.green
+                                              : widget.vendorPost.isUpcoming
+                                              ? HiPopColors.vendorAccent
+                                              : Colors.grey,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: (widget.vendorPost.isHappening
+                                              ? Colors.green
+                                              : widget.vendorPost.isUpcoming
+                                              ? HiPopColors.vendorAccent
+                                              : Colors.grey).withValues(alpha: 0.3),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          widget.vendorPost.isHappening
+                                              ? Icons.circle
+                                              : widget.vendorPost.isUpcoming
+                                              ? Icons.schedule
+                                              : Icons.history,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          widget.vendorPost.isHappening
+                                              ? 'LIVE NOW'
+                                              : widget.vendorPost.isUpcoming
+                                              ? 'UPCOMING'
+                                              : 'PAST EVENT',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                widget.vendorPost.isHappening
-                                    ? Colors.green
-                                    : widget.vendorPost.isUpcoming
-                                    ? HiPopColors.vendorAccent
-                                    : Colors.grey,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.vendorPost.isHappening
-                                ? 'LIVE NOW'
-                                : widget.vendorPost.isUpcoming
-                                ? 'UPCOMING'
-                                : 'PAST EVENT',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
                           ),
                         ),
                       ],
@@ -536,35 +590,72 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
     }
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${_vendorProducts.length} ${_vendorProducts.length == 1 ? 'Product' : 'Products'}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ..._vendorProducts
-                .take(5)
-                .map((product) => _buildProductRow(product)),
-            if (_vendorProducts.length > 5) ...[
-              const SizedBox(height: 8),
-              Text(
-                'and ${_vendorProducts.length - 5} more...',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              HiPopColors.surfaceSoftPink.withValues(alpha: 0.05),
             ],
-          ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.inventory_2,
+                    size: 20,
+                    color: HiPopColors.vendorAccent,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${_vendorProducts.length} ${_vendorProducts.length == 1 ? 'Product' : 'Products'} Available',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: HiPopColors.vendorAccentDark,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ..._vendorProducts
+                  .take(5)
+                  .map((product) => _buildProductRow(product)),
+              if (_vendorProducts.length > 5) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: HiPopColors.vendorAccent.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '+ ${_vendorProducts.length - 5} more products',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: HiPopColors.vendorAccentDark,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -572,23 +663,32 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
 
   Widget _buildProductRow(VendorProduct product) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
+              color: HiPopColors.vendorAccent.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: HiPopColors.vendorAccent.withValues(alpha: 0.3),
+                color: HiPopColors.vendorAccent.withValues(alpha: 0.2),
               ),
             ),
             child:
                 product.imageUrl != null
                     ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(7),
                       child: Image.network(
                         product.imageUrl!,
                         fit: BoxFit.cover,
@@ -596,14 +696,14 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                             (context, error, stackTrace) => const Icon(
                               Icons.shopping_basket,
                               color: HiPopColors.vendorAccent,
-                              size: 20,
+                              size: 22,
                             ),
                       ),
                     )
                     : const Icon(
                       Icons.shopping_basket,
                       color: HiPopColors.vendorAccent,
-                      size: 20,
+                      size: 22,
                     ),
           ),
           const SizedBox(width: 12),
@@ -614,29 +714,36 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                 Text(
                   product.name,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Row(
                   children: [
+                    // Product category with better contrast
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(4),
+                        color: HiPopColors.primaryDeepSage.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
                       ),
                       child: Text(
                         product.category,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: HiPopColors.primaryDeepSage.withValues(alpha: 0.9),
                         ),
                       ),
                     ),

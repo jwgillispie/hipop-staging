@@ -135,7 +135,7 @@ class VendorPremiumDashboardComponents {
                         border: Border.all(color: HiPopColors.premiumGold.withValues(alpha: 0.5)),
                       ),
                       child: const Text(
-                        'PRO',
+                        'Premium',
                         style: TextStyle(
                           color: HiPopColors.premiumGoldDark,
                           fontSize: 10,
@@ -644,7 +644,7 @@ class VendorPremiumDashboardComponents {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'PRO',
+                      'Premium',
                       style: TextStyle(
                         color: Colors.amber.shade700,
                         fontSize: 10,
@@ -828,7 +828,7 @@ class VendorPremiumDashboardComponents {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'PRO',
+                    'Premium',
                     style: TextStyle(
                       color: Colors.amber.shade700,
                       fontSize: 10,

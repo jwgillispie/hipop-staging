@@ -156,11 +156,12 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   }
 
   Widget _buildWelcomePage() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          const SizedBox(height: 32), // Top spacing instead of center alignment
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
@@ -208,6 +209,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'Priority Support',
             'Get help when you need it with dedicated customer success',
           ),
+          const SizedBox(height: 32), // Bottom spacing
         ],
       ),
     );
@@ -397,7 +399,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...((tierData['features'] as List<String>).take(4).map((feature) =>
+                      ...((tierData['features'] as List<String>).map((feature) =>
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Row(
@@ -421,18 +423,6 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
                           ),
                         ),
                       )),
-                      if ((tierData['features'] as List<String>).length > 4)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            '+${(tierData['features'] as List<String>).length - 4} more features',
-                            style: TextStyle(
-                              color: HiPopColors.lightTextTertiary,
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -471,7 +461,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'price': '\$199.99',
             'description': 'For large vendor operations and multi-market presence',
             'features': [
-              'Everything in Vendor Pro',
+              'Everything in Vendor Premium',
               'Enterprise analytics dashboard',
               'Custom API access and integrations',
               'Advanced reporting capabilities',
@@ -486,7 +476,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         return [
           {
             'tier': SubscriptionTier.marketOrganizerPro,
-            'title': 'Market Organizer Pro',
+            'title': 'Market Organizer Premium',
             'price': '\$69.00',
             'description': 'Comprehensive tools for market management',
             'recommended': true,
@@ -507,7 +497,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
             'price': '\$199.99',
             'description': 'For market management companies and large operations',
             'features': [
-              'Everything in Market Organizer Pro',
+              'Everything in Market Organizer Premium',
               'Enterprise analytics platform',
               'Custom API access and integrations',
               'Advanced reporting capabilities',
