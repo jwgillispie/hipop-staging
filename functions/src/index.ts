@@ -3669,3 +3669,73 @@ async function logWebhookSecurity(event: Stripe.Event, req: any) {
     functions.logger.error('❌ Error logging webhook security', error);
   }
 }
+
+// Places API Proxy to solve CORS issues
+// This function proxies requests to the staging places server that has restrictive CORS
+export const placesProxy = functions.https.onRequest(async (req, res) => {
+  // Set CORS headers for all origins
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  try {
+    const fetch = require('node-fetch');
+    const stagingServerUrl = 'https://hipop-places-server-788332607491.us-central1.run.app/api/places';
+    
+    // Extract the endpoint and query parameters
+    const endpoint = req.path.replace('/api/places/', '');
+    const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+    const targetUrl = `${stagingServerUrl}/${endpoint}${queryString ? '?' + queryString : ''}`;
+    
+    functions.logger.info('🗺️ Proxying places request', {
+      originalUrl: req.url,
+      targetUrl: targetUrl,
+      userAgent: req.get('User-Agent'),
+    });
+
+    // Make request to staging server with allowed origin
+    const response = await fetch(targetUrl, {
+      method: 'GET',
+      headers: {
+        'Origin': 'https://hipop-markets-staging.web.app',
+        'User-Agent': req.get('User-Agent') || 'HiPop-Places-Proxy/1.0',
+      },
+    });
+
+    if (!response.ok) {
+      functions.logger.error('❌ Staging places server error', {
+        status: response.status,
+        statusText: response.statusText,
+        targetUrl: targetUrl,
+      });
+      res.status(response.status).json({ 
+        error: `Upstream server error: ${response.status}` 
+      });
+      return;
+    }
+
+    const data = await response.json();
+    
+    functions.logger.info('✅ Places request successful', {
+      endpoint: endpoint,
+      responseSize: JSON.stringify(data).length,
+    });
+
+    res.json(data);
+  } catch (error: any) {
+    functions.logger.error('❌ Places proxy error', { error: error?.message || 'Unknown error' });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

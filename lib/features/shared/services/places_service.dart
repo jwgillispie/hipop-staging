@@ -3,17 +3,19 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class PlacesService {
-  // Production server URL
-  static const String _productionApiUrl = 'https://hipop-places-server-788332607491.us-central1.run.app/api/places';
+  // Firebase Function proxy URL (solves CORS issues)
+  static const String _firebaseFunctionUrl = 'https://us-central1-hipop-markets-staging.cloudfunctions.net/placesProxy';
+  // Original staging server URL (kept as fallback)
+  static const String _stagingApiUrl = 'https://hipop-places-server-788332607491.us-central1.run.app/api/places';
 
   static String get _baseUrl {
     if (kIsWeb) {
-      // For web builds, always use production server
-      const productionUrl = String.fromEnvironment('PLACES_API_URL', defaultValue: _productionApiUrl);
-      return productionUrl;
+      // For web builds, use Firebase Function proxy to avoid CORS issues
+      const proxyUrl = String.fromEnvironment('PLACES_API_URL', defaultValue: _firebaseFunctionUrl);
+      return proxyUrl;
     }
-    // For mobile development, use production server
-    return _productionApiUrl;
+    // For mobile development, can use staging server directly (no CORS issues)
+    return _stagingApiUrl;
   }
 
   static Future<List<PlacePrediction>> getPlacePredictions(String input) async {
@@ -22,8 +24,12 @@ class PlacesService {
     }
 
     try {
+      final url = kIsWeb 
+        ? '$_baseUrl/api/places/autocomplete?input=${Uri.encodeComponent(input)}'
+        : '$_baseUrl/autocomplete?input=${Uri.encodeComponent(input)}';
+      
       final response = await http.get(
-        Uri.parse('$_baseUrl/autocomplete?input=${Uri.encodeComponent(input)}'),
+        Uri.parse(url),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -45,8 +51,12 @@ class PlacesService {
 
   static Future<PlaceDetails?> getPlaceDetails(String placeId) async {
     try {
+      final url = kIsWeb 
+        ? '$_baseUrl/api/places/details?place_id=$placeId'
+        : '$_baseUrl/details?place_id=$placeId';
+      
       final response = await http.get(
-        Uri.parse('$_baseUrl/details?place_id=$placeId'),
+        Uri.parse(url),
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {

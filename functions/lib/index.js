@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.secureStripeWebhook = exports.monitorPaymentSecurity = exports.generatePerformanceDashboard = exports.collectPerformanceMetrics = exports.dailyBillingNotifications = exports.weeklyUsageAnalytics = exports.dailySubscriptionHealthCheck = exports.monthlyUsageReset = exports.resetUsageLimits = exports.getUserUsageAnalytics = exports.enforceUsageLimit = exports.trackUsage = exports.validateMultipleFeatures = exports.validateUsageLimit = exports.validateFeatureAccess = exports.createFoundingPartnerCoupon = exports.validatePromoCode = exports.stripeWebhookFallback = exports.stripeWebhook = exports.cancelSubscription = exports.verifySubscriptionSession = exports.stripeWebhookAlt = exports.createCheckoutSession = exports.createPaymentIntent = void 0;
+exports.placesProxy = exports.secureStripeWebhook = exports.monitorPaymentSecurity = exports.generatePerformanceDashboard = exports.collectPerformanceMetrics = exports.dailyBillingNotifications = exports.weeklyUsageAnalytics = exports.dailySubscriptionHealthCheck = exports.monthlyUsageReset = exports.resetUsageLimits = exports.getUserUsageAnalytics = exports.enforceUsageLimit = exports.trackUsage = exports.validateMultipleFeatures = exports.validateUsageLimit = exports.validateFeatureAccess = exports.createFoundingPartnerCoupon = exports.validatePromoCode = exports.stripeWebhookFallback = exports.stripeWebhook = exports.cancelSubscription = exports.verifySubscriptionSession = exports.stripeWebhookAlt = exports.createCheckoutSession = exports.createPaymentIntent = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const stripe_1 = __importDefault(require("stripe"));
@@ -3079,4 +3079,64 @@ async function logWebhookSecurity(event, req) {
         functions.logger.error('❌ Error logging webhook security', error);
     }
 }
+// Places API Proxy to solve CORS issues
+// This function proxies requests to the staging places server that has restrictive CORS
+exports.placesProxy = functions.https.onRequest(async (req, res) => {
+    // Set CORS headers for all origins
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+    // Only allow GET requests
+    if (req.method !== 'GET') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+    }
+    try {
+        const fetch = (await Promise.resolve().then(() => __importStar(require('node-fetch')))).default;
+        const stagingServerUrl = 'https://hipop-places-server-788332607491.us-central1.run.app/api/places';
+        // Extract the endpoint and query parameters
+        const endpoint = req.path.replace('/api/places/', '');
+        const queryString = new URLSearchParams(req.query).toString();
+        const targetUrl = `${stagingServerUrl}/${endpoint}${queryString ? '?' + queryString : ''}`;
+        functions.logger.info('🗺️ Proxying places request', {
+            originalUrl: req.url,
+            targetUrl: targetUrl,
+            userAgent: req.get('User-Agent'),
+        });
+        // Make request to staging server with allowed origin
+        const response = await fetch(targetUrl, {
+            method: 'GET',
+            headers: {
+                'Origin': 'https://hipop-markets-staging.web.app',
+                'User-Agent': req.get('User-Agent') || 'HiPop-Places-Proxy/1.0',
+            },
+        });
+        if (!response.ok) {
+            functions.logger.error('❌ Staging places server error', {
+                status: response.status,
+                statusText: response.statusText,
+                targetUrl: targetUrl,
+            });
+            res.status(response.status).json({
+                error: `Upstream server error: ${response.status}`
+            });
+            return;
+        }
+        const data = await response.json();
+        functions.logger.info('✅ Places request successful', {
+            endpoint: endpoint,
+            responseSize: JSON.stringify(data).length,
+        });
+        res.json(data);
+    }
+    catch (error) {
+        functions.logger.error('❌ Places proxy error', { error: error?.message || 'Unknown error' });
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
 //# sourceMappingURL=index.js.map
