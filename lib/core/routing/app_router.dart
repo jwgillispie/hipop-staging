@@ -659,6 +659,31 @@ class AppRouter {
           },
         ),
         
+        // Backward compatible subscription management route (redirects to parameterized version)
+        GoRoute(
+          path: '/subscription/management',
+          name: 'subscriptionManagementCompat',
+          builder: (context, state) {
+            final authBloc = context.read<AuthBloc>();
+            final authState = authBloc.state;
+            if (authState is Authenticated) {
+              // Redirect to the proper route with userId
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                context.go('/subscription-management/${authState.user.uid}');
+              });
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            } else {
+              return const Scaffold(
+                body: Center(
+                  child: Text('Please log in to access subscription management'),
+                ),
+              );
+            }
+          },
+        ),
+        
         // Premium upgrade route (handles upgrade flow)
         GoRoute(
           path: '/premium/upgrade',
@@ -826,6 +851,87 @@ class AppRouter {
         }
         
         return null;
+      },
+      errorBuilder: (context, state) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF2C2C2E),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: Colors.white70,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Page Not Found',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  state.error?.message ?? 'The page you are looking for does not exist',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Route: ${state.matchedLocation}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.white54,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/auth');
+                        }
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Go Back'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D32),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        context.go('/auth');
+                      },
+                      icon: const Icon(Icons.home),
+                      label: const Text('Home'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[700],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
       },
       refreshListenable: GoRouterRefreshStream(authBloc),
     );

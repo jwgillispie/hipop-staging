@@ -32,7 +32,6 @@ class SubscriptionManagementScreen extends StatefulWidget {
 class _SubscriptionManagementScreenState extends State<SubscriptionManagementScreen> {
   UserSubscription? _subscription;
   bool _isLoading = true;
-  Map<String, dynamic>? _usageStats;
   
   @override
   void initState() {
@@ -45,12 +44,10 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
       setState(() => _isLoading = true);
       
       final subscription = await SubscriptionService.getUserSubscription(widget.userId);
-      final usage = await SubscriptionService.getCurrentUsage(widget.userId);
       
       if (mounted) {
         setState(() {
           _subscription = subscription;
-          _usageStats = usage;
           _isLoading = false;
         });
       }
@@ -68,32 +65,616 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     }
   }
 
+  /// Handle back navigation - either pop if possible, or navigate to appropriate dashboard
+  void _handleBackNavigation() {
+    // Check if we can pop (there's a screen underneath in the navigation stack)
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      // No screen underneath, navigate to appropriate dashboard based on user type
+      final authBloc = context.read<AuthBloc>();
+      final authState = authBloc.state;
+      
+      if (authState is Authenticated) {
+        // Navigate to the appropriate dashboard based on user type
+        switch (authState.userType) {
+          case 'vendor':
+            context.go('/vendor');
+            break;
+          case 'market_organizer':
+            context.go('/organizer');
+            break;
+          case 'shopper':
+            context.go('/shopper');
+            break;
+          default:
+            // Fallback to shopper dashboard
+            context.go('/shopper');
+            break;
+        }
+      } else {
+        // Not authenticated, go to auth screen
+        context.go('/auth');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: HiPopAppBar(
         title: 'Manage Subscription',
         userRole: 'vendor',
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => _handleBackNavigation(),
+        ),
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildCurrentPlanCard(),
-                const SizedBox(height: 16),
-                _buildUsageStatsCard(),
-                const SizedBox(height: 16),
-                _buildBillingInfoCard(),
-                const SizedBox(height: 16),
-                _buildActionsCard(),
-              ],
-            ),
-          ),
+        : _subscription?.isPremium == true
+            ? _buildPremiumView()
+            : _buildNonPremiumView(),
     );
   }
   
+  Widget _buildPremiumView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildPremiumStatusCard(),
+          const SizedBox(height: 16),
+          _buildPremiumFeaturesCard(),
+          const SizedBox(height: 16),
+          _buildBillingInfoCard(),
+          const SizedBox(height: 16),
+          _buildPremiumActionsCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNonPremiumView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildUpgradePromptCard(),
+          const SizedBox(height: 16),
+          _buildPremiumBenefitsCard(),
+          const SizedBox(height: 16),
+          _buildCurrentLimitsCard(),
+          const SizedBox(height: 16),
+          _buildUpgradeActionCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpgradePromptCard() {
+    return Card(
+      color: HiPopColors.surfaceSoftPink.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(
+              Icons.workspace_premium,
+              size: 64,
+              color: HiPopColors.primaryDeepSage,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Unlock Premium Features',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Take your market management to the next level',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: _navigateToUpgrade,
+              icon: const Icon(Icons.rocket_launch),
+              label: const Text('Upgrade to Premium'),
+              style: FilledButton.styleFrom(
+                backgroundColor: HiPopColors.primaryDeepSage,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumBenefitsCard() {
+    final benefits = _getPremiumBenefitsForUserType();
+    
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.stars, color: HiPopColors.warningAmber),
+                const SizedBox(width: 8),
+                Text(
+                  'Premium Benefits',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...benefits.map((benefit) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: HiPopColors.successGreen,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      benefit,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentLimitsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Current Free Tier Limits',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            if (_subscription?.userType == 'market_organizer') ...[
+              _buildLimitIndicator('Vendor Posts', _subscription?.effectiveMonthlyPostCount ?? 0, 1),
+              const SizedBox(height: 12),
+              _buildLimitIndicator('Markets Managed', 1, 2),
+              const SizedBox(height: 12),
+              _buildLimitIndicator('Events per Month', 5, 10),
+            ] else if (_subscription?.userType == 'vendor') ...[
+              _buildLimitIndicator('Products', 3, 3),
+              const SizedBox(height: 12),
+              _buildLimitIndicator('Product Lists', 1, 1),
+              const SizedBox(height: 12),
+              _buildLimitIndicator('Market Applications', _subscription?.effectiveMonthlyApplicationCount ?? 0, 5),
+            ],
+            
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: HiPopColors.warningAmber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: HiPopColors.warningAmber),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Upgrade to Premium for unlimited access',
+                      style: TextStyle(
+                        color: HiPopColors.warningAmberDark,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLimitIndicator(String label, int used, int limit) {
+    final percentage = limit > 0 ? (used / limit).clamp(0.0, 1.0) : 0.0;
+    final isAtLimit = used >= limit;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(
+              '$used / $limit',
+              style: TextStyle(
+                color: isAtLimit ? HiPopColors.errorPlum : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        LinearProgressIndicator(
+          value: percentage,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            isAtLimit ? HiPopColors.errorPlum : HiPopColors.primaryDeepSage,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUpgradeActionCard() {
+    final pricing = StripeService.getPricingForUserType(_subscription?.userType ?? 'vendor');
+    
+    return Card(
+      color: HiPopColors.primaryDeepSage.withValues(alpha: 0.05),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  pricing['name'] as String,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: HiPopColors.successGreen,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'SAVE 20%',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '\$${pricing['price']}',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: HiPopColors.primaryDeepSage,
+                  ),
+                ),
+                Text(
+                  ' /month',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _navigateToUpgrade,
+                style: FilledButton.styleFrom(
+                  backgroundColor: HiPopColors.primaryDeepSage,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Start Premium Trial',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '✓ Cancel anytime ✓ No hidden fees',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<String> _getPremiumBenefitsForUserType() {
+    switch (_subscription?.userType) {
+      case 'market_organizer':
+        return [
+          'Unlimited vendor recruitment posts',
+          'Advanced vendor analytics & performance tracking',
+          'Smart vendor matching with AI recommendations',
+          'Bulk messaging & communication tools',
+          'Financial reporting & revenue insights',
+          'Priority vendor support & mediation',
+          'Custom market branding options',
+          'Export data & reports',
+        ];
+      case 'vendor':
+        return [
+          'Unlimited products & inventory tracking',
+          'Advanced sales analytics dashboard',
+          'Market discovery & auto-matching',
+          'Revenue & profit tracking',
+          'Customer demographics insights',
+          'Multi-market management tools',
+          'Priority application review',
+          'Marketing tools & promotions',
+        ];
+      default:
+        return [
+          'Access to all premium features',
+          'Unlimited usage',
+          'Priority support',
+          'Advanced analytics',
+        ];
+    }
+  }
+
+  Widget _buildPremiumStatusCard() {
+    final subscription = _subscription!;
+    
+    return Card(
+      color: HiPopColors.successGreen.withValues(alpha: 0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.verified,
+                  color: HiPopColors.successGreen,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getPlanName(subscription),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: HiPopColors.successGreen,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'ACTIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '\$${subscription.getMonthlyPrice().toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: HiPopColors.primaryDeepSage,
+                      ),
+                    ),
+                    Text(
+                      'per month',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (subscription.nextPaymentDate != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Next billing date',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  Text(
+                    _formatDate(subscription.nextPaymentDate!),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumFeaturesCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.all_inclusive, color: HiPopColors.primaryDeepSage),
+                const SizedBox(width: 8),
+                Text(
+                  'Your Premium Features',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
+                    HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.workspace_premium,
+                    color: HiPopColors.primaryDeepSage,
+                    size: 32,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Unlimited Everything',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'No limits on posts, markets, or features',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumActionsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Manage Subscription',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Update Payment Method
+            ListTile(
+              leading: const Icon(Icons.credit_card),
+              title: const Text('Update Payment Method'),
+              subtitle: const Text('Change your billing information'),
+              trailing: const Icon(Icons.arrow_forward_ios),
+              onTap: _updatePaymentMethod,
+            ),
+            
+            if (_subscription?.status == SubscriptionStatus.active) ...[
+              const Divider(),
+              
+              // Pause Subscription
+              ListTile(
+                leading: Icon(Icons.pause_circle_outline, color: HiPopColors.warningAmber),
+                title: Text(
+                  'Pause Subscription',
+                  style: TextStyle(color: HiPopColors.warningAmber),
+                ),
+                subtitle: const Text('Temporarily pause billing'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: _showPauseSubscriptionDialog,
+              ),
+              
+              const Divider(),
+              
+              // Cancel Subscription
+              ListTile(
+                leading: Icon(Icons.cancel_outlined, color: HiPopColors.errorPlum),
+                title: Text(
+                  'Cancel Subscription',
+                  style: TextStyle(color: HiPopColors.errorPlum),
+                ),
+                subtitle: const Text('End your premium access'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: _showCancellationDialog,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCurrentPlanCard() {
     final subscription = _subscription;
     final isActive = subscription?.isActive == true;
@@ -405,28 +986,6 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               
               const Divider(),
               
-              // Billing History
-              ListTile(
-                leading: const Icon(Icons.receipt_long),
-                title: const Text('Billing History'),
-                subtitle: const Text('View past invoices and payments'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: _showBillingHistory,
-              ),
-              
-              const Divider(),
-              
-              // Download Invoice
-              ListTile(
-                leading: const Icon(Icons.download),
-                title: const Text('Download Latest Invoice'),
-                subtitle: const Text('Get PDF of your most recent bill'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: _downloadLatestInvoice,
-              ),
-              
-              const Divider(),
-              
               // Pause Subscription
               if (_subscription?.status == SubscriptionStatus.active)
                 ListTile(
@@ -610,163 +1169,22 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   }
   
   Future<void> _showCancellationDialog() async {
-    // Start with retention flow
-    final shouldProceed = await _showRetentionFlow();
-    if (!shouldProceed) return;
+    debugPrint('Starting cancellation flow');
     
-    // Show cancellation options
+    // Show cancellation options directly (no fake retention offers)
     final cancellationChoice = await _showCancellationOptions();
+    debugPrint('Cancellation choice: $cancellationChoice');
     if (cancellationChoice == null) return;
     
     // Get feedback
     final feedback = await _showFeedbackDialog();
+    debugPrint('Feedback received: $feedback');
     
     // Execute cancellation
     await _executeCancellation(cancellationChoice, feedback);
   }
-  
-  Future<bool> _showRetentionFlow() async {
-    final subscription = _subscription;
-    if (subscription == null) return true;
-    
-    // Show retention offers based on user type
-    final retentionOffers = _getRetentionOffers(subscription.tier);
-    
-    return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.star, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('Wait! We have a special offer')),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Before you cancel, would any of these help?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ...retentionOffers.map((offer) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).colorScheme.outline),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(offer['icon'], 
-                          color: Theme.of(context).colorScheme.primary, 
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            offer['title'],
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      offer['description'],
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-                    ),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 16),
-              Text(
-                'Still want to cancel?',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes, continue cancellation'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep my subscription'),
-          ),
-        ],
-      ),
-    ) ?? false;
-  }
-  
-  List<Map<String, dynamic>> _getRetentionOffers(SubscriptionTier tier) {
-    switch (tier) {
-      case SubscriptionTier.vendorPro:
-        return [
-          {
-            'icon': Icons.pause,
-            'title': 'Pause for 3 months',
-            'description': 'Take a break and resume when you\'re ready. No charges during pause.',
-          },
-          {
-            'icon': Icons.discount,
-            'title': '50% off for 6 months',
-            'description': 'Get Vendor Premium for just \$14.50/month for the next 6 months.',
-          },
-          {
-            'icon': Icons.help_outline,
-            'title': 'Free consultation',
-            'description': 'Speak with our vendor success team to maximize your results.',
-          },
-        ];
-      case SubscriptionTier.marketOrganizerPro:
-        return [
-          {
-            'icon': Icons.pause,
-            'title': 'Pause for 3 months',
-            'description': 'Take a break and resume when you\'re ready. No charges during pause.',
-          },
-          {
-            'icon': Icons.discount,
-            'title': '40% off for 3 months',
-            'description': 'Get Organizer Premium for just \$41.40/month for the next 3 months.',
-          },
-          {
-            'icon': Icons.support_agent,
-            'title': 'Priority support',
-            'description': 'Get dedicated support to help optimize your market operations.',
-          },
-        ];
-      case SubscriptionTier.shopperPro:
-        return [
-          {
-            'icon': Icons.pause,
-            'title': 'Pause for 2 months',
-            'description': 'Take a break and resume when you\'re ready. No charges during pause.',
-          },
-          {
-            'icon': Icons.discount,
-            'title': '2 months free',
-            'description': 'Keep your subscription and get 2 months free.',
-          },
-        ];
-      default:
-        return [];
-    }
-  }
+  // Removed fake retention offers per Google's advice and Stripe best practices
+  // Keep cancellation simple and straightforward
   
   Future<String?> _showCancellationOptions() async {
     final subscription = _subscription;
@@ -969,12 +1387,16 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         ),
       );
       
+      debugPrint('Executing cancellation: type=$cancellationType, feedback=$feedback');
+      
       // Call enhanced cancellation service
       final success = await StripeService.cancelSubscriptionEnhanced(
         widget.userId,
         cancellationType: cancellationType,
         feedback: feedback,
       );
+      
+      debugPrint('Cancellation result: $success');
       
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
@@ -1000,6 +1422,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         throw Exception('Cancellation failed');
       }
     } catch (e) {
+      debugPrint('Error in _executeCancellation: $e');
+      
       // Close loading dialog if still open
       if (mounted && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();

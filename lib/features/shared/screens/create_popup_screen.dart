@@ -41,28 +41,29 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _vendorNotesController = TextEditingController();
-  
+
   final UserProfileService _userProfileService = UserProfileService();
   UserProfile? _currentUserProfile;
-  
+
   List<File> _selectedPhotos = [];
-  
+  List<String> _existingPhotoUrls = [];
+
   DateTime? _selectedStartDateTime;
   DateTime? _selectedEndDateTime;
   bool _isLoading = false;
   PlaceDetails? _selectedPlace;
-  
+
   List<Market> _availableMarkets = [];
   Market? _selectedMarket;
   bool _loadingMarkets = false;
   String? _popupType;
   bool _isIndependent = false;
-  
+
   // Product list integration
   List<VendorProductList> _availableProductLists = [];
   List<VendorProductList> _selectedProductLists = [];
   bool _loadingProductLists = false;
-  
+
   // Premium subscription tracking
   bool _canCreatePost = true;
   bool _isCheckingLimits = false;
@@ -77,10 +78,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     _loadCurrentUserProfile();
     _loadProductLists();
     _checkSubscriptionLimits();
-    
+
     // Track post creation start
     _trackPostCreationStart();
-    
+
     // Defer form initialization until after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeForm();
@@ -91,7 +92,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       try {
-        _currentUserProfile = await _userProfileService.getUserProfile(currentUser.uid);
+        _currentUserProfile = await _userProfileService.getUserProfile(
+          currentUser.uid,
+        );
         if (mounted) {
           setState(() {});
         }
@@ -110,7 +113,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     });
 
     try {
-      final productLists = await VendorProductService.getProductLists(currentUser.uid);
+      final productLists = await VendorProductService.getProductLists(
+        currentUser.uid,
+      );
       if (mounted) {
         setState(() {
           _availableProductLists = productLists;
@@ -136,10 +141,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     });
 
     try {
-      final subscription = await SubscriptionService.getUserSubscription(currentUser.uid);
-      final userProfile = await _userProfileService.getUserProfile(currentUser.uid);
-      final userType = subscription?.userType ?? userProfile?.userType ?? 'vendor';
-      
+      final subscription = await SubscriptionService.getUserSubscription(
+        currentUser.uid,
+      );
+      final userProfile = await _userProfileService.getUserProfile(
+        currentUser.uid,
+      );
+      final userType =
+          subscription?.userType ?? userProfile?.userType ?? 'vendor';
+
       if (userType == 'vendor') {
         // For vendors, check popup creation limits
         if (subscription?.isPremium == true) {
@@ -150,7 +160,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           // Free tier vendor - check popup_posts_per_month limit
           final limit = subscription?.getLimit('popup_posts_per_month') ?? 3;
           // Get current usage from vendor_stats collection
-          final currentUsage = await _getCurrentMonthlyPostCount(currentUser.uid);
+          final currentUsage = await _getCurrentMonthlyPostCount(
+            currentUser.uid,
+          );
           _remainingPosts = limit - currentUsage;
           _canCreatePost = _remainingPosts > 0;
           _isNearLimit = _remainingPosts == 1;
@@ -164,7 +176,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         } else {
           // Free tier organizer - check same monthly limit as vendors
           const limit = 3; // Same limit as vendors
-          final currentUsage = await _getCurrentMonthlyPostCount(currentUser.uid);
+          final currentUsage = await _getCurrentMonthlyPostCount(
+            currentUser.uid,
+          );
           _remainingPosts = limit - currentUsage;
           _canCreatePost = _remainingPosts > 0;
           _isNearLimit = _remainingPosts == 1;
@@ -179,7 +193,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         setState(() {
           _subscriptionInfo = {
             'subscription': subscription,
-            'userType': subscription?.userType ?? _currentUserProfile?.userType ?? 'vendor',
+            'userType':
+                subscription?.userType ??
+                _currentUserProfile?.userType ??
+                'vendor',
             'isPremium': subscription?.isPremium ?? false,
             'canCreate': _canCreatePost,
           };
@@ -202,14 +219,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     final uri = GoRouterState.of(context).uri;
     _popupType = uri.queryParameters['type'];
     final marketId = uri.queryParameters['marketId'];
-    
+
     // Track post type selection
     _trackPostTypeSelection(_popupType);
-    
+
     // Check for duplicate arguments first
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final duplicateFrom = args?['duplicateFrom'] as VendorPost?;
-    
+
     if (duplicateFrom != null) {
       // Duplicate mode - copy all details except date/time
       _vendorNameController.text = duplicateFrom.vendorName;
@@ -217,9 +235,11 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       _descriptionController.text = duplicateFrom.description;
       // Instagram handle will be auto-populated from user profile
       // Don't copy date/time for duplicates - let user set new ones
-      
+
       // Initialize selected place if we have location data
-      if (duplicateFrom.placeId != null && duplicateFrom.latitude != null && duplicateFrom.longitude != null) {
+      if (duplicateFrom.placeId != null &&
+          duplicateFrom.latitude != null &&
+          duplicateFrom.longitude != null) {
         _selectedPlace = PlaceDetails(
           placeId: duplicateFrom.placeId!,
           name: duplicateFrom.locationName ?? duplicateFrom.location,
@@ -228,12 +248,12 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           longitude: duplicateFrom.longitude!,
         );
       }
-      
+
       // Set selected market if available
       if (duplicateFrom.marketId != null) {
         _setSelectedMarketById(duplicateFrom.marketId!);
       }
-      
+
       // For duplication, we'll start with empty photos and let user add new ones
     } else if (widget.editingPost != null) {
       // Edit mode - copy everything including date/time
@@ -245,9 +265,11 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       // Instagram handle will be auto-populated from user profile
       _selectedStartDateTime = post.popUpStartDateTime;
       _selectedEndDateTime = post.popUpEndDateTime;
-      
+
       // Initialize selected place if we have location data
-      if (post.placeId != null && post.latitude != null && post.longitude != null) {
+      if (post.placeId != null &&
+          post.latitude != null &&
+          post.longitude != null) {
         _selectedPlace = PlaceDetails(
           placeId: post.placeId!,
           name: post.locationName ?? post.location,
@@ -256,18 +278,19 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           longitude: post.longitude!,
         );
       }
-      
+
       // Set selected market if available
       if (post.marketId != null) {
         _setSelectedMarketById(post.marketId!);
       }
-      
-      // For editing, the PhotoUploadWidget will handle existing photos via initialImagePaths
+
+      // For editing, initialize existing photos
+      _existingPhotoUrls = List.from(post.photoUrls);
     } else {
       // New post mode - set default vendor name from user profile
       final user = FirebaseAuth.instance.currentUser;
       _vendorNameController.text = user?.displayName ?? '';
-      
+
       // Set type based on URL parameter
       if (_popupType == 'independent') {
         setState(() {
@@ -284,17 +307,17 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           _isIndependent = true;
         });
       }
-      
+
       // Set selected market if marketId is provided
       if (marketId != null && marketId.isNotEmpty) {
         _setSelectedMarketById(marketId);
       }
     }
   }
-  
+
   Future<void> _loadMarkets() async {
     setState(() => _loadingMarkets = true);
-    
+
     try {
       // Load all active markets in the Atlanta metro area
       final markets = await MarketService.getAllActiveMarkets();
@@ -302,33 +325,32 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         _availableMarkets = markets;
         _loadingMarkets = false;
       });
-      
     } catch (e) {
       setState(() => _loadingMarkets = false);
     }
   }
-  
-  
+
   Future<void> _setSelectedMarketById(String marketId) async {
     // Try to find in already loaded markets first
     Market? market = _availableMarkets.firstWhere(
       (m) => m.id == marketId,
-      orElse: () => Market(
-        id: marketId,
-        name: 'Loading...',
-        address: '',
-        city: '',
-        state: '',
-        latitude: 0,
-        longitude: 0,
-        eventDate: DateTime.now(),
-        startTime: '9:00 AM',
-        endTime: '5:00 PM',
-        isActive: true,
-        createdAt: DateTime.now(),
-      ),
+      orElse:
+          () => Market(
+            id: marketId,
+            name: 'Loading...',
+            address: '',
+            city: '',
+            state: '',
+            latitude: 0,
+            longitude: 0,
+            eventDate: DateTime.now(),
+            startTime: '9:00 AM',
+            endTime: '5:00 PM',
+            isActive: true,
+            createdAt: DateTime.now(),
+          ),
     );
-    
+
     // If not found in available markets, fetch it directly
     if (market.name == 'Loading...') {
       try {
@@ -344,18 +366,20 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         debugPrint('Error fetching market: $e');
       }
     }
-    
+
     if (mounted) {
       final previousMarketId = _selectedMarket?.id;
       setState(() {
         _selectedMarket = market;
         // Pre-fill location and time from market data
         if (market != null && market.name != 'Loading...') {
-          _locationController.text = '${market.address}, ${market.city}, ${market.state}';
+          _locationController.text =
+              '${market.address}, ${market.city}, ${market.state}';
           _selectedPlace = PlaceDetails(
             placeId: market.id,
             name: market.name,
-            formattedAddress: '${market.address}, ${market.city}, ${market.state}',
+            formattedAddress:
+                '${market.address}, ${market.city}, ${market.state}',
             latitude: market.latitude,
             longitude: market.longitude,
           );
@@ -363,19 +387,19 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           _prefillMarketTime(market);
         }
       });
-      
+
       // Track market selection change
       if (previousMarketId != market?.id) {
         _trackMarketSelection(market?.id);
       }
     }
   }
-  
+
   void _prefillMarketTime(Market market) {
     // Get today's day name
     final now = DateTime.now();
     final dayName = _getDayName(now.weekday);
-    
+
     // Check if market is happening today
     if (market.isHappeningToday) {
       String hours = '${market.startTime} - ${market.endTime}';
@@ -385,21 +409,27 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         if (hours.contains('(')) {
           hours = hours.substring(0, hours.indexOf('(')).trim();
         }
-        
+
         final parts = hours.split('-');
         if (parts.length == 2) {
           final startTime = _parseTimeString(parts[0].trim());
           final endTime = _parseTimeString(parts[1].trim());
-          
+
           if (startTime != null && endTime != null) {
             setState(() {
               _selectedStartDateTime = DateTime(
-                now.year, now.month, now.day,
-                startTime.hour, startTime.minute,
+                now.year,
+                now.month,
+                now.day,
+                startTime.hour,
+                startTime.minute,
               );
               _selectedEndDateTime = DateTime(
-                now.year, now.month, now.day,
-                endTime.hour, endTime.minute,
+                now.year,
+                now.month,
+                now.day,
+                endTime.hour,
+                endTime.minute,
               );
             });
           }
@@ -409,83 +439,98 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       }
     }
   }
-  
+
   DateTime? _parseTimeString(String timeStr) {
     try {
       // Parse time like "9:00 AM" or "2:00 PM"
       final isPM = timeStr.toUpperCase().contains('PM');
       final isAM = timeStr.toUpperCase().contains('AM');
-      
+
       // Remove AM/PM and trim
-      String cleanTime = timeStr.replaceAll(RegExp(r'[AP]M', caseSensitive: false), '').trim();
-      
+      String cleanTime =
+          timeStr.replaceAll(RegExp(r'[AP]M', caseSensitive: false), '').trim();
+
       final timeParts = cleanTime.split(':');
       if (timeParts.length != 2) return null;
-      
+
       int hour = int.parse(timeParts[0]);
       final minute = int.parse(timeParts[1]);
-      
+
       // Convert to 24-hour format
       if (isPM && hour != 12) {
         hour += 12;
       } else if (isAM && hour == 12) {
         hour = 0;
       }
-      
+
       return DateTime(2000, 1, 1, hour, minute);
     } catch (e) {
       debugPrint('Error parsing time string: $e');
       return null;
     }
   }
-  
+
   String _getDayName(int weekday) {
     switch (weekday) {
-      case 1: return 'monday';
-      case 2: return 'tuesday';
-      case 3: return 'wednesday';
-      case 4: return 'thursday';
-      case 5: return 'friday';
-      case 6: return 'saturday';
-      case 7: return 'sunday';
-      default: return '';
+      case 1:
+        return 'monday';
+      case 2:
+        return 'tuesday';
+      case 3:
+        return 'wednesday';
+      case 4:
+        return 'thursday';
+      case 5:
+        return 'friday';
+      case 6:
+        return 'saturday';
+      case 7:
+        return 'sunday';
+      default:
+        return '';
     }
   }
-  
+
   Map<String, DateTime>? _getNextMarketDay(Market market) {
     // Find the next available market day
     final now = DateTime.now();
-    
+
     // Check next 30 days for market hours
     for (int i = 0; i < 30; i++) {
       final checkDate = now.add(Duration(days: i));
       final dayName = _getDayName(checkDate.weekday);
-      
+
       // Check if market event date matches the check date
-      if (market.eventDate.year == checkDate.year && 
-          market.eventDate.month == checkDate.month && 
+      if (market.eventDate.year == checkDate.year &&
+          market.eventDate.month == checkDate.month &&
           market.eventDate.day == checkDate.day) {
         String hours = '${market.startTime} - ${market.endTime}';
         // Parse hours
         if (hours.contains('(')) {
           hours = hours.substring(0, hours.indexOf('(')).trim();
         }
-        
+
         final parts = hours.split('-');
         if (parts.length == 2) {
           final startTime = _parseTimeString(parts[0].trim());
           final endTime = _parseTimeString(parts[1].trim());
-          
+
           if (startTime != null && endTime != null) {
             final start = DateTime(
-              checkDate.year, checkDate.month, checkDate.day,
-              startTime.hour, startTime.minute,
+              checkDate.year,
+              checkDate.month,
+              checkDate.day,
+              startTime.hour,
+              startTime.minute,
             );
             final end = DateTime(
-              checkDate.year, checkDate.month, checkDate.day,
-              endTime.hour, endTime.minute,
+              checkDate.year,
+              checkDate.month,
+              checkDate.day,
+              endTime.hour,
+              endTime.minute,
             );
-            
+
             // Only return if the time is in the future
             if (start.isAfter(now)) {
               return {'start': start, 'end': end};
@@ -494,7 +539,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         }
       }
     }
-    
+
     return null;
   }
 
@@ -504,7 +549,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     if (!_isLoading) {
       _trackPostCreationAbandonment();
     }
-    
+
     _vendorNameController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
@@ -516,16 +561,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.editingPost != null ? 'Edit Pop-Up' : 'Create Pop-Up'),
+        title: Text(
+          widget.editingPost != null ? 'Edit Pop-Up' : 'Create Pop-Up',
+        ),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                HiPopColors.secondarySoftSage,
-                HiPopColors.accentMauve,
-              ],
+              colors: [HiPopColors.secondarySoftSage, HiPopColors.accentMauve],
             ),
           ),
         ),
@@ -571,7 +615,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     IconData iconData;
     String title;
     String subtitle;
-    
+
     if (widget.editingPost != null) {
       iconData = Icons.edit;
       title = 'Update Your Pop-Up';
@@ -588,25 +632,21 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
     return Column(
       children: [
-        Icon(
-          iconData,
-          size: 64,
-          color: Theme.of(context).primaryColor,
-        ),
+        Icon(iconData, size: 64, color: Theme.of(context).primaryColor),
         const SizedBox(height: 16),
         Text(
           title,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
           subtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey[600],
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         // Show monthly limit for ALL post types (free users limited to 3 total per month)
@@ -615,18 +655,27 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _remainingPosts == 1 ? HiPopColors.warningAmber.withValues(alpha: 0.1) : HiPopColors.infoBlueGray.withValues(alpha: 0.1),
+              color:
+                  _remainingPosts == 1
+                      ? HiPopColors.warningAmber.withValues(alpha: 0.1)
+                      : HiPopColors.infoBlueGray.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: _remainingPosts == 1 ? HiPopColors.warningAmber : HiPopColors.infoBlueGray,
+                color:
+                    _remainingPosts == 1
+                        ? HiPopColors.warningAmber
+                        : HiPopColors.infoBlueGray,
               ),
             ),
             child: Text(
-              _remainingPosts == 1 
-                ? '⚠️ Last post this month' 
-                : '📊 $_remainingPosts posts remaining this month',
+              _remainingPosts == 1
+                  ? '⚠️ Last post this month'
+                  : '📊 $_remainingPosts posts remaining this month',
               style: TextStyle(
-                color: _remainingPosts == 1 ? HiPopColors.warningAmberDark : HiPopColors.infoBlueGrayDark,
+                color:
+                    _remainingPosts == 1
+                        ? HiPopColors.warningAmberDark
+                        : HiPopColors.infoBlueGrayDark,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -638,9 +687,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           const SizedBox(height: 8),
           Text(
             'You can optionally associate with a market or go completely independent!',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -692,17 +741,17 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                     // Store the selected place for location data
                     _selectedPlace = location;
                   });
-                  _trackFormFieldInteraction('location', location?.formattedAddress);
+                  _trackFormFieldInteraction(
+                    'location',
+                    location?.formattedAddress,
+                  );
                 },
               ),
               if (_locationController.text.isEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Please enter or select a location',
-                  style: TextStyle(
-                    color: Colors.red[700],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.red[700], fontSize: 12),
                 ),
               ],
             ],
@@ -732,7 +781,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Add vendor notes field for market posts
         // Commented out for now - message to market organizer
         // if (_popupType == 'market' || (_selectedMarket != null && !_isIndependent)) ...[
@@ -747,7 +796,6 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         //   ),
         //   const SizedBox(height: 16),
         // ],
-        
         PhotoUploadWidget(
           onPhotosSelected: (photos) {
             setState(() {
@@ -755,6 +803,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             });
             _trackPhotoUploadInteraction(photos);
           },
+          onExistingPhotosChanged: _onExistingPhotosChanged,
           initialImagePaths: widget.editingPost?.photoUrls,
           userId: FirebaseAuth.instance.currentUser?.uid,
           userType: _subscriptionInfo?['userType'] ?? 'vendor',
@@ -769,7 +818,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
   Widget _buildInstagramInfoWidget() {
     final instagramHandle = _currentUserProfile?.instagramHandle;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -795,14 +844,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  instagramHandle?.isNotEmpty == true 
+                  instagramHandle?.isNotEmpty == true
                       ? '@$instagramHandle'
                       : 'Not set in profile',
                   style: TextStyle(
                     fontSize: 16,
-                    color: instagramHandle?.isNotEmpty == true 
-                        ? Colors.black87 
-                        : Colors.grey,
+                    color:
+                        instagramHandle?.isNotEmpty == true
+                            ? Colors.black87
+                            : Colors.grey,
                   ),
                 ),
                 if (instagramHandle?.isEmpty != false)
@@ -823,13 +873,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       ),
     );
   }
-  
+
   String _getMarketScheduleText() {
     if (_selectedMarket == null) return 'Market schedule';
-    
+
     // Debug: Log market event details
-    debugPrint('Market ${_selectedMarket!.name} event: ${_selectedMarket!.eventDisplayInfo}');
-    
+    debugPrint(
+      'Market ${_selectedMarket!.name} event: ${_selectedMarket!.eventDisplayInfo}',
+    );
+
     // If we have pre-filled start/end times from the market, use those
     if (_selectedStartDateTime != null && _selectedEndDateTime != null) {
       final dateStr = _formatDate(_selectedStartDateTime!);
@@ -837,7 +889,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       final endTime = _formatTime(_selectedEndDateTime!);
       return '$dateStr: $startTime-$endTime';
     }
-    
+
     // Get the next market day
     final nextDay = _getNextMarketDay(_selectedMarket!);
     if (nextDay != null) {
@@ -848,31 +900,44 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       final endTime = _formatTime(end);
       return '$dateStr: $startTime-$endTime';
     }
-    
+
     // Fallback: Check today's hours
     final now = DateTime.now();
     final dayName = _getDayName(now.weekday);
     // Check if market is happening today
     if (_selectedMarket!.isHappeningToday) {
-      String hours = '${_selectedMarket!.startTime} - ${_selectedMarket!.endTime}';
+      String hours =
+          '${_selectedMarket!.startTime} - ${_selectedMarket!.endTime}';
       // Extract just the time portion if it includes date info
       if (hours.contains('(')) {
         hours = hours.substring(0, hours.indexOf('(')).trim();
       }
       return 'Today: $hours';
     }
-    
+
     return 'Market schedule varies';
   }
-  
+
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
+
     return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
   }
-  
+
   String _formatTime(DateTime dateTime) {
     final hour = dateTime.hour;
     final minute = dateTime.minute;
@@ -881,16 +946,19 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     final displayMinute = minute.toString().padLeft(2, '0');
     return '$displayHour:$displayMinute $period';
   }
-  
+
   Widget _buildSelectedMarketCard() {
     if (_selectedMarket == null) return const SizedBox.shrink();
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: HiPopColors.successGreenLight.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3), width: 1.5),
+        border: Border.all(
+          color: HiPopColors.successGreen.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -999,14 +1067,17 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                const Icon(Icons.inventory_2, color: HiPopColors.primaryDeepSage),
+                const Icon(
+                  Icons.inventory_2,
+                  color: HiPopColors.primaryDeepSage,
+                ),
                 const SizedBox(width: 12),
                 const Text(
                   'Product Lists (Optional)',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: HiPopColors.lightTextPrimary
+                    color: HiPopColors.lightTextPrimary,
                   ),
                 ),
                 const Spacer(),
@@ -1024,10 +1095,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(
                 'No product lists found. Create product lists to showcase your items.',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
               ),
             )
           else if (_availableProductLists.isNotEmpty) ...[
@@ -1035,10 +1103,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
               padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
                 'Select product lists to showcase at this pop-up:',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
             ),
             Container(
@@ -1049,8 +1114,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                 itemCount: _availableProductLists.length,
                 itemBuilder: (context, index) {
                   final productList = _availableProductLists[index];
-                  final isSelected = _selectedProductLists.contains(productList);
-                  
+                  final isSelected = _selectedProductLists.contains(
+                    productList,
+                  );
+
                   return Container(
                     width: 160,
                     margin: const EdgeInsets.only(right: 12),
@@ -1063,19 +1130,32 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                             _selectedProductLists.add(productList);
                           }
                         });
-                        _trackFormFieldInteraction('product_lists', _selectedProductLists.length);
+                        _trackFormFieldInteraction(
+                          'product_lists',
+                          _selectedProductLists.length,
+                        );
                       },
                       child: Container(
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: isSelected ? HiPopColors.primaryDeepSage : HiPopColors.lightBorder,
+                            color:
+                                isSelected
+                                    ? HiPopColors.primaryDeepSage
+                                    : HiPopColors.lightBorder,
                             width: isSelected ? 2 : 1,
                           ),
                           borderRadius: BorderRadius.circular(8),
-                          color: isSelected ? HiPopColors.primaryDeepSage.withValues(alpha: 0.1) : Colors.white,
+                          color:
+                              isSelected
+                                  ? HiPopColors.primaryDeepSage.withValues(
+                                    alpha: 0.1,
+                                  )
+                                  : Colors.white,
                           boxShadow: [
                             BoxShadow(
-                              color: HiPopColors.lightShadow.withValues(alpha: 0.05),
+                              color: HiPopColors.lightShadow.withValues(
+                                alpha: 0.05,
+                              ),
                               blurRadius: 2,
                               offset: const Offset(0, 1),
                             ),
@@ -1093,7 +1173,10 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: isSelected ? HiPopColors.primaryDeepSageDark : Colors.black87,
+                                      color:
+                                          isSelected
+                                              ? HiPopColors.primaryDeepSageDark
+                                              : Colors.black87,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
@@ -1183,10 +1266,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                     children: [
                       Text(
                         'Start Time',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1195,18 +1275,24 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                             : 'Select when your pop-up starts',
                         style: TextStyle(
                           fontSize: 16,
-                          color: _selectedStartDateTime != null 
-                              ? Colors.black87 
-                              : Colors.grey[500],
-                          fontWeight: _selectedStartDateTime != null 
-                              ? FontWeight.w500 
-                              : FontWeight.normal,
+                          color:
+                              _selectedStartDateTime != null
+                                  ? Colors.black87
+                                  : Colors.grey[500],
+                          fontWeight:
+                              _selectedStartDateTime != null
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
               ],
             ),
           ),
@@ -1239,10 +1325,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                     children: [
                       Text(
                         'End Time',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 16),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -1251,18 +1334,24 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                             : 'Select when your pop-up ends',
                         style: TextStyle(
                           fontSize: 16,
-                          color: _selectedEndDateTime != null 
-                              ? Colors.black87 
-                              : Colors.grey[500],
-                          fontWeight: _selectedEndDateTime != null 
-                              ? FontWeight.w500 
-                              : FontWeight.normal,
+                          color:
+                              _selectedEndDateTime != null
+                                  ? Colors.black87
+                                  : Colors.grey[500],
+                          fontWeight:
+                              _selectedEndDateTime != null
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
+                ),
               ],
             ),
           ),
@@ -1290,8 +1379,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
   Future<void> _selectStartDateTime() async {
     final now = DateTime.now();
-    final initialDate = _selectedStartDateTime ?? now.add(const Duration(hours: 1));
-    
+    final initialDate =
+        _selectedStartDateTime ?? now.add(const Duration(hours: 1));
+
     final date = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -1300,9 +1390,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Theme.of(context).primaryColor,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: Theme.of(context).primaryColor),
           ),
           child: child!,
         );
@@ -1316,9 +1406,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         builder: (context, child) {
           return Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: Theme.of(context).primaryColor,
-              ),
+              colorScheme: Theme.of(
+                context,
+              ).colorScheme.copyWith(primary: Theme.of(context).primaryColor),
             ),
             child: child!,
           );
@@ -1333,11 +1423,12 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           time.hour,
           time.minute,
         );
-        
+
         setState(() {
           _selectedStartDateTime = selectedStart;
           // Auto-set end time to 4 hours later if not already set
-          if (_selectedEndDateTime == null || _selectedEndDateTime!.isBefore(selectedStart)) {
+          if (_selectedEndDateTime == null ||
+              _selectedEndDateTime!.isBefore(selectedStart)) {
             _selectedEndDateTime = selectedStart.add(const Duration(hours: 4));
           }
         });
@@ -1358,8 +1449,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     }
 
     final minDate = _selectedStartDateTime!;
-    final initialDate = _selectedEndDateTime ?? minDate.add(const Duration(hours: 4));
-    
+    final initialDate =
+        _selectedEndDateTime ?? minDate.add(const Duration(hours: 4));
+
     final date = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -1368,9 +1460,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: Theme.of(context).primaryColor,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: Theme.of(context).primaryColor),
           ),
           child: child!,
         );
@@ -1384,9 +1476,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         builder: (context, child) {
           return Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: Theme.of(context).primaryColor,
-              ),
+              colorScheme: Theme.of(
+                context,
+              ).colorScheme.copyWith(primary: Theme.of(context).primaryColor),
             ),
             child: child!,
           );
@@ -1401,7 +1493,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           time.hour,
           time.minute,
         );
-        
+
         if (selectedEnd.isAfter(_selectedStartDateTime!)) {
           setState(() {
             _selectedEndDateTime = selectedEnd;
@@ -1423,44 +1515,57 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final selectedDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
-    
+
     String dateStr;
     if (selectedDate == today) {
       dateStr = 'Today';
     } else if (selectedDate == today.add(const Duration(days: 1))) {
       dateStr = 'Tomorrow';
     } else {
-      dateStr = '${_getMonthName(dateTime.month)} ${dateTime.day}, ${dateTime.year}';
+      dateStr =
+          '${_getMonthName(dateTime.month)} ${dateTime.day}, ${dateTime.year}';
     }
-    
-    final hour = dateTime.hour == 0 ? 12 : dateTime.hour > 12 ? dateTime.hour - 12 : dateTime.hour;
+
+    final hour =
+        dateTime.hour == 0
+            ? 12
+            : dateTime.hour > 12
+            ? dateTime.hour - 12
+            : dateTime.hour;
     final period = dateTime.hour >= 12 ? 'PM' : 'AM';
     final minute = dateTime.minute.toString().padLeft(2, '0');
-    
+
     return '$dateStr at $hour:$minute $period';
   }
 
   String _getMonthName(int month) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return months[month - 1];
   }
-  
+
   Widget _buildUpgradeBanner() {
     final userType = _subscriptionInfo?['userType'] ?? 'vendor';
-    
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.purple.shade600,
-            Colors.blue.shade600,
-          ],
+          colors: [Colors.purple.shade600, Colors.blue.shade600],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -1476,11 +1581,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.star,
-                color: Colors.yellow.shade300,
-                size: 28,
-              ),
+              Icon(Icons.star, color: Colors.yellow.shade300, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -1508,36 +1609,46 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
-                    children: _getUpgradeBenefits(userType).map((benefit) => 
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.yellow.shade300,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                benefit,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 12,
+                    children:
+                        _getUpgradeBenefits(userType)
+                            .map(
+                              (benefit) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 2,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.yellow.shade300,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        benefit,
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.9,
+                                          ),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ).toList(),
+                            )
+                            .toList(),
                   ),
                 ),
               ),
@@ -1587,17 +1698,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
   Widget _buildWarningBanner() {
     final userType = _subscriptionInfo?['userType'] ?? 'vendor';
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            HiPopColors.warningAmber,
-            HiPopColors.warningAmberLight,
-          ],
+          colors: [HiPopColors.warningAmber, HiPopColors.warningAmberLight],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
@@ -1610,20 +1718,16 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.warning_amber,
-            color: Colors.white,
-            size: 24,
-          ),
+          Icon(Icons.warning_amber, color: Colors.white, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _remainingPosts == 1 
-                    ? 'Only 1 popup left this month!'
-                    : 'Almost at your limit!',
+                  _remainingPosts == 1
+                      ? 'Only 1 popup left this month!'
+                      : 'Almost at your limit!',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -1632,9 +1736,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  userType == 'vendor' 
-                    ? 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining. Upgrade to Vendor Pro for unlimited popups!'
-                    : 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining this month. Upgrade to Organizer Pro for unlimited posts!',
+                  userType == 'vendor'
+                      ? 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining. Upgrade to Vendor Pro for unlimited popups!'
+                      : 'You have $_remainingPosts popup${_remainingPosts == 1 ? '' : 's'} remaining this month. Upgrade to Organizer Premium for unlimited posts!',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,
@@ -1656,10 +1760,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
             ),
             child: const Text(
               'Upgrade',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -1679,7 +1780,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   String _getUpgradeDescription(String userType) {
     switch (userType) {
       case 'market_organizer':
-        return 'You\'ve reached your monthly limit for vendor recruitment posts. Upgrade to Organizer Pro for unlimited posts and advanced vendor matching tools.';
+        return 'You\'ve reached your monthly limit for vendor recruitment posts. Upgrade to Organizer Premium for unlimited posts and advanced vendor matching tools.';
       default:
         return 'Unlock unlimited popup creation and advanced features to grow your business faster.';
     }
@@ -1733,86 +1834,87 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   void _showUpgradeDetails(String userType) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${_getPremiumTierName(userType)} Benefits'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Upgrade to unlock powerful features:',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ..._getDetailedBenefits(userType).map((benefit) =>
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: Colors.green.shade600,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          benefit,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
+      builder:
+          (context) => AlertDialog(
+            title: Text('${_getPremiumTierName(userType)} Benefits'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Upgrade to unlock powerful features:',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.blue.shade600, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _getPricingInfo(userType),
-                        style: TextStyle(
-                          color: Colors.blue.shade700,
-                          fontSize: 12,
-                        ),
+                  const SizedBox(height: 16),
+                  ..._getDetailedBenefits(userType).map(
+                    (benefit) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green.shade600,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              benefit,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue.shade600, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getPricingInfo(userType),
+                            style: TextStyle(
+                              color: Colors.blue.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Maybe Later'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _navigateToUpgrade(userType);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple.shade600,
+                  foregroundColor: Colors.white,
                 ),
+                child: const Text('Upgrade Now'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Maybe Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateToUpgrade(userType);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Upgrade Now'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -2008,8 +2110,20 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           } else {
             // Fallback to next occurrence with default times
             final tomorrow = DateTime.now().add(const Duration(days: 1));
-            _selectedStartDateTime = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0);
-            _selectedEndDateTime = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 14, 0);
+            _selectedStartDateTime = DateTime(
+              tomorrow.year,
+              tomorrow.month,
+              tomorrow.day,
+              9,
+              0,
+            );
+            _selectedEndDateTime = DateTime(
+              tomorrow.year,
+              tomorrow.month,
+              tomorrow.day,
+              14,
+              0,
+            );
           }
         }
       }
@@ -2075,21 +2189,25 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       }
 
       final now = DateTime.now();
-      
+
       if (widget.editingPost != null) {
         // Update existing post
-        List<String> photoUrls = widget.editingPost!.photoUrls;
-        
+        List<String> photoUrls = _existingPhotoUrls; // Use managed existing photos
+
         // Upload new photos if any
         if (_selectedPhotos.isNotEmpty) {
           // Filter out existing photos (File objects created from URLs won't be real files)
-          final newPhotos = _selectedPhotos.where((photo) => photo.existsSync()).toList();
+          final newPhotos =
+              _selectedPhotos.where((photo) => photo.existsSync()).toList();
           if (newPhotos.isNotEmpty) {
-            final newUrls = await PhotoService.uploadPostPhotos(widget.editingPost!.id, newPhotos);
+            final newUrls = await PhotoService.uploadPostPhotos(
+              widget.editingPost!.id,
+              newPhotos,
+            );
             photoUrls = [...photoUrls, ...newUrls];
           }
         }
-        
+
         final updatedPost = widget.editingPost!.copyWith(
           vendorName: _vendorNameController.text.trim(),
           location: _locationController.text.trim(),
@@ -2097,9 +2215,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           longitude: _selectedPlace?.longitude,
           placeId: _selectedPlace?.placeId,
           locationName: _selectedPlace?.name,
-          locationKeywords: _selectedPlace != null 
-              ? VendorPost.generateLocationKeywords(_selectedPlace!.formattedAddress)
-              : VendorPost.generateLocationKeywords(_locationController.text.trim()),
+          locationKeywords:
+              _selectedPlace != null
+                  ? VendorPost.generateLocationKeywords(
+                    _selectedPlace!.formattedAddress,
+                  )
+                  : VendorPost.generateLocationKeywords(
+                    _locationController.text.trim(),
+                  ),
           popUpStartDateTime: _selectedStartDateTime!,
           popUpEndDateTime: _selectedEndDateTime!,
           description: _descriptionController.text.trim(),
@@ -2107,15 +2230,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           photoUrls: photoUrls,
           marketId: _selectedMarket?.id,
           productListIds: _selectedProductLists.map((list) => list.id).toList(),
-          // vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
-          //     ? _vendorNotesController.text.trim() 
+          // vendorNotes: _vendorNotesController.text.trim().isNotEmpty
+          //     ? _vendorNotesController.text.trim()
           //     : null,
           vendorNotes: null, // Commented out for now
           updatedAt: now,
         );
-        
+
         await widget.postsRepository.updatePost(updatedPost);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -2128,17 +2251,19 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       } else {
         // Create new post
         // Determine post type based on whether a market is selected
-        final postType = (_selectedMarket != null && _popupType == 'market') 
-            ? PostType.market 
-            : PostType.independent;
-        
+        final postType =
+            (_selectedMarket != null && _popupType == 'market')
+                ? PostType.market
+                : PostType.independent;
+
         // Set approval status for market posts
-        final approvalStatus = postType == PostType.market 
-            ? ApprovalStatus.pending 
-            : null;
-        
-        debugPrint('Creating post with type: ${postType.value}, marketId: ${_selectedMarket?.id}, approvalStatus: ${approvalStatus?.value}');
-        
+        final approvalStatus =
+            postType == PostType.market ? ApprovalStatus.pending : null;
+
+        debugPrint(
+          'Creating post with type: ${postType.value}, marketId: ${_selectedMarket?.id}, approvalStatus: ${approvalStatus?.value}',
+        );
+
         final tempPost = VendorPost(
           id: '', // Will be set by repository
           vendorId: user.uid,
@@ -2148,9 +2273,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           longitude: _selectedPlace?.longitude,
           placeId: _selectedPlace?.placeId,
           locationName: _selectedPlace?.name,
-          locationKeywords: _selectedPlace != null 
-              ? VendorPost.generateLocationKeywords(_selectedPlace!.formattedAddress)
-              : VendorPost.generateLocationKeywords(_locationController.text.trim()),
+          locationKeywords:
+              _selectedPlace != null
+                  ? VendorPost.generateLocationKeywords(
+                    _selectedPlace!.formattedAddress,
+                  )
+                  : VendorPost.generateLocationKeywords(
+                    _locationController.text.trim(),
+                  ),
           popUpStartDateTime: _selectedStartDateTime!,
           popUpEndDateTime: _selectedEndDateTime!,
           description: _descriptionController.text.trim(),
@@ -2162,40 +2292,44 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           associatedMarketId: _selectedMarket?.id,
           associatedMarketName: _selectedMarket?.name,
           productListIds: _selectedProductLists.map((list) => list.id).toList(),
-          // vendorNotes: _vendorNotesController.text.trim().isNotEmpty 
-          //     ? _vendorNotesController.text.trim() 
+          // vendorNotes: _vendorNotesController.text.trim().isNotEmpty
+          //     ? _vendorNotesController.text.trim()
           //     : null,
           vendorNotes: null, // Commented out for now
           createdAt: now,
           updatedAt: now,
         );
-        
+
         // Create the post first to get an ID
         final postId = await widget.postsRepository.createPost(tempPost);
-        
+
         // Upload photos if any
         List<String> photoUrls = [];
         if (_selectedPhotos.isNotEmpty) {
-          photoUrls = await PhotoService.uploadPostPhotos(postId, _selectedPhotos);
-          
+          photoUrls = await PhotoService.uploadPostPhotos(
+            postId,
+            _selectedPhotos,
+          );
+
           // Update the post with photo URLs
           if (photoUrls.isNotEmpty) {
             final finalPost = tempPost.copyWith(
               id: postId,
               photoUrls: photoUrls,
-              productListIds: _selectedProductLists.map((list) => list.id).toList(),
+              productListIds:
+                  _selectedProductLists.map((list) => list.id).toList(),
             );
             await widget.postsRepository.updatePost(finalPost);
           }
         }
-        
+
         if (mounted) {
           // Track successful post creation
           await _trackPostCreationSuccess(postType, _selectedMarket?.id);
-          
+
           // Update visual cues to reflect new post count
           await _checkSubscriptionLimits();
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Pop-up created successfully!'),
@@ -2223,150 +2357,150 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
 
   void _showUpgradeDialog() {
     final userType = _subscriptionInfo?['userType'] ?? 'vendor';
-    
+
     // Track when users view upgrade options from limit dialog
     _trackUpgradeDialogViewed(userType);
-    
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.star,
-              color: Colors.purple.shade600,
-              size: 28,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _getUpgradeTitle(userType),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _getUpgradeDescription(userType),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.purple.shade200),
+      builder:
+          (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.star, color: Colors.purple.shade600, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _getUpgradeTitle(userType),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_getPremiumTierName(userType)} Benefits:',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple.shade700,
-                      ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getUpgradeDescription(userType),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.purple.shade200),
                     ),
-                    const SizedBox(height: 12),
-                    ..._getUpgradeBenefits(userType).map((benefit) =>
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.green.shade600,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                benefit,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey.shade700,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${_getPremiumTierName(userType)} Benefits:',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ..._getUpgradeBenefits(userType).map(
+                          (benefit) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green.shade600,
+                                  size: 18,
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    benefit,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(color: Colors.grey.shade700),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue.shade600, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _getPricingInfo(userType),
+                            style: TextStyle(
+                              color: Colors.blue.shade700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Maybe Later'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _trackUpgradeFromLimitDialog(userType);
+                  _navigateToUpgrade(userType);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple.shade600,
+                  foregroundColor: Colors.white,
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.blue.shade600, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _getPricingInfo(userType),
-                        style: TextStyle(
-                          color: Colors.blue.shade700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: Text('Upgrade to ${_getPremiumTierName(userType)}'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Maybe Later'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _trackUpgradeFromLimitDialog(userType);
-              _navigateToUpgrade(userType);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Upgrade to ${_getPremiumTierName(userType)}'),
-          ),
-        ],
-      ),
     );
   }
 
   /// Get current monthly post count for any user (vendor or organizer)
   Future<int> _getCurrentMonthlyPostCount(String userId) async {
     try {
-      final statsRef = FirebaseFirestore.instance.collection('user_stats').doc(userId);
+      final statsRef = FirebaseFirestore.instance
+          .collection('user_stats')
+          .doc(userId);
       final statsDoc = await statsRef.get();
-      
+
       if (!statsDoc.exists) {
         return 0; // No posts created yet
       }
-      
+
       final data = statsDoc.data()!;
       final currentMonth = _getCurrentMonth();
       final storedMonth = data['currentCountMonth'] as String?;
-      
+
       if (storedMonth != currentMonth) {
         return 0; // Different month, count has reset
       }
-      
+
       return (data['monthlyPostCount'] as num?)?.toInt() ?? 0;
     } catch (e) {
       debugPrint('Error getting monthly post count: $e');
@@ -2381,41 +2515,51 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       if (user == null) return false;
 
       // Check if user is premium
-      final userDoc = await FirebaseFirestore.instance
-          .collection('user_profiles')
-          .doc(user.uid)
-          .get();
-      
-      if (!userDoc.exists) return false;
-      
-      final userData = userDoc.data()!;
-      final isPremium = userData['isPremium'] ?? false;
-      
-      // Premium users have unlimited posts
-      if (isPremium) return true;
-      
-      // Free users: check monthly limit
-      final currentCount = await _getCurrentMonthlyPostCount(user.uid);
-      const monthlyLimit = 3;
-      
-      if (currentCount >= monthlyLimit) {
-        if (mounted) {
-          // Get user type for appropriate messaging
-          final userDoc = await FirebaseFirestore.instance
+      final userDoc =
+          await FirebaseFirestore.instance
               .collection('user_profiles')
               .doc(user.uid)
               .get();
+
+      if (!userDoc.exists) return false;
+
+      final userData = userDoc.data()!;
+      final isPremium = userData['isPremium'] ?? false;
+
+      // Premium users have unlimited posts
+      if (isPremium) return true;
+
+      // Free users: check monthly limit
+      final currentCount = await _getCurrentMonthlyPostCount(user.uid);
+      const monthlyLimit = 3;
+
+      if (currentCount >= monthlyLimit) {
+        if (mounted) {
+          // Get user type for appropriate messaging
+          final userDoc =
+              await FirebaseFirestore.instance
+                  .collection('user_profiles')
+                  .doc(user.uid)
+                  .get();
           final userType = userDoc.data()?['userType'] ?? 'vendor';
-          
+
           // Track monthly limit encounter
-          await _trackMonthlyLimitEncounter(currentCount, monthlyLimit, userType);
-          
-          final upgradeType = userType == 'market_organizer' ? 'organizer' : 'vendor';
-          final productName = userType == 'market_organizer' ? 'Organizer Pro' : 'Vendor Pro';
-          
+          await _trackMonthlyLimitEncounter(
+            currentCount,
+            monthlyLimit,
+            userType,
+          );
+
+          final upgradeType =
+              userType == 'market_organizer' ? 'organizer' : 'vendor';
+          final productName =
+              userType == 'market_organizer' ? 'Organizer Pro' : 'Vendor Pro';
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('You\'ve reached your monthly limit of $monthlyLimit posts. Upgrade to $productName for unlimited posts.'),
+              content: Text(
+                'You\'ve reached your monthly limit of $monthlyLimit posts. Upgrade to $productName for unlimited posts.',
+              ),
               backgroundColor: HiPopColors.warningAmber,
               action: SnackBarAction(
                 label: 'Upgrade',
@@ -2430,7 +2574,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
         }
         return false;
       }
-      
+
       return true;
     } catch (e) {
       debugPrint('Error checking monthly post limit: $e');
@@ -2451,15 +2595,21 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return '${now.year}-${now.month.toString().padLeft(2, '0')}';
   }
 
+  void _onExistingPhotosChanged(List<String> existingUrls) {
+    setState(() {
+      _existingPhotoUrls = existingUrls;
+    });
+  }
+
   // Analytics tracking methods
-  
+
   Future<void> _trackPostCreationStart() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     final userType = _currentUserProfile?.userType ?? 'vendor';
     final isPremium = _subscriptionInfo?['isPremium'] ?? false;
-    
+
     await RealTimeAnalyticsService.trackEvent('post_creation_started', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2468,14 +2618,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'startTime': DateTime.now().toIso8601String(),
     });
   }
-  
+
   Future<void> _trackPostTypeSelection(String? postType) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null || postType == null) return;
-    
+
     final userType = _currentUserProfile?.userType ?? 'vendor';
     final isPremium = _subscriptionInfo?['isPremium'] ?? false;
-    
+
     await RealTimeAnalyticsService.trackEvent('post_type_selected', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2484,14 +2634,17 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'selectionTime': DateTime.now().toIso8601String(),
     });
   }
-  
-  Future<void> _trackPostCreationSuccess(PostType postType, String? marketId) async {
+
+  Future<void> _trackPostCreationSuccess(
+    PostType postType,
+    String? marketId,
+  ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     final userType = _currentUserProfile?.userType ?? 'vendor';
     final isPremium = _subscriptionInfo?['isPremium'] ?? false;
-    
+
     await RealTimeAnalyticsService.trackEvent('post_creation_completed', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2505,11 +2658,15 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'remainingPosts': _remainingPosts,
     });
   }
-  
-  Future<void> _trackMonthlyLimitEncounter(int currentCount, int limit, String userType) async {
+
+  Future<void> _trackMonthlyLimitEncounter(
+    int currentCount,
+    int limit,
+    String userType,
+  ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('monthly_limit_encountered', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2519,11 +2676,11 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'attemptedPostType': _popupType ?? 'unknown',
     });
   }
-  
+
   Future<void> _trackUpgradeDialogViewed(String userType) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('upgrade_dialog_viewed', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2532,11 +2689,11 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'viewTime': DateTime.now().toIso8601String(),
     });
   }
-  
+
   Future<void> _trackUpgradeFromLimitDialog(String userType) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('upgrade_clicked_from_limit', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2545,14 +2702,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'clickTime': DateTime.now().toIso8601String(),
     });
   }
-  
+
   Future<void> _trackPostCreationAbandonment() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     final userType = _currentUserProfile?.userType ?? 'vendor';
     final isPremium = _subscriptionInfo?['isPremium'] ?? false;
-    
+
     // Calculate abandonment stage
     String abandonmentStage = 'initial';
     if (_vendorNameController.text.isNotEmpty) {
@@ -2570,7 +2727,7 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     if (_selectedPhotos.isNotEmpty) {
       abandonmentStage = 'photos_added';
     }
-    
+
     await RealTimeAnalyticsService.trackEvent('post_creation_abandoned', {
       'userId': currentUser.uid,
       'userType': userType,
@@ -2579,7 +2736,8 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'postType': _popupType ?? 'unknown',
       'selectedMarketId': _selectedMarket?.id,
       'hasBusinessName': _vendorNameController.text.isNotEmpty,
-      'hasLocation': _locationController.text.isNotEmpty || _selectedMarket != null,
+      'hasLocation':
+          _locationController.text.isNotEmpty || _selectedMarket != null,
       'hasDescription': _descriptionController.text.isNotEmpty,
       'hasDateTime': _selectedStartDateTime != null,
       'hasPhotos': _selectedPhotos.isNotEmpty,
@@ -2591,11 +2749,14 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'screenContext': widget.editingPost != null ? 'edit' : 'create',
     });
   }
-  
-  Future<void> _trackFormFieldInteraction(String fieldName, dynamic value) async {
+
+  Future<void> _trackFormFieldInteraction(
+    String fieldName,
+    dynamic value,
+  ) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('form_field_interaction', {
       'userId': currentUser.uid,
       'userType': _currentUserProfile?.userType ?? 'vendor',
@@ -2606,25 +2767,26 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'interactionTime': DateTime.now().toIso8601String(),
     });
   }
-  
+
   Future<void> _trackMarketSelection(String? marketId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('market_selection_changed', {
       'userId': currentUser.uid,
       'userType': _currentUserProfile?.userType ?? 'vendor',
       'selectedMarketId': marketId,
       'previousMarketId': _selectedMarket?.id,
-      'selectionSource': marketId != null ? 'market_chosen' : 'independent_chosen',
+      'selectionSource':
+          marketId != null ? 'market_chosen' : 'independent_chosen',
       'selectionTime': DateTime.now().toIso8601String(),
     });
   }
-  
+
   Future<void> _trackDateTimeSelection(DateTime? dateTime, String type) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('datetime_selection', {
       'userId': currentUser.uid,
       'userType': _currentUserProfile?.userType ?? 'vendor',
@@ -2635,11 +2797,11 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
       'selectionTime': DateTime.now().toIso8601String(),
     });
   }
-  
+
   Future<void> _trackPhotoUploadInteraction(List<File> photos) async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
-    
+
     await RealTimeAnalyticsService.trackEvent('photo_upload_interaction', {
       'userId': currentUser.uid,
       'userType': _currentUserProfile?.userType ?? 'vendor',

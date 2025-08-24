@@ -7,7 +7,7 @@ import 'package:hipop/features/market/widgets/market_vendor_recruitment_form.dar
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/shared/services/places_service.dart';
 import 'package:hipop/features/shared/widgets/common/simple_places_widget.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
+import 'package:hipop/features/shared/services/user_profile_service.dart';
 
 /// Screen for creating vendor recruitment posts from the premium dashboard
 /// Uses the same form as traditional market creation but without creating a public market
@@ -53,18 +53,29 @@ class _CreateVendorRecruitmentPostScreenState extends State<CreateVendorRecruitm
       return;
     }
     
-    final hasAccess = await SubscriptionService.hasFeature(user.uid, 'vendor_post_creation');
-    if (!hasAccess) {
-      // Redirect to upgrade page if not premium
-      if (mounted) {
-        context.go('/premium/upgrade?tier=marketOrganizerPro&userId=$user.uid');
+    try {
+      // Check user profile directly for premium status
+      final userProfileService = UserProfileService();
+      final userProfile = await userProfileService.getUserProfile(user.uid);
+      
+      final hasAccess = userProfile?.isPremium ?? false;
+      if (!hasAccess) {
+        // Redirect to upgrade page if not premium
+        if (mounted) {
+          context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+        }
+        return;
       }
-      return;
+      
+      setState(() {
+        _hasCheckedPremium = true;
+      });
+    } catch (e) {
+      debugPrint('Error checking premium access: $e');
+      if (mounted) {
+        context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+      }
     }
-    
-    setState(() {
-      _hasCheckedPremium = true;
-    });
   }
   
   @override

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../../../blocs/subscription/subscription_bloc.dart';
-import '../../../../blocs/subscription/subscription_state.dart';
-import '../../../../blocs/subscription/subscription_event.dart';
+import '../../../../blocs/auth/auth_bloc.dart';
+import '../../../../blocs/auth/auth_state.dart';
 import '../../../premium/widgets/vendor_premium_dashboard_components.dart';
 import '../../../premium/models/user_subscription.dart';
 
@@ -243,9 +242,9 @@ class PremiumAnalyticsWidgets {
     required String userType,
     required Map<String, dynamic> analyticsData,
   }) {
-    return BlocBuilder<SubscriptionBloc, SubscriptionState>(
-      builder: (context, state) {
-        if (state is! SubscriptionLoaded) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (authState is! Authenticated) {
           return const Card(
             child: Padding(
               padding: EdgeInsets.all(20),
@@ -256,24 +255,23 @@ class PremiumAnalyticsWidgets {
           );
         }
 
-        final subscription = state.subscription;
+        final userProfile = authState.userProfile;
+        final isPremium = userProfile?.isPremium ?? false;
         
-        // Build different analytics based on tier
-        switch (subscription.tier) {
-          case SubscriptionTier.free:
-            return _buildFreeUserAnalytics(context, analyticsData);
-          
-          case SubscriptionTier.vendorPro:
-            return _buildVendorProAnalytics(context, analyticsData);
-          
-          case SubscriptionTier.marketOrganizerPro:
-            return _buildOrganizerProAnalytics(context, analyticsData);
-          
-          case SubscriptionTier.enterprise:
-            return _buildEnterpriseAnalytics(context, analyticsData);
-          
-          default:
-            return _buildFreeUserAnalytics(context, analyticsData);
+        // Build different analytics based on premium status
+        if (isPremium) {
+          // For premium users, show enhanced analytics
+          switch (userType) {
+            case 'vendor':
+              return _buildVendorProAnalytics(context, analyticsData);
+            case 'market_organizer':
+              return _buildOrganizerProAnalytics(context, analyticsData);
+            default:
+              return _buildVendorProAnalytics(context, analyticsData);
+          }
+        } else {
+          // For free users, show basic analytics
+          return _buildFreeUserAnalytics(context, analyticsData);
         }
       },
     );
@@ -286,20 +284,9 @@ class PremiumAnalyticsWidgets {
     required Widget Function() builder,
     Widget Function()? fallbackBuilder,
   }) {
-    return BlocConsumer<SubscriptionBloc, SubscriptionState>(
-      listener: (context, state) {
-        // Handle subscription state changes
-        if (state is SubscriptionError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      },
-      builder: (context, state) {
-        if (state is SubscriptionLoading) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (authState is! Authenticated) {
           return const Card(
             child: Padding(
               padding: EdgeInsets.all(20),
@@ -310,31 +297,18 @@ class PremiumAnalyticsWidgets {
           );
         }
 
-        if (state is SubscriptionLoaded) {
-          // Check feature access
-          final hasAccess = state.hasFeature(featureName);
-          
-          if (hasAccess) {
-            return builder();
-          } else {
-            return fallbackBuilder?.call() ?? 
-                VendorPremiumDashboardComponents.buildUpgradePrompt(
-                  context,
-                  customMessage: 'Unlock $featureName with Vendor Pro',
-                );
-          }
+        final userProfile = authState.userProfile;
+        final hasAccess = userProfile?.isPremium ?? false;
+        
+        if (hasAccess) {
+          return builder();
+        } else {
+          return fallbackBuilder?.call() ?? 
+              VendorPremiumDashboardComponents.buildUpgradePrompt(
+                context,
+                customMessage: 'Unlock $featureName with Vendor Pro',
+              );
         }
-
-        // Default fallback
-        return fallbackBuilder?.call() ?? 
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Center(
-                  child: Text('Analytics unavailable'),
-                ),
-              ),
-            );
       },
     );
   }

@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../premium/models/user_subscription.dart';
 import '../../../premium/services/subscription_service.dart';
 import '../../../premium/widgets/upgrade_prompt_widget.dart';
 
 class PhotoUploadWidget extends StatefulWidget {
   final Function(List<File>) onPhotosSelected;
+  final Function(List<String>)? onExistingPhotosChanged;
   final List<String>? initialImagePaths;
   final String? userId;
   final String? userType;
@@ -15,6 +17,7 @@ class PhotoUploadWidget extends StatefulWidget {
   const PhotoUploadWidget({
     super.key,
     required this.onPhotosSelected,
+    this.onExistingPhotosChanged,
     this.initialImagePaths,
     this.userId,
     this.userType,
@@ -25,7 +28,8 @@ class PhotoUploadWidget extends StatefulWidget {
 }
 
 class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
-  List<File> _selectedImages = [];
+  final List<File> _selectedImages = [];
+  final List<String> _existingImageUrls = [];
   final ImagePicker _picker = ImagePicker();
   UserSubscription? _subscription;
   bool _isLoading = false;
@@ -34,9 +38,14 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   void initState() {
     super.initState();
     if (widget.initialImagePaths != null) {
-      _selectedImages = widget.initialImagePaths!
-          .map((path) => File(path))
-          .toList();
+      // Separate URLs from local file paths
+      for (String path in widget.initialImagePaths!) {
+        if (path.startsWith('http') || path.startsWith('https')) {
+          _existingImageUrls.add(path);
+        } else {
+          _selectedImages.add(File(path));
+        }
+      }
     }
     _loadSubscription();
   }
@@ -57,7 +66,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   Future<void> _handleAddPhoto() async {
     if (_isLoading) return;
 
-    final currentCount = _selectedImages.length;
+    final currentCount = _selectedImages.length + _existingImageUrls.length;
     final limit = _getPhotoLimit();
     final isUnlimited = limit == -1;
 
@@ -103,8 +112,17 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   }
 
   void _removePhoto(int index) {
+    final totalExisting = _existingImageUrls.length;
+    
     setState(() {
-      _selectedImages.removeAt(index);
+      if (index < totalExisting) {
+        // Removing an existing URL
+        _existingImageUrls.removeAt(index);
+        widget.onExistingPhotosChanged?.call(_existingImageUrls);
+      } else {
+        // Removing a newly selected file
+        _selectedImages.removeAt(index - totalExisting);
+      }
     });
     widget.onPhotosSelected(_selectedImages);
   }
@@ -122,7 +140,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
       userId: widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? '',
       userType: widget.userType ?? 'vendor',
       limitName: 'photos per post',
-      currentUsage: _selectedImages.length,
+      currentUsage: _selectedImages.length + _existingImageUrls.length,
       limit: 3,
     );
   }
@@ -146,7 +164,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
       children: [
         _buildHeader(),
         const SizedBox(height: 12),
-        if (_selectedImages.isNotEmpty) _buildPhotoGrid(),
+        if (_selectedImages.isNotEmpty || _existingImageUrls.isNotEmpty) _buildPhotoGrid(),
         _buildAddPhotoSection(),
       ],
     );
@@ -155,7 +173,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   Widget _buildHeader() {
     final limit = _getPhotoLimit();
     final isUnlimited = limit == -1;
-    final count = _selectedImages.length;
+    final count = _selectedImages.length + _existingImageUrls.length;
 
     return Row(
       children: [
@@ -213,12 +231,16 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   }
 
   Widget _buildPhotoGrid() {
-    return Container(
+    final totalCount = _existingImageUrls.length + _selectedImages.length;
+    
+    return SizedBox(
       height: 120,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: _selectedImages.length,
+        itemCount: totalCount,
         itemBuilder: (context, index) {
+          final isExisting = index < _existingImageUrls.length;
+          
           return Container(
             margin: const EdgeInsets.only(right: 12),
             width: 120,
@@ -231,12 +253,29 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    _selectedImages[index],
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                  ),
+                  child: isExisting
+                      ? CachedNetworkImage(
+                          imageUrl: _existingImageUrls[index],
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.error),
+                          ),
+                        )
+                      : Image.file(
+                          _selectedImages[index - _existingImageUrls.length],
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        ),
                 ),
                 Positioned(
                   top: 4,
@@ -271,7 +310,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   Widget _buildAddPhotoSection() {
     final limit = _getPhotoLimit();
     final isUnlimited = limit == -1;
-    final count = _selectedImages.length;
+    final count = _selectedImages.length + _existingImageUrls.length;
     final canAddMore = isUnlimited || count < limit;
 
     return Container(

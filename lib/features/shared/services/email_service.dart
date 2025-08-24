@@ -99,13 +99,13 @@ class EmailService {
 
     if (relationship.invitationToken != null) {
       buffer.writeln('To accept this invitation, please:');
-      buffer.writeln('1. Download the HiPop app: https://hipopapp.com');
+      buffer.writeln('1. Download the HiPop app: https://hipop-markets.web.app');
       buffer.writeln('2. Create or log into your vendor account');
       buffer.writeln('3. Use invitation code: ${relationship.invitationToken}');
       buffer.writeln();
     } else {
       buffer.writeln('To get started:');
-      buffer.writeln('1. Download the HiPop app: https://hipopapp.com');
+      buffer.writeln('1. Download the HiPop app: https://hipop-markets.web.app');
       buffer.writeln('2. Create a vendor account');
       buffer.writeln('3. Apply to join ${market.name}');
       buffer.writeln();

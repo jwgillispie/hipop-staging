@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
@@ -341,7 +342,7 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Navigate to upgrade screen
+              _navigateToUpgrade();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
@@ -352,6 +353,27 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
         ],
       ),
     );
+  }
+
+  void _navigateToUpgrade() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated && authState.userProfile != null) {
+      // Track analytics for upgrade button click
+      RealTimeAnalyticsService.trackEvent(
+        'upgrade_button_clicked',
+        {
+          'user_type': 'market_organizer',
+          'source': 'market_management_screen',
+          'current_market_count': _usageSummary['markets_used'] ?? 0,
+          'limit': _usageSummary['markets_limit'] ?? 2,
+          'is_premium': _usageSummary['is_premium'] ?? false,
+        },
+        userId: authState.userProfile!.userId,
+      );
+
+      // Navigate to premium upgrade flow for market organizers
+      context.go('/premium/upgrade?tier=market_organizer&userId=${authState.userProfile!.userId}');
+    }
   }
 
   Widget _buildUsageSummaryCard() {
@@ -386,9 +408,7 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
                   const Spacer(),
                   if (!isPremium && isAtLimit)
                     TextButton(
-                      onPressed: () {
-                        // TODO: Navigate to upgrade screen
-                      },
+                      onPressed: _navigateToUpgrade,
                       child: const Text('Upgrade'),
                     ),
                 ],

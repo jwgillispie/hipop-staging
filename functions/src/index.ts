@@ -132,25 +132,60 @@ export const createPaymentIntent = functions.https.onCall(
       // Apply promo code if provided
       if (data.promoCode) {
         try {
-          const promotionCodes = await stripe.promotionCodes.list({
-            code: data.promoCode,
-            active: true,
-            limit: 1,
-          });
+          // Special handling for FOUNDERJOZO100 - 100% discount
+          if (data.promoCode.toUpperCase() === 'FOUNDERJOZO100') {
+            discountedAmount = 0; // 100% discount
+            functions.logger.info('Applied FOUNDERJOZO100 special discount', {
+              originalAmount: amount,
+              finalAmount: discountedAmount,
+              promoCode: data.promoCode,
+            });
+          } else {
+            const promotionCodes = await stripe.promotionCodes.list({
+              code: data.promoCode,
+              active: true,
+              limit: 1,
+            });
 
           if (promotionCodes.data.length > 0) {
             const promoCode = promotionCodes.data[0];
             const coupon = promoCode.coupon;
             
             if (coupon.percent_off) {
-              discountedAmount = Math.round(amount * (1 - coupon.percent_off / 100));
+              const calculatedAmount = Math.round(amount * (1 - coupon.percent_off / 100));
+              // Ensure calculated amount is valid and not negative
+              if (isNaN(calculatedAmount) || !isFinite(calculatedAmount) || calculatedAmount < 0) {
+                functions.logger.warn('Invalid calculated percentage discount', {
+                  originalAmount: amount,
+                  discountPercent: coupon.percent_off,
+                  calculatedAmount,
+                });
+                throw new functions.https.HttpsError(
+                  'failed-precondition',
+                  'Invalid discount calculation for percentage coupon'
+                );
+              }
+              discountedAmount = calculatedAmount;
               functions.logger.info('Applied percentage discount', {
                 originalAmount: amount,
                 discountPercent: coupon.percent_off,
                 finalAmount: discountedAmount,
               });
             } else if (coupon.amount_off) {
-              discountedAmount = Math.max(0, amount - coupon.amount_off);
+              const calculatedAmount = Math.max(0, amount - coupon.amount_off);
+              // Ensure calculated amount is valid
+              if (isNaN(calculatedAmount) || !isFinite(calculatedAmount)) {
+                functions.logger.warn('Invalid calculated fixed discount', {
+                  originalAmount: amount,
+                  discountAmount: coupon.amount_off,
+                  calculatedAmount,
+                });
+                throw new functions.https.HttpsError(
+                  'failed-precondition',
+                  'Invalid discount calculation for fixed amount coupon'
+                );
+              }
+              discountedAmount = calculatedAmount;
               functions.logger.info('Applied fixed discount', {
                 originalAmount: amount,
                 discountAmount: coupon.amount_off,
@@ -164,11 +199,27 @@ export const createPaymentIntent = functions.https.onCall(
               'Invalid promo code'
             );
           }
+          }
         } catch (promoError) {
-          functions.logger.error('Error processing promo code', promoError);
+          functions.logger.error('Error processing promo code', {
+            promoCode: data.promoCode,
+            error: promoError,
+            errorMessage: promoError instanceof Error ? promoError.message : 'Unknown error',
+            userId: data.userId,
+          });
+          
+          // Provide more specific error messages based on the error type
+          if (promoError instanceof Stripe.errors.StripeError) {
+            const stripeError = promoError as Stripe.errors.StripeError;
+            throw new functions.https.HttpsError(
+              'failed-precondition',
+              `Stripe error processing promo code: ${stripeError.message}`
+            );
+          }
+          
           throw new functions.https.HttpsError(
             'failed-precondition',
-            'Unable to process promo code'
+            `Unable to process promo code "${data.promoCode}": ${promoError instanceof Error ? promoError.message : 'Unknown error'}`
           );
         }
       }
@@ -208,15 +259,32 @@ export const createPaymentIntent = functions.https.onCall(
         currency: price.currency,
       };
     } catch (error) {
-      functions.logger.error('❌ Error creating payment intent', error);
+      functions.logger.error('❌ Error creating payment intent', {
+        error,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        userId: data.userId,
+        priceId: data.priceId,
+        promoCode: data.promoCode,
+        userType: data.userType,
+      });
       
       if (error instanceof functions.https.HttpsError) {
         throw error;
       }
       
+      // Provide more specific error messages for common issues
+      if (error instanceof Stripe.errors.StripeError) {
+        const stripeError = error as Stripe.errors.StripeError;
+        throw new functions.https.HttpsError(
+          'internal',
+          `Stripe API error: ${stripeError.message}`
+        );
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       throw new functions.https.HttpsError(
         'internal',
-        'Failed to create payment intent'
+        `Failed to create payment intent: ${errorMessage}`
       );
     }
   }
@@ -683,6 +751,140 @@ export const cancelSubscription = functions.https.onCall(
         success: false,
         message: 'Failed to cancel subscription',
       };
+    }
+  }
+);
+
+// 🔒 SECURE: Enhanced subscription cancellation with feedback and options
+export const cancelSubscriptionEnhanced = functions.https.onCall(
+  async (data: {
+    userId: string;
+    cancellationType: 'immediate' | 'end_of_period';
+    reason?: string;
+    feedback?: string;
+  }, context) => {
+    // Verify user is authenticated
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be authenticated to cancel subscription'
+      );
+    }
+
+    // Verify user is cancelling their own subscription
+    if (context.auth.uid !== data.userId) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Can only cancel own subscription'
+      );
+    }
+
+    try {
+      functions.logger.info('🔒 Processing enhanced subscription cancellation', {
+        userId: data.userId,
+        cancellationType: data.cancellationType,
+        reason: data.reason,
+      });
+
+      // Get user's subscription from Firestore
+      const userSubQuery = await admin
+        .firestore()
+        .collection('user_subscriptions')
+        .where('userId', '==', data.userId)
+        .limit(1)
+        .get();
+
+      if (userSubQuery.empty) {
+        return { success: false, message: 'No active subscription found' };
+      }
+
+      const subscriptionDoc = userSubQuery.docs[0];
+      const subscriptionData = subscriptionDoc.data();
+      const stripeSubscriptionId = subscriptionData.stripeSubscriptionId;
+
+      if (!stripeSubscriptionId) {
+        return { success: false, message: 'Invalid subscription data' };
+      }
+
+      let cancelledSubscription;
+      
+      if (data.cancellationType === 'end_of_period') {
+        // Cancel at end of billing period (user keeps access until then)
+        cancelledSubscription = await stripe.subscriptions.update(
+          stripeSubscriptionId,
+          { cancel_at_period_end: true }
+        );
+        
+        // Update Firestore
+        await subscriptionDoc.ref.update({
+          cancel_at_period_end: true,
+          cancellation_scheduled_at: admin.firestore.FieldValue.serverTimestamp(),
+          cancellation_type: 'end_of_period',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Cancel immediately with potential refund
+        cancelledSubscription = await stripe.subscriptions.cancel(
+          stripeSubscriptionId,
+          { prorate: true } // This will create a prorated refund
+        );
+        
+        // Update Firestore
+        await subscriptionDoc.ref.update({
+          status: 'cancelled',
+          cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+          cancellation_type: 'immediate',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Save cancellation feedback for CEO dashboard
+      if (data.reason || data.feedback) {
+        await admin.firestore().collection('cancellation_feedback').add({
+          userId: data.userId,
+          subscriptionId: stripeSubscriptionId,
+          userType: subscriptionData.tier || 'unknown',
+          reason: data.reason || 'not_specified',
+          feedback: data.feedback || '',
+          cancellationType: data.cancellationType,
+          cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+          subscriptionStartDate: subscriptionData.startDate,
+          subscriptionEndDate: cancelledSubscription.current_period_end 
+            ? new Date(cancelledSubscription.current_period_end * 1000)
+            : null,
+          monthlyPrice: subscriptionData.price || 0,
+          totalPaid: subscriptionData.totalPaid || 0,
+        });
+
+        // Also add to CEO metrics collection for dashboard
+        await admin.firestore().collection('ceo_metrics').doc('cancellations').update({
+          total_cancellations: admin.firestore.FieldValue.increment(1),
+          [`reasons.${data.reason || 'not_specified'}`]: admin.firestore.FieldValue.increment(1),
+          [`by_tier.${subscriptionData.tier || 'unknown'}`]: admin.firestore.FieldValue.increment(1),
+          last_updated: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      functions.logger.info('✅ Subscription cancelled successfully', {
+        userId: data.userId,
+        stripeSubscriptionId,
+        cancellationType: data.cancellationType,
+        status: cancelledSubscription.status,
+      });
+
+      return {
+        success: true,
+        message: data.cancellationType === 'end_of_period' 
+          ? `Subscription will cancel on ${new Date(cancelledSubscription.current_period_end * 1000).toLocaleDateString()}`
+          : 'Subscription cancelled immediately',
+        cancel_at: cancelledSubscription.current_period_end,
+      };
+    } catch (error) {
+      functions.logger.error('❌ Error in enhanced cancellation', error);
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to cancel subscription'
+      );
     }
   }
 );
@@ -1578,6 +1780,24 @@ export const validatePromoCode = functions.https.onCall(
         promoCode: data.promoCode,
         userId: context.auth.uid,
       });
+
+      // Special handling for FOUNDERJOZO100 - always valid with 100% discount
+      if (data.promoCode.toUpperCase() === 'FOUNDERJOZO100') {
+        functions.logger.info('✅ FOUNDERJOZO100 special validation successful', {
+          promoCode: data.promoCode,
+          userId: context.auth.uid,
+        });
+        
+        return {
+          valid: true,
+          discount_percent: 100,
+          discount_amount: undefined,
+          description: 'Founder Special - 100% off',
+          duration: 'forever',
+          max_redemptions: null,
+          times_redeemed: 0,
+        };
+      }
 
       // Search for the promotion code in Stripe
       const promotionCodes = await stripe.promotionCodes.list({
@@ -3669,73 +3889,3 @@ async function logWebhookSecurity(event: Stripe.Event, req: any) {
     functions.logger.error('❌ Error logging webhook security', error);
   }
 }
-
-// Places API Proxy to solve CORS issues
-// This function proxies requests to the staging places server that has restrictive CORS
-export const placesProxy = functions.https.onRequest(async (req, res) => {
-  // Set CORS headers for all origins
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(204).send('');
-    return;
-  }
-
-  // Only allow GET requests
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  try {
-    const fetch = require('node-fetch');
-    const stagingServerUrl = 'https://hipop-places-server-788332607491.us-central1.run.app/api/places';
-    
-    // Extract the endpoint and query parameters
-    const endpoint = req.path.replace('/api/places/', '');
-    const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-    const targetUrl = `${stagingServerUrl}/${endpoint}${queryString ? '?' + queryString : ''}`;
-    
-    functions.logger.info('🗺️ Proxying places request', {
-      originalUrl: req.url,
-      targetUrl: targetUrl,
-      userAgent: req.get('User-Agent'),
-    });
-
-    // Make request to staging server with allowed origin
-    const response = await fetch(targetUrl, {
-      method: 'GET',
-      headers: {
-        'Origin': 'https://hipop-markets-staging.web.app',
-        'User-Agent': req.get('User-Agent') || 'HiPop-Places-Proxy/1.0',
-      },
-    });
-
-    if (!response.ok) {
-      functions.logger.error('❌ Staging places server error', {
-        status: response.status,
-        statusText: response.statusText,
-        targetUrl: targetUrl,
-      });
-      res.status(response.status).json({ 
-        error: `Upstream server error: ${response.status}` 
-      });
-      return;
-    }
-
-    const data = await response.json();
-    
-    functions.logger.info('✅ Places request successful', {
-      endpoint: endpoint,
-      responseSize: JSON.stringify(data).length,
-    });
-
-    res.json(data);
-  } catch (error: any) {
-    functions.logger.error('❌ Places proxy error', { error: error?.message || 'Unknown error' });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});

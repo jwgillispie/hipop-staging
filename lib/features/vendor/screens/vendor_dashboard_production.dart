@@ -11,7 +11,6 @@ import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/premium/widgets/premium_vendor_analytics_widget.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
 
 /// Production-ready vendor dashboard with seamlessly integrated premium features
 class VendorDashboard extends StatefulWidget {
@@ -38,10 +37,9 @@ class _VendorDashboardState extends State<VendorDashboard>
   Future<void> _checkPremiumAccess() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
-      final hasAccess = await SubscriptionService.hasFeature(
-        authState.user.uid,
-        'advanced_analytics',
-      );
+      final userProfile = authState.userProfile;
+      final hasAccess = userProfile?.isPremium ?? false;
+      
       if (mounted) {
         setState(() {
           _hasPremiumAccess = hasAccess;

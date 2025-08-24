@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/premium/widgets/upgrade_to_premium_button.dart';
 import '../../services/vendor_following_service.dart';
-import '../../../shared/services/user_profile_service.dart';
 
 
 class VendorNotificationButton extends StatefulWidget {
@@ -93,17 +91,9 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
     });
 
     try {
-      // Check if user has premium subscription for enhanced features (dual check system)
-      final futures = await Future.wait([
-        SubscriptionService.hasFeature(authState.user.uid, 'vendor_following_system'),
-        _checkUserProfilePremiumStatus(authState.user.uid),
-      ]);
-      
-      final hasFeatureAccess = futures[0];
-      final hasProfilePremium = futures[1];
-      
-      // User is premium if either check returns true
-      final hasFeature = hasFeatureAccess || hasProfilePremium;
+      // Check premium access using AuthBloc userProfile
+      final userProfile = authState.userProfile;
+      final hasFeature = userProfile?.isPremium ?? false;
 
       if (_isNotifying) {
         await VendorFollowingService.unfollowVendor(
@@ -180,15 +170,6 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
     );
   }
 
-  Future<bool> _checkUserProfilePremiumStatus(String userId) async {
-    try {
-      final userProfileService = UserProfileService();
-      return await userProfileService.hasPremiumAccess(userId);
-    } catch (e) {
-      debugPrint('Error checking user profile premium status: $e');
-      return false;
-    }
-  }
 
   void _showPremiumRequired() {
     showDialog(

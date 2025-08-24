@@ -5,6 +5,7 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/shared/models/event.dart';
 import 'package:hipop/features/shared/services/event_service.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 import 'organizer/create_event_screen.dart';
 import 'organizer/edit_event_screen.dart';
 import '../../../core/widgets/hipop_app_bar.dart';
@@ -19,11 +20,18 @@ class OrganizerEventManagementScreen extends StatefulWidget {
 
 class _OrganizerEventManagementScreenState extends State<OrganizerEventManagementScreen> {
   Stream<List<Event>>? _eventsStream;
+  StreamSubscription<List<Event>>? _eventsSubscription;
 
   @override
   void initState() {
     super.initState();
     _initializeEvents();
+  }
+
+  @override
+  void dispose() {
+    _eventsSubscription?.cancel();
+    super.dispose();
   }
 
   void _initializeEvents() {
@@ -125,19 +133,29 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                   ),
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
-                sliver:
+              StreamBuilder<List<Event>>(
+                stream: _eventsStream,
+                builder: (context, snapshot) {
+                  // Add mounted check to prevent disposal issues
+                  if (!mounted) {
+                    return const SliverToBoxAdapter(child: SizedBox.shrink());
+                  }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                      sliver: SliverToBoxAdapter(
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                    );
+                  }
 
-                StreamBuilder<List<Event>>(
-                  stream: _eventsStream,
-                  builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(
+                  if (snapshot.hasError) {
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                      sliver: SliverToBoxAdapter(
+                        child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -156,13 +174,18 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                               ),
                             ],
                           ),
-                        );
-                      }
+                        ),
+                      ),
+                    );
+                  }
 
-                      final events = snapshot.data ?? [];
+                  final events = snapshot.data ?? [];
 
-                      if (events.isEmpty) {
-                        return Center(
+                  if (events.isEmpty) {
+                    return SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                      sliver: SliverToBoxAdapter(
+                        child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -193,23 +216,27 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                               ),
                             ],
                           ),
-                        );
-                      }
-
-                      return SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final event = events[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: _buildEventCard(event),
-                            );
-                          },
-                          childCount: events.length,
                         ),
-                      );
-                  },
-                ),
+                      ),
+                    );
+                  }
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final event = events[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: _buildEventCard(event),
+                          );
+                        },
+                        childCount: events.length,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           );
@@ -504,6 +531,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
   }
 
   void _showCreateEventDialog(BuildContext context) {
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const CreateEventScreen(),
@@ -512,6 +540,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
   }
 
   void _showEditEventDialog(Event event) {
+    if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EditEventScreen(event: event),

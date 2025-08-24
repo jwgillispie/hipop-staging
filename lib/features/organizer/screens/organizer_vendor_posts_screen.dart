@@ -5,7 +5,9 @@ import '../models/organizer_vendor_post.dart';
 import '../services/organizer_vendor_post_service.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
-import '../../premium/services/subscription_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hipop/blocs/auth/auth_bloc.dart';
+import 'package:hipop/blocs/auth/auth_state.dart';
 import '../../../core/widgets/hipop_app_bar.dart';
 import '../../../core/theme/hipop_colors.dart';
 
@@ -13,18 +15,25 @@ class OrganizerVendorPostsScreen extends StatefulWidget {
   const OrganizerVendorPostsScreen({super.key});
 
   @override
-  State<OrganizerVendorPostsScreen> createState() => _OrganizerVendorPostsScreenState();
+  State<OrganizerVendorPostsScreen> createState() =>
+      _OrganizerVendorPostsScreenState();
 }
 
-class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen> {
+class _OrganizerVendorPostsScreenState
+    extends State<OrganizerVendorPostsScreen> {
   List<OrganizerVendorPost> _posts = [];
   bool _isLoading = true;
   bool _hasPremiumAccess = false;
   String? _error;
   String _selectedFilter = 'all';
-  int _remainingPosts = 0;
 
-  final List<String> _filterOptions = ['all', 'active', 'paused', 'closed', 'expired'];
+  final List<String> _filterOptions = [
+    'all',
+    'active',
+    'paused',
+    'closed',
+    'expired',
+  ];
 
   @override
   void initState() {
@@ -39,8 +48,8 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
     });
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! Authenticated) {
         setState(() {
           _error = 'Please log in to access Vendor Posts';
           _isLoading = false;
@@ -48,9 +57,10 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
         return;
       }
 
-      // Check premium access
-      final hasAccess = await SubscriptionService.hasFeature(user.uid, 'vendor_post_creation');
-      
+      // Check premium access via user profile
+      final userProfile = authState.userProfile;
+      final hasAccess = userProfile?.isPremium ?? false;
+
       if (!hasAccess) {
         setState(() {
           _hasPremiumAccess = false;
@@ -60,14 +70,9 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
       }
 
       setState(() => _hasPremiumAccess = true);
-      
-      // Load remaining posts count
-      final remaining = await SubscriptionService.getRemainingVendorPosts(user.uid);
-      setState(() => _remainingPosts = remaining);
-      
-      // Load posts
+
+      // Load posts (no remaining posts limit for premium users)
       await _loadPosts();
-      
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -84,10 +89,13 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
       final posts = await OrganizerVendorPostService.getOrganizerPosts(
         user.uid,
         limit: 50,
-        status: _selectedFilter == 'all' ? null : PostStatus.values.firstWhere(
-          (status) => status.name == _selectedFilter,
-          orElse: () => PostStatus.active,
-        ),
+        status:
+            _selectedFilter == 'all'
+                ? null
+                : PostStatus.values.firstWhere(
+                  (status) => status.name == _selectedFilter,
+                  orElse: () => PostStatus.active,
+                ),
       );
 
       setState(() {
@@ -109,24 +117,27 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
   Future<void> _deletePost(OrganizerVendorPost post) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Post'),
-        content: Text('Are you sure you want to delete "${post.title}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Post'),
+            content: Text(
+              'Are you sure you want to delete "${post.title}"? This action cannot be undone.',
             ),
-            child: const Text('Delete'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -152,19 +163,20 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
 
   Future<void> _togglePostStatus(OrganizerVendorPost post) async {
     try {
-      final newStatus = post.status == PostStatus.active 
-          ? PostStatus.paused 
-          : PostStatus.active;
-      
+      final newStatus =
+          post.status == PostStatus.active
+              ? PostStatus.paused
+              : PostStatus.active;
+
       await OrganizerVendorPostService.updatePostStatus(post.id, newStatus);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Post ${newStatus.name}'),
           backgroundColor: Colors.green,
         ),
       );
-      
+
       _refreshPosts();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -195,35 +207,36 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
             ),
         ],
       ),
-      body: !_hasPremiumAccess
-          ? _buildUpgradePrompt()
-          : _isLoading
+      body:
+          !_hasPremiumAccess
+              ? _buildUpgradePrompt()
+              : _isLoading
               ? const LoadingWidget(message: 'Loading vendor posts...')
               : _error != null
-                  ? ErrorDisplayWidget(
-                      title: 'Load Error',
-                      message: _error!,
-                      onRetry: _refreshPosts,
-                    )
-                  : Column(
-                      children: [
-                        _buildFilterSection(),
-                        Expanded(
-                          child: _posts.isEmpty
-                              ? _buildEmptyState()
-                              : _buildPostsList(),
-                        ),
-                      ],
-                    ),
-      floatingActionButton: _hasPremiumAccess && !_isLoading
-          ? FloatingActionButton(
-              onPressed: () {
-                context.go('/organizer/vendor-recruitment/create');
-              },
-              backgroundColor: HiPopColors.organizerAccent,
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+              ? ErrorDisplayWidget(
+                title: 'Load Error',
+                message: _error!,
+                onRetry: _refreshPosts,
+              )
+              : Column(
+                children: [
+                  _buildFilterSection(),
+                  Expanded(
+                    child:
+                        _posts.isEmpty ? _buildEmptyState() : _buildPostsList(),
+                  ),
+                ],
+              ),
+      floatingActionButton:
+          _hasPremiumAccess && !_isLoading
+              ? FloatingActionButton(
+                onPressed: () {
+                  context.go('/organizer/vendor-recruitment/create');
+                },
+                backgroundColor: HiPopColors.organizerAccent,
+                child: const Icon(Icons.add, color: Colors.white),
+              )
+              : null,
     );
   }
 
@@ -242,15 +255,11 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.amber.shade300),
               ),
-              child: Icon(
-                Icons.campaign,
-                size: 64,
-                color: Colors.amber[700],
-              ),
+              child: Icon(Icons.campaign, size: 64, color: Colors.amber[700]),
             ),
             const SizedBox(height: 24),
             Text(
-              'Upgrade to Organizer Pro',
+              'Upgrade to Organizer Premium',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: Colors.deepPurple[800],
@@ -259,9 +268,9 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
             const SizedBox(height: 16),
             Text(
               'Create "Looking for Vendors" posts that appear directly in vendor market discovery feeds.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.grey[700],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: Colors.grey[700]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -285,26 +294,28 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                       'Advanced response management and filtering',
                       'Smart matching to qualified vendors',
                       'Comprehensive analytics and insights',
-                    ].map((feature) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Colors.green[600],
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              feature,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                    ].map(
+                      (feature) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green[600],
+                              size: 20,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                feature,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
@@ -316,7 +327,9 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                 onPressed: () {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
-                    context.go('/premium/upgrade?tier=organizer&userId=${user.uid}');
+                    context.go(
+                      '/premium/upgrade?tier=organizer&userId=${user.uid}',
+                    );
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -333,7 +346,7 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                     Icon(Icons.diamond),
                     const SizedBox(width: 8),
                     const Text(
-                      'Upgrade to Organizer Pro - \$69/month',
+                      'Upgrade to Organizer Premium - \$69/month',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -375,21 +388,27 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: _filterOptions.map((filter) => Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(_formatFilterName(filter)),
-                  selected: _selectedFilter == filter,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedFilter = filter);
-                      _loadPosts();
-                    }
-                  },
-                  selectedColor: HiPopColors.organizerAccent.withValues(alpha: 0.2),
-                  checkmarkColor: HiPopColors.organizerAccent,
-                ),
-              )).toList(),
+              children:
+                  _filterOptions
+                      .map(
+                        (filter) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(_formatFilterName(filter)),
+                            selected: _selectedFilter == filter,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() => _selectedFilter = filter);
+                                _loadPosts();
+                              }
+                            },
+                            selectedColor: HiPopColors.organizerAccent
+                                .withValues(alpha: 0.2),
+                            checkmarkColor: HiPopColors.organizerAccent,
+                          ),
+                        ),
+                      )
+                      .toList(),
             ),
           ),
         ],
@@ -466,27 +485,38 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                 _buildStatusChip(post.status),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Categories
             if (post.categories.isNotEmpty) ...[
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children: post.categories.take(3).map((category) => Chip(
-                  label: Text(
-                    _formatCategoryName(category),
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  backgroundColor: Colors.deepPurple.withValues(alpha: 0.1),
-                  side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.3)),
-                )).toList(),
+                children:
+                    post.categories
+                        .take(3)
+                        .map(
+                          (category) => Chip(
+                            label: Text(
+                              _formatCategoryName(category),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            backgroundColor: Colors.deepPurple.withValues(
+                              alpha: 0.1,
+                            ),
+                            side: BorderSide(
+                              color: Colors.deepPurple.withValues(alpha: 0.3),
+                            ),
+                          ),
+                        )
+                        .toList(),
               ),
               const SizedBox(height: 16),
             ],
-            
+
             // Analytics row
             Row(
               children: [
@@ -509,16 +539,18 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Action buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      context.go('/organizer/vendor-posts/${post.id}/responses');
+                      context.go(
+                        '/organizer/vendor-posts/${post.id}/responses',
+                      );
                     },
                     icon: const Icon(Icons.inbox),
                     label: const Text('Responses'),
@@ -552,40 +584,45 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
                         break;
                     }
                   },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'toggle',
-                      child: Row(
-                        children: [
-                          Icon(
-                            post.status == PostStatus.active 
-                                ? Icons.pause 
-                                : Icons.play_arrow,
-                            size: 18,
+                  itemBuilder:
+                      (context) => [
+                        PopupMenuItem(
+                          value: 'toggle',
+                          child: Row(
+                            children: [
+                              Icon(
+                                post.status == PostStatus.active
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                post.status == PostStatus.active
+                                    ? 'Pause Post'
+                                    : 'Activate Post',
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            post.status == PostStatus.active 
-                                ? 'Pause Post' 
-                                : 'Activate Post',
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete,
+                                size: 18,
+                                color: Colors.red[600],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Delete Post',
+                                style: TextStyle(color: Colors.red[600]),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 18, color: Colors.red[600]),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Delete Post',
-                            style: TextStyle(color: Colors.red[600]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      ],
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -689,24 +726,20 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.campaign,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.campaign, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'No Vendor Posts Yet',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
               'Create your first "Looking for Vendors" post to attract qualified vendors to your market.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -719,7 +752,10 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: HiPopColors.organizerAccent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -729,15 +765,16 @@ class _OrganizerVendorPostsScreenState extends State<OrganizerVendorPostsScreen>
   }
 
   String _formatCategoryName(String category) {
-    return category.split('_').map((word) => 
-      word[0].toUpperCase() + word.substring(1)
-    ).join(' ');
+    return category
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 0) {
       return '${difference.inDays}d ago';
     } else if (difference.inHours > 0) {

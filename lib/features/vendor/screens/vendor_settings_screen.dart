@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:async';
+import '../../shared/services/user_feedback_service.dart';
+import '../../shared/models/user_feedback.dart';
+import '../../../blocs/auth/auth_bloc.dart';
+import '../../../blocs/auth/auth_state.dart';
 
 class VendorSettingsScreen extends StatefulWidget {
   const VendorSettingsScreen({super.key});
@@ -46,28 +52,38 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
           
           // Subscription Section
           _buildSectionHeader('Subscription'),
-          StreamBuilder<DocumentSnapshot>(
-            stream: user != null 
-                ? _firestore.collection('subscriptions').doc(user.uid).snapshots()
-                : const Stream.empty(),
-            builder: (context, snapshot) {
-              final data = snapshot.data?.data() as Map<String, dynamic>?;
-              final isActive = data?['status'] == 'active';
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, authState) {
+              if (authState is! Authenticated) {
+                return const SizedBox.shrink();
+              }
+
+              final userProfile = authState.userProfile;
+              final hasPremiumAccess = userProfile?.isPremium ?? false;
+              
+              if (kDebugMode) {
+                print('📊 Vendor Settings: User profile premium status');
+                print('📊 userProfile?.isPremium: ${userProfile?.isPremium}');
+                print('📊 hasPremiumAccess: $hasPremiumAccess');
+                print('📊 Will route to: ${hasPremiumAccess ? '/subscription-management/${user?.uid}' : '/premium/onboarding'}');
+              }
               
               return _buildSettingsTile(
                 icon: Icons.star_outline,
                 title: 'Manage Subscription',
-                subtitle: isActive 
+                subtitle: hasPremiumAccess 
                     ? 'Premium member - Manage your plan'
                     : 'Upgrade to Premium',
                 onTap: () {
-                  if (isActive) {
-                    context.go('/subscription/management');
+                  if (!mounted) return; // Prevent navigation if widget is disposed
+                  
+                  if (hasPremiumAccess) {
+                    context.go('/subscription-management/${user?.uid}');
                   } else {
-                    context.go('/subscription/selection');
+                    context.go('/premium/onboarding?userId=${user?.uid}&userType=vendor');
                   }
                 },
-                trailing: isActive 
+                trailing: hasPremiumAccess 
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -191,19 +207,161 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
   }
 
   Future<void> _sendFeedback() async {
-    final user = FirebaseAuth.instance.currentUser;
-    final emailUri = Uri(
-      scheme: 'mailto',
-      path: 'support@hipop.app',
-      query: 'subject=Feedback from Vendor&body=User ID: ${user?.uid ?? "Unknown"}%0D%0A%0D%0AYour feedback:',
-    );
-    
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
+    // Show feedback dialog similar to market organizers
+    await _showFeedbackDialog();
+  }
+
+  Future<void> _showFeedbackDialog() async {
+    FeedbackCategory? selectedCategory = FeedbackCategory.general;
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send Feedback'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Category:'),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<FeedbackCategory>(
+                value: selectedCategory,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                items: [
+                  FeedbackCategory.general,
+                  FeedbackCategory.bug,
+                  FeedbackCategory.feature,
+                  FeedbackCategory.improvement,
+                  FeedbackCategory.support,
+                ].map((category) => DropdownMenuItem(
+                  value: category,
+                  child: Text(_getCategoryLabel(category)),
+                )).toList(),
+                onChanged: (value) {
+                  selectedCategory = value;
+                },
+              ),
+              const SizedBox(height: 16),
+              const Text('Title:'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  hintText: 'Brief summary of your feedback',
+                  border: OutlineInputBorder(),
+                ),
+                maxLength: 100,
+              ),
+              const SizedBox(height: 16),
+              const Text('Description:'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  hintText: 'Detailed description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 5,
+                maxLength: 1000,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (titleController.text.trim().isEmpty ||
+                  descriptionController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all fields'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (submitted && selectedCategory != null) {
+      await _submitFeedback(
+        selectedCategory!,
+        titleController.text.trim(),
+        descriptionController.text.trim(),
+      );
+    }
+
+    titleController.dispose();
+    descriptionController.dispose();
+  }
+
+  String _getCategoryLabel(FeedbackCategory category) {
+    switch (category) {
+      case FeedbackCategory.bug:
+        return 'Bug Report';
+      case FeedbackCategory.feature:
+        return 'Feature Request';
+      case FeedbackCategory.improvement:
+        return 'Improvement Suggestion';
+      case FeedbackCategory.general:
+        return 'General Feedback';
+      case FeedbackCategory.support:
+        return 'Support Request';
+      case FeedbackCategory.tutorial:
+        return 'Tutorial Feedback';
+    }
+  }
+
+  Future<void> _submitFeedback(FeedbackCategory category, String title, String description) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      await UserFeedbackService.submitFeedback(
+        userId: user.uid,
+        userType: 'vendor',
+        userEmail: user.email ?? '',
+        userName: user.displayName,
+        category: category,
+        title: title,
+        description: description,
+        metadata: {
+          'screen': 'vendor_settings',
+          'timestamp': DateTime.now().toIso8601String(),
+          'appSection': 'vendor_settings',
+        },
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open email app')),
+          const SnackBar(
+            content: Text('Feedback submitted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit feedback: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -316,8 +474,4 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }

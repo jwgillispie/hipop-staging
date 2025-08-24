@@ -16,6 +16,8 @@ class Market extends Equatable {
   final String endTime; // e.g., "2:00 PM"
   final String? description;
   final String? imageUrl;
+  final List<String> flyerUrls;
+  final String? instagramHandle;
   final bool isActive;
   final List<String> associatedVendorIds; // IDs of vendors associated with this market
   final DateTime createdAt;
@@ -48,6 +50,8 @@ class Market extends Equatable {
     required this.endTime,
     this.description,
     this.imageUrl,
+    this.flyerUrls = const [],
+    this.instagramHandle,
     this.isActive = true,
     this.associatedVendorIds = const [],
     required this.createdAt,
@@ -82,6 +86,10 @@ class Market extends Equatable {
         endTime: data['endTime'] ?? '2:00 PM',
         description: data['description'],
         imageUrl: data['imageUrl'],
+        flyerUrls: data['flyerUrls'] != null 
+            ? List<String>.from(data['flyerUrls'])
+            : [],
+        instagramHandle: data['instagramHandle'],
         isActive: data['isActive'] ?? true,
         associatedVendorIds: data['associatedVendorIds'] != null
             ? List<String>.from(data['associatedVendorIds'])
@@ -121,6 +129,8 @@ class Market extends Equatable {
       'endTime': endTime,
       'description': description,
       'imageUrl': imageUrl,
+      'flyerUrls': flyerUrls,
+      'instagramHandle': instagramHandle,
       'isActive': isActive,
       'associatedVendorIds': associatedVendorIds,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -154,6 +164,8 @@ class Market extends Equatable {
     String? endTime,
     String? description,
     String? imageUrl,
+    List<String>? flyerUrls,
+    String? instagramHandle,
     bool? isActive,
     List<String>? associatedVendorIds,
     DateTime? createdAt,
@@ -182,6 +194,8 @@ class Market extends Equatable {
       endTime: endTime ?? this.endTime,
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
+      flyerUrls: flyerUrls ?? this.flyerUrls,
+      instagramHandle: instagramHandle ?? this.instagramHandle,
       isActive: isActive ?? this.isActive,
       associatedVendorIds: associatedVendorIds ?? this.associatedVendorIds,
       createdAt: createdAt ?? this.createdAt,
@@ -285,6 +299,8 @@ class Market extends Equatable {
         endTime,
         description,
         imageUrl,
+        flyerUrls,
+        instagramHandle,
         isActive,
         associatedVendorIds,
         createdAt,

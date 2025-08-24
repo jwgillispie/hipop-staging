@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/vendor/models/managed_vendor.dart';
@@ -11,9 +13,11 @@ import '../../premium/services/subscription_service.dart';
 import '../../shared/services/places_service.dart';
 import '../../shared/services/real_time_analytics_service.dart';
 import '../../shared/services/location_data_service.dart';
+import '../../shared/services/photo_service.dart';
 import '../../vendor/services/vendor_application_service.dart';
 import '../../vendor/services/managed_vendor_service.dart';
 import '../../shared/widgets/common/simple_places_widget.dart';
+import '../../shared/widgets/common/photo_upload_widget.dart';
 import '../../../core/constants/ui_utils.dart';
 import '../../../core/constants/constants.dart';
 import '../../../core/theme/hipop_colors.dart';
@@ -49,6 +53,11 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   List<String> _selectedVendorIds = [];
   bool _isLoadingVendors = false;
   
+  // Flyer upload
+  List<File> _selectedFlyers = [];
+  List<String> _existingFlyerUrls = [];
+  bool _isFlyerUploading = false;
+  
   bool _isLoading = false;
   bool get _isEditing => widget.market != null;
   
@@ -67,6 +76,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       _selectedAddress = '${market.address}, ${market.city}, ${market.state}';
       _descriptionController.text = market.description ?? '';
       _selectedVendorIds = List.from(market.associatedVendorIds);
+      _existingFlyerUrls = List.from(market.flyerUrls);
       _selectedEventDate = market.eventDate;
       _isLookingForVendors = market.isLookingForVendors;
       _recruitmentData = {
@@ -178,6 +188,49 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     super.dispose();
   }
 
+  void _onFlyersSelected(List<File> flyers) {
+    setState(() {
+      _selectedFlyers = flyers;
+    });
+  }
+
+  void _onExistingFlyersChanged(List<String> existingUrls) {
+    setState(() {
+      _existingFlyerUrls = existingUrls;
+    });
+  }
+
+  Future<List<String>> _uploadFlyers() async {
+    if (_selectedFlyers.isEmpty) return _existingFlyerUrls;
+    
+    setState(() {
+      _isFlyerUploading = true;
+    });
+    
+    try {
+      final uploadedUrls = <String>[];
+      
+      // Get current user ID
+      final authState = context.read<AuthBloc>().state;
+      final userId = authState is Authenticated ? authState.userProfile?.userId ?? 'anonymous' : 'anonymous';
+      
+      for (final flyer in _selectedFlyers) {
+        final url = await PhotoService.uploadPhoto(flyer, 'market_flyers', userId);
+        uploadedUrls.add(url);
+      }
+      
+      // Combine existing URLs (which may have been modified) with new uploaded URLs
+      return [..._existingFlyerUrls, ...uploadedUrls];
+    } catch (e) {
+      debugPrint('Error uploading flyers: $e');
+      throw Exception('Failed to upload flyers: $e');
+    } finally {
+      setState(() {
+        _isFlyerUploading = false;
+      });
+    }
+  }
+
   void _onPlaceSelected(PlaceDetails place) {
     setState(() {
       _selectedPlace = place;
@@ -234,12 +287,15 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     setState(() => _isLoading = true);
 
     try {
+      // Upload flyers first if any
+      final flyerUrls = await _uploadFlyers();
+      
       if (_isEditing) {
         // Update existing market
-        await _updateMarketWithSchedules();
+        await _updateMarketWithSchedules(flyerUrls);
       } else {
         // Create new market
-        await _createMarketWithSchedules();
+        await _createMarketWithSchedules(flyerUrls);
       }
     } catch (e) {
       if (mounted) {
@@ -252,7 +308,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     }
   }
   
-  Future<void> _createMarketWithSchedules() async {
+  Future<void> _createMarketWithSchedules(List<String> flyerUrls) async {
     // Parse address components from selected place
     final addressComponents = _parseAddressComponents(_selectedPlace!.formattedAddress);
     
@@ -280,6 +336,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       description: _descriptionController.text.trim().isNotEmpty 
           ? _descriptionController.text.trim() 
           : null,
+      flyerUrls: flyerUrls,
       associatedVendorIds: _selectedVendorIds,
       createdAt: DateTime.now(),
       // Vendor Recruitment Fields
@@ -313,7 +370,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
     }
   }
   
-  Future<void> _updateMarketWithSchedules() async {
+  Future<void> _updateMarketWithSchedules(List<String> flyerUrls) async {
     final market = widget.market!;
     
     // Parse address components from selected place
@@ -342,6 +399,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       description: _descriptionController.text.trim().isNotEmpty 
           ? _descriptionController.text.trim() 
           : null,
+      flyerUrls: flyerUrls,
       associatedVendorIds: _selectedVendorIds,
       // Vendor Recruitment Fields
       isLookingForVendors: _recruitmentData['isLookingForVendors'] ?? false,
@@ -633,6 +691,53 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       'city': '',
       'state': '',
     };
+  }
+
+  Widget _buildFlyerUploadSection() {
+    return Card(
+      color: HiPopColors.darkSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: HiPopColors.darkBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.image, color: HiPopColors.accentMauve),
+                const SizedBox(width: 8),
+                Text(
+                  'Market Flyer (Optional)',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: HiPopColors.darkTextPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Upload a flyer to showcase your market event',
+              style: TextStyle(
+                fontSize: 14,
+                color: HiPopColors.darkTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            PhotoUploadWidget(
+              onPhotosSelected: _onFlyersSelected,
+              onExistingPhotosChanged: _onExistingFlyersChanged,
+              initialImagePaths: _existingFlyerUrls.isNotEmpty ? _existingFlyerUrls : null,
+              userId: FirebaseAuth.instance.currentUser?.uid,
+              userType: 'market_organizer',
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showMarketLimitDialog() async {
@@ -1136,6 +1241,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                         textCapitalization: TextCapitalization.sentences,
                       ),
                       const SizedBox(height: 24),
+                      // Flyer Upload Section
+                      _buildFlyerUploadSection(),
+                      const SizedBox(height: 24),
                       // Event Date and Time Form
                       _buildEventDateTimeForm(),
                       const SizedBox(height: 24),
@@ -1177,7 +1285,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submitForm,
+                    onPressed: (_isLoading || _isFlyerUploading) ? null : _submitForm,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: HiPopColors.primaryDeepSage,
                       foregroundColor: HiPopColors.darkTextPrimary,
@@ -1185,7 +1293,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: _isLoading
+                    child: (_isLoading || _isFlyerUploading)
                         ? SizedBox(
                             height: 20,
                             width: 20,
@@ -1194,7 +1302,7 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                               color: HiPopColors.darkTextPrimary,
                             ),
                           )
-                        : Text(_isEditing ? 'Update Market' : 'Create Market'),
+                        : Text(_isFlyerUploading ? 'Uploading...' : (_isEditing ? 'Update Market' : 'Create Market')),
                   ),
                 ),
               ],

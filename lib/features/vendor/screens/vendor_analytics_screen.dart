@@ -8,7 +8,6 @@ import 'package:hipop/blocs/subscription/subscription_state.dart';
 import 'package:hipop/blocs/subscription/subscription_event.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/premium/widgets/vendor_premium_dashboard_components.dart';
 import 'package:hipop/core/widgets/hipop_app_bar.dart';
 import 'package:hipop/core/widgets/metric_card.dart';
@@ -42,24 +41,25 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   }
 
   Future<void> _checkPremiumAccessWithBloc(String vendorId) async {
-    // Initialize subscription monitoring
-    context.read<SubscriptionBloc>().add(SubscriptionInitialized(vendorId));
-    
-    // Check specific feature access
-    context.read<SubscriptionBloc>().add(
-      const FeatureAccessRequested('product_performance_analytics'),
-    );
-    
-    // Fallback to service check
-    final hasAccess = await SubscriptionService.hasFeature(
-      vendorId,
-      'product_performance_analytics',
-    );
-    if (mounted) {
-      setState(() {
-        _hasPremiumAccess = hasAccess;
-        _isCheckingPremium = false;
-      });
+    // Check premium access using AuthBloc userProfile
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      final userProfile = authState.userProfile;
+      final hasAccess = userProfile?.isPremium ?? false;
+      
+      if (mounted) {
+        setState(() {
+          _hasPremiumAccess = hasAccess;
+          _isCheckingPremium = false;
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _hasPremiumAccess = false;
+          _isCheckingPremium = false;
+        });
+      }
     }
   }
 

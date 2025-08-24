@@ -100,6 +100,7 @@ class _EnhancedShopperPremiumDemoScreenState extends State<EnhancedShopperPremiu
       return await VendorInsightsService.getShoppingInsights(
         shopperId: _currentUserId,
         months: 3,
+        isPremium: false, // Shoppers have free access
       );
     } catch (e) {
       debugPrint('Error loading shopping insights: $e');

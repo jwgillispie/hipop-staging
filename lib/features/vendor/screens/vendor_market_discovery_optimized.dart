@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
@@ -8,9 +9,10 @@ import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../market/models/market.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
-import '../../premium/services/subscription_service.dart';
 import '../../shared/services/real_time_analytics_service.dart';
 import '../../../core/widgets/premium_upgrade_card.dart';
+import '../../../blocs/auth/auth_bloc.dart';
+import '../../../blocs/auth/auth_state.dart';
 
 /// Optimized Vendor Market Discovery Screen
 /// Shows ONLY markets actively looking for vendors (isLookingForVendors = true)
@@ -72,8 +74,14 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
         throw Exception('Please log in to access Market Discovery');
       }
       
-      // Check premium access for market discovery feature
-      final hasAccess = await SubscriptionService.hasFeature(user.uid, 'market_discovery');
+      // Check premium access using AuthBloc userProfile
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! Authenticated) {
+        throw Exception('Not authenticated');
+      }
+      
+      final userProfile = authState.userProfile;
+      final hasAccess = userProfile?.isPremium ?? false;
       _hasPremiumAccess = hasAccess;
       
       // If no premium access, set loading to false and show upgrade prompt
@@ -504,7 +512,6 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
   }
 
   Widget _buildEmptyState() {
-    final user = FirebaseAuth.instance.currentUser;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -559,93 +566,6 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
             ),
             
             const SizedBox(height: 48),
-            
-            // Premium upgrade suggestion even for premium users (for advanced features)
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    HiPopColors.accentMauve.withValues(alpha: 0.1),
-                    HiPopColors.primaryDeepSage.withValues(alpha: 0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: HiPopColors.accentMauve.withValues(alpha: 0.3),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome,
-                        color: HiPopColors.accentMauve,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Get Notified When Markets Are Recruiting',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: HiPopColors.darkTextPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Set up instant notifications and priority access to new market opportunities. Be the first to know when markets in your area start looking for vendors.',
-                    style: TextStyle(
-                      color: HiPopColors.darkTextSecondary,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // Navigate to notification settings
-                            context.go('/settings/notifications');
-                          },
-                          icon: const Icon(Icons.notifications_outlined, size: 18),
-                          label: const Text('Setup Notifications'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: HiPopColors.accentMauve,
-                            side: BorderSide(color: HiPopColors.accentMauve),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            if (user != null) {
-                              context.go('/premium/upgrade?tier=vendor&userId=${user.uid}&feature=advanced_notifications');
-                            }
-                          },
-                          icon: const Icon(Icons.diamond, size: 18),
-                          label: const Text('Upgrade'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: HiPopColors.accentMauve,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

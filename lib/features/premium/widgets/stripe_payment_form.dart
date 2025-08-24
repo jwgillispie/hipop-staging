@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../services/payment_service.dart';
 import '../services/premium_error_handler.dart';
 import '../services/stripe_service.dart';
@@ -34,6 +35,9 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
   final TextEditingController _couponController = TextEditingController();
   String? _appliedCoupon;
   bool _couponValidated = false;
+  bool _validatingCoupon = false;
+  PromoCodeValidation? _promoValidation;
+  double? _discountedPrice;
   
   @override
   void initState() {
@@ -193,12 +197,34 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              Text(
-                _getPriceDisplay(),
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                ),
+              Column(
+                children: [
+                  if (_promoValidation != null && _promoValidation!.isValid) ...[
+                    Text(
+                      _getPriceDisplay(),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        decoration: TextDecoration.lineThrough,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _getDiscountedPriceDisplay(),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      _getPriceDisplay(),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -289,13 +315,64 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
         const SizedBox(height: 16),
         
         // Terms and conditions
-        Text(
-          'By subscribing, you agree to our Terms of Service and Privacy Policy',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
-          textAlign: TextAlign.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            Text(
+              'By subscribing, you agree to our ',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showTermsDialog(context),
+              child: Text(
+                'Terms of Service',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            Text(
+              ', ',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showPrivacyDialog(context),
+              child: Text(
+                'Privacy Policy',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            Text(
+              ', and ',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showPaymentTermsDialog(context),
+              child: Text(
+                'Payment Terms',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 12,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -525,11 +602,18 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
         Row(
           children: [
             Expanded(
-              child: TextField(
+              child: TextFormField(
                 controller: _couponController,
-                enabled: !_couponValidated,
+                enabled: !_couponValidated && !_validatingCoupon,
+                style: const TextStyle(
+                  color: Color(0xFF040000), // HiPop black color
+                  fontWeight: FontWeight.w500,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Enter coupon code',
+                  hintStyle: TextStyle(
+                    color: Colors.grey[500],
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -537,33 +621,59 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
                     Icons.local_offer,
                     color: _couponValidated ? Colors.green : Colors.grey,
                   ),
-                  suffixIcon: _couponValidated
-                      ? Icon(Icons.check_circle, color: Colors.green)
-                      : null,
+                  suffixIcon: _validatingCoupon
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        )
+                      : _couponValidated
+                          ? Icon(Icons.check_circle, color: Colors.green)
+                          : null,
                   filled: true,
                   fillColor: _couponValidated
                       ? Colors.green.shade50
                       : Colors.white,
                 ),
                 textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  // Custom formatter to handle iOS text visibility issues
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    // Ensure text is always uppercase and properly formatted
+                    final upperText = newValue.text.toUpperCase();
+                    return TextEditingValue(
+                      text: upperText,
+                      selection: TextSelection.collapsed(offset: upperText.length),
+                    );
+                  }),
+                ],
                 onChanged: (value) {
-                  // Convert to uppercase
-                  _couponController.value = _couponController.value.copyWith(
-                    text: value.toUpperCase(),
-                    selection: TextSelection.collapsed(
-                      offset: value.length,
-                    ),
-                  );
+                  // Reset validation state when user types
+                  if (_couponValidated) {
+                    setState(() {
+                      _couponValidated = false;
+                      _appliedCoupon = null;
+                      _promoValidation = null;
+                      _discountedPrice = null;
+                    });
+                  }
                 },
               ),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
-              onPressed: _couponValidated
-                  ? _removeCoupon
-                  : (_couponController.text.isEmpty || _isProcessing)
-                      ? null
-                      : _validateCoupon,
+              onPressed: _validatingCoupon
+                  ? null
+                  : _couponValidated
+                      ? _removeCoupon
+                      : _isProcessing
+                          ? null
+                          : _validateCoupon,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -572,18 +682,32 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                backgroundColor: _couponValidated ? Colors.red : null,
+                backgroundColor: _couponValidated 
+                    ? Colors.red 
+                    : _couponController.text.trim().isEmpty
+                        ? Colors.grey.shade400 // Disabled gray state when empty
+                        : Colors.green, // Enabled green state
+                foregroundColor: Colors.white,
               ),
-              child: Text(
-                _couponValidated ? 'Remove' : 'Apply',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _validatingCoupon
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      _couponValidated ? 'Remove' : 'Apply',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ],
         ),
-        if (_couponValidated) ...[
+        if (_couponValidated && _promoValidation != null) ...[
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(12),
@@ -592,17 +716,42 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.green.shade200),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Coupon "$_appliedCoupon" applied successfully!',
-                    style: TextStyle(
-                      color: Colors.green.shade700,
-                      fontWeight: FontWeight.w500,
+                Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Coupon Applied ✓',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+                if (_promoValidation!.description != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _promoValidation!.description!,
+                    style: TextStyle(
+                      color: Colors.green.shade600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  'You save ${_getSavingsText()}',
+                  style: TextStyle(
+                    color: Colors.green.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -613,26 +762,303 @@ class _StripePaymentFormState extends State<StripePaymentForm> {
     );
   }
   
-  void _validateCoupon() {
+  Future<void> _validateCoupon() async {
     final couponCode = _couponController.text.trim().toUpperCase();
-    if (couponCode.isEmpty) return;
+    if (couponCode.isEmpty) {
+      // Show a message to user that they need to enter a code
+      setState(() {
+        _errorMessage = 'Please enter a coupon code';
+      });
+      return;
+    }
     
     setState(() {
-      _appliedCoupon = couponCode;
-      _couponValidated = true;
+      _validatingCoupon = true;
       _errorMessage = null;
     });
     
-    debugPrint('🎟️ Coupon applied: $couponCode');
+    try {
+      debugPrint('🎟️ Validating coupon with backend: $couponCode');
+      
+      // Call the backend validation service
+      final validation = await PaymentService.validatePromoCode(couponCode);
+      
+      setState(() {
+        _validatingCoupon = false;
+        
+        if (validation.isValid) {
+          _appliedCoupon = couponCode;
+          _couponValidated = true;
+          _promoValidation = validation;
+          _discountedPrice = _calculateDiscountedPrice(validation);
+          debugPrint('✅ Coupon validated successfully: $couponCode');
+        } else {
+          _errorMessage = validation.errorMessage ?? 'Invalid coupon code';
+          debugPrint('❌ Coupon validation failed: ${validation.errorMessage}');
+        }
+      });
+    } catch (e) {
+      debugPrint('❌ Error validating coupon: $e');
+      setState(() {
+        _validatingCoupon = false;
+        _errorMessage = 'Unable to validate coupon. Please try again.';
+      });
+    }
   }
   
   void _removeCoupon() {
     setState(() {
       _appliedCoupon = null;
       _couponValidated = false;
+      _promoValidation = null;
+      _discountedPrice = null;
       _couponController.clear();
     });
     
     debugPrint('🎟️ Coupon removed');
+  }
+  
+  double _calculateDiscountedPrice(PromoCodeValidation validation) {
+    final originalPrice = _getOriginalPrice();
+    
+    // Validate original price is not NaN or invalid
+    if (originalPrice.isNaN || originalPrice.isInfinite || originalPrice <= 0) {
+      debugPrint('❌ Invalid original price: $originalPrice, using fallback');
+      return _getOriginalPrice(); // Use fallback logic
+    }
+    
+    if (validation.discountAmount != null) {
+      final discountAmount = validation.discountAmount!;
+      // Ensure discount amount is valid
+      if (discountAmount.isNaN || discountAmount.isInfinite || discountAmount < 0) {
+        debugPrint('❌ Invalid discount amount: $discountAmount, ignoring discount');
+        return originalPrice;
+      }
+      return (originalPrice - discountAmount).clamp(0.0, originalPrice);
+    }
+    
+    if (validation.discountPercent != null) {
+      final discountPercent = validation.discountPercent!;
+      // Ensure discount percent is valid
+      if (discountPercent.isNaN || discountPercent.isInfinite || discountPercent < 0 || discountPercent > 100) {
+        debugPrint('❌ Invalid discount percent: $discountPercent, ignoring discount');
+        return originalPrice;
+      }
+      final discount = originalPrice * (discountPercent / 100);
+      // Ensure calculated discount is valid
+      if (discount.isNaN || discount.isInfinite) {
+        debugPrint('❌ Invalid calculated discount: $discount, ignoring discount');
+        return originalPrice;
+      }
+      return (originalPrice - discount).clamp(0.0, originalPrice);
+    }
+    
+    return originalPrice;
+  }
+  
+  double _getOriginalPrice() {
+    // Map user types to prices (in dollars)
+    switch (widget.userType) {
+      case 'vendor':
+        return 29.00;
+      case 'market_organizer':
+        return 69.00;
+      case 'shopper':
+        return 4.00;
+      default:
+        return 0.00;
+    }
+  }
+  
+  String _getDiscountedPriceDisplay() {
+    if (_discountedPrice != null) {
+      // Ensure discounted price is not NaN or invalid before displaying
+      if (_discountedPrice!.isNaN || _discountedPrice!.isInfinite || _discountedPrice! < 0) {
+        debugPrint('❌ Invalid discounted price for display: $_discountedPrice, using original price');
+        return _getPriceDisplay();
+      }
+      return '\$${_discountedPrice!.toStringAsFixed(2)}/month';
+    }
+    return _getPriceDisplay();
+  }
+  
+  String _getSavingsText() {
+    if (_promoValidation == null || !_promoValidation!.isValid) {
+      return '';
+    }
+    
+    final originalPrice = _getOriginalPrice();
+    
+    if (_promoValidation!.discountAmount != null) {
+      final discountAmount = _promoValidation!.discountAmount!;
+      // Validate discount amount before displaying
+      if (discountAmount.isNaN || discountAmount.isInfinite || discountAmount < 0) {
+        debugPrint('❌ Invalid discount amount for display: $discountAmount');
+        return '';
+      }
+      return '\$${discountAmount.toStringAsFixed(2)}';
+    }
+    
+    if (_promoValidation!.discountPercent != null) {
+      final discountPercent = _promoValidation!.discountPercent!;
+      // Validate discount percent before calculating
+      if (discountPercent.isNaN || discountPercent.isInfinite || discountPercent < 0 || discountPercent > 100) {
+        debugPrint('❌ Invalid discount percent for display: $discountPercent');
+        return '';
+      }
+      final savings = originalPrice * (discountPercent / 100);
+      // Validate calculated savings
+      if (savings.isNaN || savings.isInfinite || savings < 0) {
+        debugPrint('❌ Invalid calculated savings for display: $savings');
+        return '';
+      }
+      return '\$${savings.toStringAsFixed(2)} (${discountPercent.toStringAsFixed(0)}% off)';
+    }
+    
+    return '';
+  }
+
+  void _showTermsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terms of Service'),
+        content: const SingleChildScrollView(
+          child: Text(
+            '''HiPop Markets Terms of Service
+
+ABOUT HIPOP MARKETS
+HiPop is a comprehensive three-sided marketplace platform that connects vendors, shoppers, and market organizers in the local pop-up market ecosystem.
+
+SUBSCRIPTION SERVICES
+• Shopper Premium: \$4/month - Enhanced discovery and notifications
+• Vendor Premium: \$29/month - Advanced analytics and priority placement  
+• Market Organizer Premium: \$69/month - Comprehensive management tools
+
+PAYMENT PROCESSING
+• All payments processed securely through Stripe
+• Automatic recurring billing on subscription date
+• Payment methods: Cards, Apple Pay, Google Pay
+• Secure tokenization and PCI compliance
+
+By subscribing, you agree to our complete Terms of Service, Privacy Policy, and Payment Terms available in the Legal Documents section.''',
+            style: TextStyle(fontSize: 14),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/legal');
+            },
+            child: const Text('View Full Terms'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: const SingleChildScrollView(
+          child: Text(
+            '''HiPop Markets Privacy Policy
+
+DATA COLLECTION
+We collect account information, usage analytics, and payment data to provide our three-sided marketplace services.
+
+ANALYTICS USAGE
+• Performance metrics and user engagement data
+• Market discovery and vendor interaction analytics
+• Payment processing and subscription management data
+
+THIRD-PARTY SERVICES
+• Stripe for secure payment processing
+• Google Cloud Platform for data storage
+• Firebase for authentication and real-time features
+
+Your privacy is protected with enterprise-grade security. View our complete Privacy Policy in Legal Documents for full details on data collection, usage, and your rights.''',
+            style: TextStyle(fontSize: 14),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/legal');
+            },
+            child: const Text('View Full Policy'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentTermsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Payment Terms'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Subscription: ${widget.tier}',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Price: ${_getPriceDisplay()}',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '''PAYMENT TERMS
+• Automatic recurring monthly billing
+• Secure processing through Stripe
+• Cancel anytime in app settings
+• No refunds for partial usage
+• Prorated charges for plan changes
+
+PAYMENT SECURITY
+• End-to-end encryption
+• PCI DSS compliance
+• Tokenized payment storage
+• Fraud protection systems
+
+View complete Payment Terms in Legal Documents for full billing policies, refund procedures, and security details.''',
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pushNamed('/legal');
+            },
+            child: const Text('View Full Terms'),
+          ),
+        ],
+      ),
+    );
   }
 }

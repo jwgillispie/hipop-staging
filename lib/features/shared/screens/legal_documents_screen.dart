@@ -65,30 +65,30 @@ class LegalDocumentsScreen extends StatelessWidget {
                       _buildDocumentCard(
                         context: context,
                         title: 'Terms of Service',
-                        description: 'Our terms and conditions for using HiPop Markets',
+                        description: 'Comprehensive terms for the HiPop three-sided marketplace platform',
                         icon: Icons.description,
                         color: Colors.orange,
-                        url: 'https://hipop-markets-website.web.app/terms',
+                        onTap: () => _showTermsDialog(context),
                       ),
                       const SizedBox(height: 16),
                       
                       _buildDocumentCard(
                         context: context,
                         title: 'Privacy Policy',
-                        description: 'How we collect, use, and protect your information',
+                        description: 'Data collection, analytics usage, and privacy protection details',
                         icon: Icons.privacy_tip,
                         color: Colors.blue,
-                        url: 'https://hipop-markets-website.web.app/privacy',
+                        onTap: () => _showPrivacyDialog(context),
                       ),
                       const SizedBox(height: 16),
                       
                       _buildDocumentCard(
                         context: context,
-                        title: 'User Agreement',
-                        description: 'Guidelines for using our platform responsibly',
-                        icon: Icons.handshake,
+                        title: 'Payment Terms',
+                        description: 'Stripe integration, subscription tiers, and payment security details',
+                        icon: Icons.payment,
                         color: Colors.green,
-                        url: 'https://hipop-markets-website.web.app/user-agreement',
+                        onTap: () => _showPaymentTermsDialog(context),
                       ),
                     ],
                   ),
@@ -154,13 +154,14 @@ class LegalDocumentsScreen extends StatelessWidget {
     required String description,
     required IconData icon,
     required Color color,
-    required String url,
+    VoidCallback? onTap,
+    String? url,
   }) {
     return Card(
       elevation: 2,
       shadowColor: Colors.black12,
       child: InkWell(
-        onTap: () => _launchDocument(context, title, url),
+        onTap: onTap ?? (url != null ? () => _launchDocument(context, title, url) : null),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -276,5 +277,259 @@ class LegalDocumentsScreen extends StatelessWidget {
         );
       }
     }
+  }
+
+  void _showTermsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terms of Service'),
+        content: SingleChildScrollView(
+          child: Text(
+            '''HiPop Markets Terms of Service
+
+ABOUT HIPOP MARKETS
+HiPop is a comprehensive three-sided marketplace platform that connects vendors, shoppers, and market organizers in the local pop-up market ecosystem. Our app facilitates discovery, booking, payment processing, and analytics across all user types.
+
+USER TYPES AND FEATURES:
+
+1. SHOPPERS (\$4/month premium tier)
+   • Discover local pop-up markets and vendors
+   • Browse vendor products and services
+   • Save favorite vendors and events
+   • Access enhanced search and filtering
+   • Premium: Advanced notifications and exclusive market access
+
+2. VENDORS (\$29/month premium tier)
+   • Create and manage vendor profiles
+   • Post products and services
+   • Apply to participate in markets
+   • Track sales and analytics
+   • Premium: Advanced analytics, priority market placement, bulk messaging
+
+3. MARKET ORGANIZERS (\$69/month premium tier)
+   • Create and manage market events
+   • Recruit and approve vendors
+   • Manage market logistics
+   • Access comprehensive analytics
+   • Premium: Advanced reporting, vendor directory access, bulk communications
+
+PAYMENT PROCESSING:
+• All payments are processed securely through Stripe
+• Subscription billing is automated and recurring
+• Payment methods include cards, Apple Pay, and Google Pay
+• All transactions are encrypted and PCI compliant
+• Refunds are processed according to our refund policy
+
+ANALYTICS AND DATA USAGE:
+• We collect usage data to improve platform performance
+• Analytics help vendors understand customer engagement
+• Market organizers receive attendance and vendor performance metrics
+• All data collection complies with privacy regulations
+• Users can request data deletion per GDPR/CCPA requirements
+
+MARKETPLACE RULES:
+• All content must be accurate and appropriate
+• Vendors must honor posted prices and availability
+• Market organizers must provide accurate event information
+• Users are responsible for their own transactions and agreements
+• HiPop facilitates connections but does not guarantee outcomes
+
+PLATFORM RESPONSIBILITIES:
+• Maintain secure, reliable platform access
+• Process payments and subscriptions accurately
+• Provide customer support and dispute resolution
+• Protect user data and privacy
+• Ensure platform compliance with applicable laws
+
+By using HiPop, you agree to these terms, our Privacy Policy, and Payment Terms.
+
+Last updated: 2024''',
+            style: TextStyle(fontSize: 14),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: SingleChildScrollView(
+          child: Text(
+            '''HiPop Markets Privacy Policy
+
+DATA COLLECTION:
+We collect information you provide directly, including:
+• Account registration data (name, email, user type)
+• Profile information and preferences
+• Payment and subscription information
+• Content you create (vendor posts, market listings)
+• Communication and support interactions
+
+ANALYTICS AND USAGE DATA:
+• App usage patterns and feature interactions
+• Device information and technical specifications
+• Location data (when permitted) for market discovery
+• Performance metrics and error reporting
+• User engagement and session analytics
+
+THIRD-PARTY INTEGRATIONS:
+• Stripe for payment processing and subscription management
+• Google Cloud Platform for data storage and analytics
+• Firebase for user authentication and real-time features
+• Google Maps for location services
+
+HOW WE USE YOUR DATA:
+• Provide and improve platform services
+• Process payments and manage subscriptions
+• Generate analytics and insights for all user types
+• Send relevant notifications and updates
+• Ensure platform security and prevent fraud
+• Comply with legal and regulatory requirements
+
+DATA SHARING:
+• We do not sell personal information to third parties
+• Aggregate analytics may be shared with market organizers
+• Payment processing requires sharing data with Stripe
+• We may share data to comply with legal requirements
+
+YOUR RIGHTS:
+• Access and update your profile information
+• Request data deletion (subject to legal requirements)
+• Opt out of non-essential communications
+• Control location sharing permissions
+• Review and manage subscription settings
+
+SECURITY MEASURES:
+• End-to-end encryption for sensitive data
+• Regular security audits and penetration testing
+• Secure cloud infrastructure with access controls
+• PCI DSS compliance for payment processing
+• Employee data access is strictly limited and monitored
+
+RETENTION:
+• Account data retained while account is active
+• Payment records retained per legal requirements
+• Analytics data may be retained in aggregate form
+• Deleted account data purged within 30 days
+
+For questions about privacy, contact: privacy@hipopmarkets.com
+
+Last updated: 2024''',
+            style: TextStyle(fontSize: 14),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentTermsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Payment Terms'),
+        content: SingleChildScrollView(
+          child: Text(
+            '''HiPop Markets Payment Terms
+
+SUBSCRIPTION TIERS:
+
+Shopper Premium - \$4.00/month
+• Enhanced market discovery features
+• Priority notifications for new markets
+• Advanced filtering and search capabilities
+• Exclusive access to select vendor events
+
+Vendor Premium - \$29.00/month
+• Advanced analytics dashboard
+• Priority placement in market search results
+• Bulk messaging capabilities
+• Enhanced vendor profile features
+• Sales tracking and performance metrics
+
+Market Organizer Premium - \$69.00/month
+• Comprehensive vendor management tools
+• Advanced reporting and analytics
+• Vendor directory access and recruitment tools
+• Bulk communication features
+• Priority support and consultation
+
+PAYMENT PROCESSING:
+• All payments processed through Stripe, Inc.
+• Stripe handles payment security and PCI compliance
+• Automatic recurring billing on subscription date
+• Payment methods: Credit/debit cards, Apple Pay, Google Pay
+• Secure tokenization prevents storage of payment details
+
+BILLING POLICIES:
+• Subscriptions billed monthly in advance
+• Payment due on signup date each month
+• Failed payments result in immediate service suspension
+• Grace period of 3 days for payment resolution
+• Account closure after 7 days of non-payment
+
+PROMO CODES AND DISCOUNTS:
+• Promotional codes may be available for new subscribers
+• Discounts apply to first billing cycle unless specified
+• Cannot be combined with other promotional offers
+• Expires if not used within specified timeframe
+• Subject to verification and fraud prevention
+
+REFUND POLICY:
+• No refunds for partial month usage
+• Technical issues may warrant prorated refunds
+• Refund requests must be made within 30 days
+• Processing time: 5-10 business days
+• Refunds issued to original payment method
+
+PAYMENT SECURITY:
+• End-to-end encryption for all transactions
+• Tokenization prevents storage of card numbers
+• Regular security audits and compliance checks
+• Fraud detection and prevention systems
+• Immediate notification of suspicious activity
+
+SUBSCRIPTION MANAGEMENT:
+• Cancel anytime through app settings
+• Cancellation effective at end of billing period
+• Automatic renewal unless cancelled
+• Upgrade/downgrade processed immediately
+• Prorated charges for mid-cycle changes
+
+TAXES:
+• Prices do not include applicable taxes
+• Tax calculation based on billing address
+• Compliance with state and federal tax laws
+• Tax receipts available upon request
+
+For payment support, contact: billing@hipopmarkets.com
+
+Last updated: 2024''',
+            style: TextStyle(fontSize: 14),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 }

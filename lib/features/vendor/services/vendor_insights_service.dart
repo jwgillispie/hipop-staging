@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/features/shared/services/search_history_service.dart';
 import 'dart:math' as math;
 import 'vendor_following_service.dart';
@@ -41,15 +40,11 @@ class VendorInsightsService {
     required String shopperId,
     required ActivityType activityType,
     required Map<String, dynamic> activityData,
+    required bool isPremium,
   }) async {
     try {
-      final hasFeature = await SubscriptionService.hasFeature(
-        shopperId,
-        'personalized_discovery',
-      );
-
       // Only premium users get detailed tracking
-      if (!hasFeature) return;
+      if (!isPremium) return;
 
       await _shoppingInsightsCollection.add({
         'shopperId': shopperId,
@@ -74,16 +69,12 @@ class VendorInsightsService {
     required String vendorName,
     required double amount,
     required String category,
+    required bool isPremium,
     String? description,
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      final hasFeature = await SubscriptionService.hasFeature(
-        shopperId,
-        'personalized_discovery',
-      );
-
-      if (!hasFeature) return;
+      if (!isPremium) return;
 
       await _spendingTrackingCollection.add({
         'shopperId': shopperId,
@@ -108,15 +99,11 @@ class VendorInsightsService {
   /// Get comprehensive shopping insights
   static Future<Map<String, dynamic>> getShoppingInsights({
     required String shopperId,
+    required bool isPremium,
     int months = 6,
   }) async {
     try {
-      final hasFeature = await SubscriptionService.hasFeature(
-        shopperId,
-        'personalized_discovery',
-      );
-
-      if (!hasFeature) {
+      if (!isPremium) {
         throw Exception('Shopping insights is a premium feature');
       }
 
@@ -449,19 +436,20 @@ class VendorInsightsService {
   }
 
   /// Get spending comparison with similar users (anonymized)
-  static Future<Map<String, dynamic>> getSpendingComparison(String shopperId) async {
+  static Future<Map<String, dynamic>> getSpendingComparison({
+    required String shopperId,
+    required bool isPremium,
+  }) async {
     try {
-      final hasFeature = await SubscriptionService.hasFeature(
-        shopperId,
-        'personalized_discovery',
-      );
-
-      if (!hasFeature) {
+      if (!isPremium) {
         throw Exception('Spending comparison is a premium feature');
       }
 
       // Get user's spending data
-      final userInsights = await getShoppingInsights(shopperId: shopperId);
+      final userInsights = await getShoppingInsights(
+        shopperId: shopperId,
+        isPremium: isPremium,
+      );
       final userTotalSpent = userInsights['summary']['totalSpent'] as double;
       final userAvgTransaction = userInsights['summary']['averageTransactionAmount'] as double;
 
@@ -524,19 +512,24 @@ class VendorInsightsService {
   }
 
   /// Export shopping insights data
-  static Future<Map<String, dynamic>> exportShoppingData(String shopperId) async {
+  static Future<Map<String, dynamic>> exportShoppingData({
+    required String shopperId,
+    required bool isPremium,
+  }) async {
     try {
-      final hasFeature = await SubscriptionService.hasFeature(
-        shopperId,
-        'personalized_discovery',
-      );
-
-      if (!hasFeature) {
+      if (!isPremium) {
         throw Exception('Data export is a premium feature');
       }
 
-      final insights = await getShoppingInsights(shopperId: shopperId, months: 12);
-      final comparison = await getSpendingComparison(shopperId);
+      final insights = await getShoppingInsights(
+        shopperId: shopperId,
+        isPremium: isPremium,
+        months: 12,
+      );
+      final comparison = await getSpendingComparison(
+        shopperId: shopperId,
+        isPremium: isPremium,
+      );
 
       return {
         'exportDate': DateTime.now().toIso8601String(),

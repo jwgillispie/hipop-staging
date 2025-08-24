@@ -371,10 +371,26 @@ class PaymentService {
 
       final data = result.data as Map<String, dynamic>;
       
+      // Validate numeric values from server response
+      final rawDiscountPercent = (data['discount_percent'] as num?)?.toDouble();
+      final rawDiscountAmount = (data['discount_amount'] as num?)?.toDouble();
+      
+      // Ensure no NaN or invalid values are passed through
+      final validDiscountPercent = (rawDiscountPercent != null && 
+          !rawDiscountPercent.isNaN && 
+          !rawDiscountPercent.isInfinite && 
+          rawDiscountPercent >= 0 && 
+          rawDiscountPercent <= 100) ? rawDiscountPercent : null;
+          
+      final validDiscountAmount = (rawDiscountAmount != null && 
+          !rawDiscountAmount.isNaN && 
+          !rawDiscountAmount.isInfinite && 
+          rawDiscountAmount >= 0) ? rawDiscountAmount : null;
+
       return PromoCodeValidation(
         isValid: data['valid'] as bool? ?? false,
-        discountPercent: (data['discount_percent'] as num?)?.toDouble(),
-        discountAmount: (data['discount_amount'] as num?)?.toDouble(),
+        discountPercent: validDiscountPercent,
+        discountAmount: validDiscountAmount,
         description: data['description'] as String?,
         errorMessage: data['error'] as String?,
       );
@@ -488,19 +504,54 @@ class PaymentService {
     }
   }
 
-  /// Calculate final amount after applying promo code
+  /// Calculate final amount after applying promo code with NaN protection
   static double calculateFinalAmount(double originalAmount, PromoCodeValidation? promoValidation) {
+    // Validate original amount first
+    if (originalAmount.isNaN || originalAmount.isInfinite || originalAmount <= 0) {
+      debugPrint('❌ Invalid original amount: $originalAmount, returning 0');
+      return 0.0;
+    }
+
     if (promoValidation == null || !promoValidation.isValid) {
       return originalAmount;
     }
 
     if (promoValidation.discountAmount != null) {
-      return (originalAmount - promoValidation.discountAmount!).clamp(0.0, originalAmount);
+      final discountAmount = promoValidation.discountAmount!;
+      // Validate discount amount
+      if (discountAmount.isNaN || discountAmount.isInfinite || discountAmount < 0) {
+        debugPrint('❌ Invalid discount amount: $discountAmount, ignoring discount');
+        return originalAmount;
+      }
+      final result = (originalAmount - discountAmount).clamp(0.0, originalAmount);
+      // Validate final result
+      if (result.isNaN || result.isInfinite) {
+        debugPrint('❌ Invalid calculated result: $result, returning original amount');
+        return originalAmount;
+      }
+      return result;
     }
 
     if (promoValidation.discountPercent != null) {
-      final discount = originalAmount * (promoValidation.discountPercent! / 100);
-      return (originalAmount - discount).clamp(0.0, originalAmount);
+      final discountPercent = promoValidation.discountPercent!;
+      // Validate discount percent
+      if (discountPercent.isNaN || discountPercent.isInfinite || discountPercent < 0 || discountPercent > 100) {
+        debugPrint('❌ Invalid discount percent: $discountPercent, ignoring discount');
+        return originalAmount;
+      }
+      final discount = originalAmount * (discountPercent / 100);
+      // Validate discount calculation
+      if (discount.isNaN || discount.isInfinite) {
+        debugPrint('❌ Invalid discount calculation: $discount, ignoring discount');
+        return originalAmount;
+      }
+      final result = (originalAmount - discount).clamp(0.0, originalAmount);
+      // Validate final result
+      if (result.isNaN || result.isInfinite) {
+        debugPrint('❌ Invalid calculated result: $result, returning original amount');
+        return originalAmount;
+      }
+      return result;
     }
 
     return originalAmount;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
@@ -6,12 +7,13 @@ import '../../market/models/market.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart';
 import '../../shared/widgets/common/hipop_text_field.dart';
-import '../../premium/services/subscription_service.dart';
 import '../../shared/services/user_profile_service.dart';
 import '../services/vendor_market_discovery_service.dart';
 import '../../organizer/services/vendor_post_discovery_service.dart';
 import '../../organizer/models/organizer_vendor_post_result.dart';
 import '../widgets/vendor/vendor_post_response_dialog.dart';
+import '../../../blocs/auth/auth_bloc.dart';
+import '../../../blocs/auth/auth_state.dart';
 
 class VendorMarketDiscoveryScreen extends StatefulWidget {
   const VendorMarketDiscoveryScreen({super.key});
@@ -79,8 +81,18 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
         return;
       }
 
-      // Check premium access
-      final hasAccess = await SubscriptionService.hasFeature(user.uid, 'market_discovery');
+      // Check premium access using AuthBloc userProfile
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! Authenticated) {
+        setState(() {
+          _error = 'Not authenticated';
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      final userProfile = authState.userProfile;
+      final hasAccess = userProfile?.isPremium ?? false;
       
       if (!hasAccess) {
         setState(() {
@@ -92,9 +104,9 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
 
       setState(() => _hasPremiumAccess = true);
       
-      // Load remaining applications count
-      final remaining = await SubscriptionService.getRemainingMarketApplications(user.uid);
-      setState(() => _remainingApplications = remaining);
+      // For premium users, assume unlimited applications for now
+      // TODO: Implement specific application limits if needed
+      setState(() => _remainingApplications = 999);
       
       // Load initial results (without location for now)
       await _performDiscovery();
@@ -183,9 +195,8 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      // Check application limits first
-      final canApply = await SubscriptionService.canCreateMarketApplication(user.uid);
-      if (!canApply) {
+      // Check application limits - premium users have unlimited applications
+      if (!_hasPremiumAccess) {
         await _showApplicationLimitDialog();
         return;
       }
@@ -263,13 +274,10 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
               // Increment application count
               final user = FirebaseAuth.instance.currentUser;
               if (user != null) {
-                try {
-                  await SubscriptionService.incrementApplicationCount(user.uid);
-                  // Update remaining applications count
-                  final remaining = await SubscriptionService.getRemainingMarketApplications(user.uid);
-                  setState(() => _remainingApplications = remaining);
-                } catch (e) {
-                  debugPrint('Error incrementing application count: $e');
+                // For premium users, we don't track specific application counts
+                // Applications are unlimited for premium vendors
+                if (mounted) {
+                  setState(() => _remainingApplications = 999);
                 }
               }
               
@@ -1691,7 +1699,7 @@ class _VendorMarketDiscoveryScreenState extends State<VendorMarketDiscoveryScree
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final remaining = await SubscriptionService.getRemainingMarketApplications(user.uid);
+    // For the premium access pattern, show generic limit message
     
     return showDialog(
       context: context,

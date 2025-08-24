@@ -653,7 +653,17 @@ class PremiumAccessControls {
   }
 
   static void _navigateToSubscriptionManagement(BuildContext context) {
-    context.go('/subscription-management');
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (userId.isNotEmpty) {
+      context.go('/subscription-management/$userId');
+    } else {
+      // Handle case where user is not authenticated
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to access subscription management'),
+        ),
+      );
+    }
   }
 
   static void _showSubscriptionDetails(BuildContext context, UserSubscription subscription) {

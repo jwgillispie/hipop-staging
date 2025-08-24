@@ -551,7 +551,7 @@ class EnterpriseDashboard extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildStatusItem(
                     'API Usage',
-                    '${apiUsage['monthlyRequests'] ?? 0}/${apiUsage['rateLimitUtilization'] != null ? (1/apiUsage['rateLimitUtilization'] * apiUsage['monthlyRequests']).toInt() : 10000}',
+                    '${apiUsage['monthlyRequests'] ?? 0}/${_calculateApiLimit(apiUsage)}',
                     (apiUsage['rateLimitUtilization'] ?? 0.0) < 0.8 ? Colors.green : Colors.orange,
                   ),
                   _buildStatusItem(
@@ -673,5 +673,27 @@ class EnterpriseDashboard extends StatelessWidget {
       default:
         return Colors.blue;
     }
+  }
+
+  /// Calculate API limit safely, avoiding division by zero and NaN values
+  int _calculateApiLimit(Map<String, dynamic> apiUsage) {
+    final monthlyRequests = (apiUsage['monthlyRequests'] as num?)?.toInt() ?? 0;
+    final rateLimitUtilization = (apiUsage['rateLimitUtilization'] as num?)?.toDouble();
+    
+    // Handle null or zero utilization to avoid division by zero
+    if (rateLimitUtilization == null || rateLimitUtilization <= 0.0) {
+      return 10000; // Default API limit
+    }
+    
+    // Calculate the limit: requests / utilization = total limit
+    // Since utilization = requests / limit, then limit = requests / utilization
+    final calculatedLimit = monthlyRequests / rateLimitUtilization;
+    
+    // Ensure we don't return NaN or infinite values
+    if (calculatedLimit.isNaN || calculatedLimit.isInfinite || calculatedLimit <= 0) {
+      return 10000; // Fallback to default
+    }
+    
+    return calculatedLimit.round();
   }
 }

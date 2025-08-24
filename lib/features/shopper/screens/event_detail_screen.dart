@@ -579,7 +579,7 @@ class EventDetailView extends StatelessWidget {
     buffer.writeln('When: ${_formatDateTime(event.startDateTime, event.endDateTime)}');
     buffer.writeln();
     buffer.writeln('Discovered on HiPop - Discover local pop-ups and markets');
-    buffer.writeln('Download: https://hipopapp.com');
+    buffer.writeln('Download: https://hipop-markets.web.app');
     buffer.writeln();
     buffer.writeln('#Event #LocalEvents #${event.location.replaceAll(' ', '')} #HiPop');
     

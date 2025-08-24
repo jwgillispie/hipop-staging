@@ -14,29 +14,30 @@ import 'package:flutter/foundation.dart';
 import 'package:hipop/core/widgets/hipop_app_bar.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
 
-
 class OrganizerAnalyticsScreen extends StatefulWidget {
   const OrganizerAnalyticsScreen({super.key});
 
   @override
-  State<OrganizerAnalyticsScreen> createState() => _OrganizerAnalyticsScreenState();
+  State<OrganizerAnalyticsScreen> createState() =>
+      _OrganizerAnalyticsScreenState();
 }
 
-class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> with TickerProviderStateMixin {
+class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
+    with TickerProviderStateMixin {
   AnalyticsTimeRange _selectedTimeRange = AnalyticsTimeRange.month;
   bool _isLoading = true;
   AnalyticsSummary? _summary;
   Map<String, dynamic>? _realTimeMetrics;
   String? _error;
   String? _currentMarketId;
-  
+
   // Premium features state
   bool _hasPremiumAccess = false;
   bool _isCheckingPremium = true;
   Map<String, dynamic>? _marketIntelligence;
   Map<String, dynamic>? _advancedMetrics;
   Map<String, dynamic>? _revenueAnalytics;
-  
+
   // Tab controller for enhanced analytics
   late TabController _tabController;
 
@@ -57,18 +58,18 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   Future<void> _checkPremiumAccess() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! Authenticated) return;
-    
+
     final hasAccess = await SubscriptionService.hasFeature(
       authState.user.uid,
       'advanced_market_analytics',
     );
-    
+
     if (mounted) {
       setState(() {
         _hasPremiumAccess = hasAccess;
         _isCheckingPremium = false;
       });
-      
+
       if (hasAccess) {
         _loadPremiumAnalytics();
       }
@@ -77,17 +78,18 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Future<void> _loadPremiumAnalytics() async {
     if (!_hasPremiumAccess || _currentMarketId == null) return;
-    
+
     try {
-      final marketIntelligence = await MarketIntelligenceService.getCrossMarketPerformance(
-        vendorId: _currentMarketId!,
-        startDate: DateTime.now().subtract(const Duration(days: 90)),
-        endDate: DateTime.now(),
-      );
-      
+      final marketIntelligence =
+          await MarketIntelligenceService.getCrossMarketPerformance(
+            vendorId: _currentMarketId!,
+            startDate: DateTime.now().subtract(const Duration(days: 90)),
+            endDate: DateTime.now(),
+          );
+
       final revenueData = await _getRevenueAnalytics();
       final advancedMetrics = await _getAdvancedMetrics();
-      
+
       if (mounted) {
         setState(() {
           _marketIntelligence = marketIntelligence;
@@ -102,7 +104,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Future<Map<String, dynamic>> _getRevenueAnalytics() async {
     if (_currentMarketId == null) return {};
-    
+
     // Get revenue data for the market
     return {
       'totalRevenue': 15420.50,
@@ -133,11 +135,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
       'customerRetentionRate': 78.2,
       'averageSpendPerVisit': 42.80,
       'peakTrafficHours': ['10:00 AM', '2:00 PM', '6:00 PM'],
-      'weatherCorrelation': {
-        'sunny': 85,
-        'cloudy': 65,
-        'rainy': 35,
-      },
+      'weatherCorrelation': {'sunny': 85, 'cloudy': 65, 'rainy': 35},
       'competitivePosition': 'Strong',
       'growthOpportunities': [
         'Evening hours expansion',
@@ -155,17 +153,18 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
     try {
       final authState = context.read<AuthBloc>().state;
-      
-      if (authState is! Authenticated || authState.userProfile?.isMarketOrganizer != true) {
+
+      if (authState is! Authenticated ||
+          authState.userProfile?.isMarketOrganizer != true) {
         setState(() {
           _isLoading = false;
           _error = 'Not authenticated as market organizer';
         });
         return;
       }
-      
+
       final managedMarketIds = authState.userProfile!.managedMarketIds;
-      
+
       if (managedMarketIds.isEmpty) {
         setState(() {
           _isLoading = false;
@@ -173,15 +172,17 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         });
         return;
       }
-      
+
       // Use the first managed market for now, or could aggregate across all
       final marketId = managedMarketIds.first;
-      
+
       final summary = await AnalyticsService.getAnalyticsSummary(
         marketId,
         _selectedTimeRange,
       );
-      final realTimeMetrics = await AnalyticsService.getRealTimeMetrics(marketId);
+      final realTimeMetrics = await AnalyticsService.getRealTimeMetrics(
+        marketId,
+      );
 
       setState(() {
         _currentMarketId = marketId;
@@ -189,7 +190,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         _realTimeMetrics = realTimeMetrics;
         _isLoading = false;
       });
-      
+
       // Load premium analytics if user has access
       if (_hasPremiumAccess) {
         _loadPremiumAnalytics();
@@ -219,18 +220,24 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             userRole: 'vendor',
             centerTitle: true,
             showPremiumBadge: _hasPremiumAccess,
-            bottom: _hasPremiumAccess ? TabBar(
-              controller: _tabController,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              indicatorColor: HiPopColors.premiumGold,
-              tabs: const [
-                Tab(icon: Icon(Icons.analytics), text: 'Overview'),
-                Tab(icon: Icon(Icons.trending_up), text: 'Revenue'),
-                Tab(icon: Icon(Icons.compare_arrows), text: 'Intelligence'),
-                Tab(icon: Icon(Icons.assessment), text: 'Reports'),
-              ],
-            ) : null,
+            bottom:
+                _hasPremiumAccess
+                    ? TabBar(
+                      controller: _tabController,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white70,
+                      indicatorColor: HiPopColors.premiumGold,
+                      tabs: const [
+                        Tab(icon: Icon(Icons.analytics), text: 'Overview'),
+                        Tab(icon: Icon(Icons.trending_up), text: 'Revenue'),
+                        Tab(
+                          icon: Icon(Icons.compare_arrows),
+                          text: 'Intelligence',
+                        ),
+                        Tab(icon: Icon(Icons.assessment), text: 'Reports'),
+                      ],
+                    )
+                    : null,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -243,12 +250,16 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                   });
                   _loadAnalytics();
                 },
-                itemBuilder: (context) => AnalyticsTimeRange.values
-                    .map((range) => PopupMenuItem(
-                          value: range,
-                          child: Text(range.displayName),
-                        ))
-                    .toList(),
+                itemBuilder:
+                    (context) =>
+                        AnalyticsTimeRange.values
+                            .map(
+                              (range) => PopupMenuItem(
+                                value: range,
+                                child: Text(range.displayName),
+                              ),
+                            )
+                            .toList(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -262,17 +273,18 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
               ),
             ],
           ),
-          body: _hasPremiumAccess 
-              ? TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildOverviewTab(),
-                    _buildRevenueTab(),
-                    _buildIntelligenceTab(),
-                    _buildReportsTab(),
-                  ],
-                )
-              : _buildBody(),
+          body:
+              _hasPremiumAccess
+                  ? TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildOverviewTab(),
+                      _buildRevenueTab(),
+                      _buildIntelligenceTab(),
+                      _buildReportsTab(),
+                    ],
+                  )
+                  : _buildBody(),
         );
       },
     );
@@ -304,9 +316,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             const SizedBox(height: 16),
             Text(
               'Error loading analytics',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(color: Colors.white),
             ),
             const SizedBox(height: 8),
             Text(
@@ -359,7 +371,6 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             _buildEventAnalytics(),
             const SizedBox(height: 24),
 
-
             // Favorites analytics
             _buildFavoritesAnalytics(),
             const SizedBox(height: 24),
@@ -370,7 +381,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
             // Performance insights
             _buildPerformanceInsights(),
-            
+
             // Premium upgrade prompt for non-premium users
             if (!_hasPremiumAccess && !_isCheckingPremium) ...[
               const SizedBox(height: 24),
@@ -440,9 +451,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         children: [
           Text(
             'Generate Reports',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           _buildReportGenerationSection(),
@@ -480,25 +491,39 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             ),
             if (_summary!.growthRate != 0)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: _summary!.growthRate > 0 ? Colors.green[100] : Colors.red[100],
+                  color:
+                      _summary!.growthRate > 0
+                          ? Colors.green[100]
+                          : Colors.red[100],
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      _summary!.growthRate > 0 ? Icons.trending_up : Icons.trending_down,
+                      _summary!.growthRate > 0
+                          ? Icons.trending_up
+                          : Icons.trending_down,
                       size: 16,
-                      color: _summary!.growthRate > 0 ? Colors.green[800] : Colors.red[800],
+                      color:
+                          _summary!.growthRate > 0
+                              ? Colors.green[800]
+                              : Colors.red[800],
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${_summary!.growthRate.toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: _summary!.growthRate > 0 ? Colors.green[800] : Colors.red[800],
+                        color:
+                            _summary!.growthRate > 0
+                                ? Colors.green[800]
+                                : Colors.red[800],
                       ),
                     ),
                   ],
@@ -516,9 +541,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
       children: [
         Text(
           'Key Metrics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -553,7 +578,12 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     );
   }
 
-  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
+  Widget _buildMetricCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -588,16 +618,17 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildVendorAnalytics() {
-    final vendorMetrics = (_realTimeMetrics!['vendors'] as Map<String, dynamic>?) ?? {};
-    
+    final vendorMetrics =
+        (_realTimeMetrics!['vendors'] as Map<String, dynamic>?) ?? {};
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Vendor Analytics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -645,16 +676,17 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildEventAnalytics() {
-    final eventMetrics = (_realTimeMetrics!['events'] as Map<String, dynamic>?) ?? {};
-    
+    final eventMetrics =
+        (_realTimeMetrics!['events'] as Map<String, dynamic>?) ?? {};
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Event Analytics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -701,7 +733,6 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     );
   }
 
-
   Widget _buildMiniMetric(String label, String value, Color color) {
     return Column(
       children: [
@@ -716,10 +747,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
       ],
@@ -730,40 +758,39 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w500),
-        ),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
         const SizedBox(height: 8),
-        ...data.entries.map((entry) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: _getStatusColor(entry.key),
-                  shape: BoxShape.circle,
+        ...data.entries.map(
+          (entry) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(entry.key),
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  entry.key.toUpperCase(),
-                  style: const TextStyle(fontSize: 12),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    entry.key.toUpperCase(),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
-              ),
-              Text(
-                entry.value.toString(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                Text(
+                  entry.value.toString(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -774,16 +801,21 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
       children: [
         Text(
           'Trends & Charts',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         VendorRegistrationsChart(
           marketId: _currentMarketId ?? '',
-          monthsBack: _selectedTimeRange == AnalyticsTimeRange.week ? 3 :
-                      _selectedTimeRange == AnalyticsTimeRange.month ? 6 :
-                      _selectedTimeRange == AnalyticsTimeRange.quarter ? 12 : 12,
+          monthsBack:
+              _selectedTimeRange == AnalyticsTimeRange.week
+                  ? 3
+                  : _selectedTimeRange == AnalyticsTimeRange.month
+                  ? 6
+                  : _selectedTimeRange == AnalyticsTimeRange.quarter
+                  ? 12
+                  : 12,
         ),
       ],
     );
@@ -795,9 +827,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
       children: [
         Text(
           'Performance Insights',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -827,7 +859,12 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     );
   }
 
-  Widget _buildInsightItem(IconData icon, String title, String description, Color color) {
+  Widget _buildInsightItem(
+    IconData icon,
+    String title,
+    String description,
+    Color color,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -845,10 +882,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 ),
               ],
             ),
@@ -876,16 +910,17 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildFavoritesAnalytics() {
-    final favoritesMetrics = (_realTimeMetrics!['favorites'] as Map<String, dynamic>?) ?? {};
-    
+    final favoritesMetrics =
+        (_realTimeMetrics!['favorites'] as Map<String, dynamic>?) ?? {};
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Favorites Analytics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -898,21 +933,25 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                     Expanded(
                       child: _buildMiniMetric(
                         'Market Favorites',
-                        favoritesMetrics['totalMarketFavorites']?.toString() ?? '0',
+                        favoritesMetrics['totalMarketFavorites']?.toString() ??
+                            '0',
                         Colors.red,
                       ),
                     ),
                     Expanded(
                       child: _buildMiniMetric(
                         'Vendor Favorites',
-                        favoritesMetrics['totalVendorFavorites']?.toString() ?? '0',
+                        favoritesMetrics['totalVendorFavorites']?.toString() ??
+                            '0',
                         Colors.pink,
                       ),
                     ),
                     Expanded(
                       child: _buildMiniMetric(
                         'Total Favorites',
-                        ((favoritesMetrics['totalMarketFavorites'] ?? 0) + (favoritesMetrics['totalVendorFavorites'] ?? 0)).toString(),
+                        ((favoritesMetrics['totalMarketFavorites'] ?? 0) +
+                                (favoritesMetrics['totalVendorFavorites'] ?? 0))
+                            .toString(),
                         Colors.purple,
                       ),
                     ),
@@ -924,18 +963,24 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                     Expanded(
                       child: _buildMiniMetric(
                         'New Market Favorites Today',
-                        favoritesMetrics['newMarketFavoritesToday']?.toString() ?? '0',
+                        favoritesMetrics['newMarketFavoritesToday']
+                                ?.toString() ??
+                            '0',
                         Colors.orange,
                       ),
                     ),
                     Expanded(
                       child: _buildMiniMetric(
                         'New Vendor Favorites Today',
-                        favoritesMetrics['newVendorFavoritesToday']?.toString() ?? '0',
+                        favoritesMetrics['newVendorFavoritesToday']
+                                ?.toString() ??
+                            '0',
                         Colors.cyan,
                       ),
                     ),
-                    const Expanded(child: SizedBox()), // Empty space for alignment
+                    const Expanded(
+                      child: SizedBox(),
+                    ), // Empty space for alignment
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -954,15 +999,15 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Widget _buildRevenueOverview() {
     final revenue = _revenueAnalytics!;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Revenue Analytics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -1004,8 +1049,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildRevenueChart() {
-    final revenueByDay = _revenueAnalytics!['revenueByDay'] as Map<String, dynamic>? ?? {};
-    
+    final revenueByDay =
+        _revenueAnalytics!['revenueByDay'] as Map<String, dynamic>? ?? {};
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1014,9 +1060,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
           children: [
             Text(
               'Daily Revenue Distribution',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -1024,8 +1070,13 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
-                  maxY: revenueByDay.values.isEmpty ? 100 : 
-                      revenueByDay.values.map((v) => v as double).reduce((a, b) => a > b ? a : b) * 1.2,
+                  maxY:
+                      revenueByDay.values.isEmpty
+                          ? 100
+                          : revenueByDay.values
+                                  .map((v) => v as double)
+                                  .reduce((a, b) => a > b ? a : b) *
+                              1.2,
                   barTouchData: BarTouchData(enabled: false),
                   titlesData: FlTitlesData(
                     show: true,
@@ -1033,7 +1084,15 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                       sideTitles: SideTitles(
                         showTitles: true,
                         getTitlesWidget: (double value, TitleMeta meta) {
-                          const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                          const days = [
+                            'Mon',
+                            'Tue',
+                            'Wed',
+                            'Thu',
+                            'Fri',
+                            'Sat',
+                            'Sun',
+                          ];
                           return Text(
                             days[value.toInt() % 7],
                             style: const TextStyle(fontSize: 12),
@@ -1064,13 +1123,21 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   List<BarChartGroupData> _createBarGroups(Map<String, dynamic> revenueByDay) {
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
+    final days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+
     return days.asMap().entries.map((entry) {
       final index = entry.key;
       final day = entry.value;
       final revenue = (revenueByDay[day] as double?) ?? 0.0;
-      
+
       return BarChartGroupData(
         x: index,
         barRods: [
@@ -1086,8 +1153,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildRevenueBreakdown() {
-    final monthlyTrend = _revenueAnalytics!['monthlyTrend'] as List<Map<String, dynamic>>? ?? [];
-    
+    final monthlyTrend =
+        _revenueAnalytics!['monthlyTrend'] as List<Map<String, dynamic>>? ?? [];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1096,38 +1164,42 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
           children: [
             Text(
               'Monthly Revenue Trend',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...monthlyTrend.map((month) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 40,
-                    child: Text(
-                      month['month'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+            ...monthlyTrend.map(
+              (month) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 40,
+                      child: Text(
+                        month['month'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                      value: (month['revenue'] as double? ?? 0.0) / 16000, // Max expected revenue
-                      backgroundColor: Colors.grey[300],
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: LinearProgressIndicator(
+                        value:
+                            (month['revenue'] as double? ?? 0.0) /
+                            16000, // Max expected revenue
+                        backgroundColor: Colors.grey[300],
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    '\$${(month['revenue'] as double?)?.toStringAsFixed(0) ?? '0'}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Text(
+                      '\$${(month['revenue'] as double?)?.toStringAsFixed(0) ?? '0'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
@@ -1135,9 +1207,11 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildMarketHealthScore() {
-    final healthScore = _advancedMetrics!['marketHealthScore'] as double? ?? 0.0;
-    final vendorSatisfaction = _advancedMetrics!['vendorSatisfaction'] as double? ?? 0.0;
-    
+    final healthScore =
+        _advancedMetrics!['marketHealthScore'] as double? ?? 0.0;
+    final vendorSatisfaction =
+        _advancedMetrics!['vendorSatisfaction'] as double? ?? 0.0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1146,9 +1220,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
           children: [
             Text(
               'Market Health Dashboard',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             Row(
@@ -1177,7 +1251,12 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     );
   }
 
-  Widget _buildCircularMetric(String title, double value, Color color, String suffix) {
+  Widget _buildCircularMetric(
+    String title,
+    double value,
+    Color color,
+    String suffix,
+  ) {
     return Column(
       children: [
         SizedBox(
@@ -1210,10 +1289,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         const SizedBox(height: 8),
         Text(
           title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
           textAlign: TextAlign.center,
         ),
       ],
@@ -1221,9 +1297,11 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildCompetitiveAnalysis() {
-    final position = _advancedMetrics!['competitivePosition'] as String? ?? 'Unknown';
-    final weatherCorr = _advancedMetrics!['weatherCorrelation'] as Map<String, dynamic>? ?? {};
-    
+    final position =
+        _advancedMetrics!['competitivePosition'] as String? ?? 'Unknown';
+    final weatherCorr =
+        _advancedMetrics!['weatherCorrelation'] as Map<String, dynamic>? ?? {};
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1232,9 +1310,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
           children: [
             Text(
               'Market Intelligence',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -1254,24 +1332,29 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
-            ...weatherCorr.entries.map((entry) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  Icon(
-                    entry.key == 'sunny' ? Icons.wb_sunny :
-                    entry.key == 'cloudy' ? Icons.cloud : Icons.grain,
-                    size: 16,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text('${entry.key.toString().toUpperCase()}'),
-                  ),
-                  Text('${entry.value}% attendance'),
-                ],
+            ...weatherCorr.entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      entry.key == 'sunny'
+                          ? Icons.wb_sunny
+                          : entry.key == 'cloudy'
+                          ? Icons.cloud
+                          : Icons.grain,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('${entry.key.toString().toUpperCase()}'),
+                    ),
+                    Text('${entry.value}% attendance'),
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
@@ -1279,10 +1362,13 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
   }
 
   Widget _buildCustomerInsights() {
-    final retentionRate = _advancedMetrics!['customerRetentionRate'] as double? ?? 0.0;
-    final averageSpend = _advancedMetrics!['averageSpendPerVisit'] as double? ?? 0.0;
-    final peakHours = _advancedMetrics!['peakTrafficHours'] as List<dynamic>? ?? [];
-    
+    final retentionRate =
+        _advancedMetrics!['customerRetentionRate'] as double? ?? 0.0;
+    final averageSpend =
+        _advancedMetrics!['averageSpendPerVisit'] as double? ?? 0.0;
+    final peakHours =
+        _advancedMetrics!['peakTrafficHours'] as List<dynamic>? ?? [];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1291,9 +1377,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
           children: [
             Text(
               'Customer Insights',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -1324,11 +1410,16 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: peakHours.map((hour) => Chip(
-                label: Text(hour.toString()),
-                backgroundColor: Colors.orange[100],
-                labelStyle: TextStyle(color: Colors.orange[700]),
-              )).toList(),
+              children:
+                  peakHours
+                      .map(
+                        (hour) => Chip(
+                          label: Text(hour.toString()),
+                          backgroundColor: Colors.orange[100],
+                          labelStyle: TextStyle(color: Colors.orange[700]),
+                        ),
+                      )
+                      .toList(),
             ),
           ],
         ),
@@ -1336,7 +1427,12 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
     );
   }
 
-  Widget _buildInsightMetric(String label, String value, IconData icon, Color color) {
+  Widget _buildInsightMetric(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
@@ -1349,20 +1445,15 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
+        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       ],
     );
   }
 
   Widget _buildGrowthOpportunities() {
-    final opportunities = _advancedMetrics!['growthOpportunities'] as List<dynamic>? ?? [];
-    
+    final opportunities =
+        _advancedMetrics!['growthOpportunities'] as List<dynamic>? ?? [];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1382,18 +1473,18 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
               ],
             ),
             const SizedBox(height: 16),
-            ...opportunities.map((opportunity) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(Icons.arrow_right, color: Colors.amber),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(opportunity.toString()),
-                  ),
-                ],
+            ...opportunities.map(
+              (opportunity) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_right, color: Colors.amber),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(opportunity.toString())),
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
@@ -1480,10 +1571,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                   ),
                 ],
               ),
@@ -1501,9 +1589,9 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
       children: [
         Text(
           'Recent Reports',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
         Card(
@@ -1556,16 +1644,10 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                name,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
+              Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
               Text(
                 '$format • $date',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ],
           ),
@@ -1576,10 +1658,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             child: const Text('Download'),
           )
         else
-          Text(
-            'Processing...',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          Text('Processing...', style: TextStyle(color: Colors.grey[600])),
       ],
     );
   }
@@ -1621,7 +1700,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
             ),
             const SizedBox(height: 16),
             const Text(
-              'Upgrade to Organizer Pro (\$69/month) to unlock:',
+              'Upgrade to Organizer Premium (\$69/month) to unlock:',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
@@ -1659,27 +1738,28 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
 
   Future<void> _generateReport(String reportType) async {
     if (_currentMarketId == null) return;
-    
+
     // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Generating report...'),
-          ],
-        ),
-      ),
+      builder:
+          (context) => const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Generating report...'),
+              ],
+            ),
+          ),
     );
-    
+
     try {
       final authState = context.read<AuthBloc>().state;
       if (authState is! Authenticated) return;
-      
+
       final report = await AdvancedReportingService.generateMarketReport(
         organizerId: authState.user.uid,
         marketId: _currentMarketId!,
@@ -1688,10 +1768,10 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
         endDate: DateTime.now(),
         format: 'pdf',
       );
-      
+
       if (mounted) {
         Navigator.of(context).pop(); // Close loading dialog
-        
+
         if (report['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1735,5 +1815,4 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen> wit
       ),
     );
   }
-
 }

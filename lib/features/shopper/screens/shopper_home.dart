@@ -1613,7 +1613,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     buffer.writeln();
     
     buffer.writeln('Discovered on HiPop - Find local markets & pop-ups');
-    buffer.writeln('Download: https://hipopapp.com');
+    buffer.writeln('Download: https://hipop-markets.web.app');
     buffer.writeln();
     buffer.writeln('#FarmersMarket #LocalMarket #SupportLocal #HiPop');
     

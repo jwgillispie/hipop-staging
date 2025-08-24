@@ -10,7 +10,8 @@ class VendorProduct extends Equatable {
   final String category;
   final String? description;
   final double? basePrice;
-  final String? imageUrl;
+  final String? imageUrl; // @deprecated Use photoUrls instead
+  final List<String> photoUrls;
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -24,6 +25,7 @@ class VendorProduct extends Equatable {
     this.description,
     this.basePrice,
     this.imageUrl,
+    this.photoUrls = const [],
     this.tags = const [],
     required this.createdAt,
     required this.updatedAt,
@@ -41,6 +43,9 @@ class VendorProduct extends Equatable {
       description: data['description'],
       basePrice: data['basePrice']?.toDouble(),
       imageUrl: data['imageUrl'],
+      photoUrls: data['photoUrls'] != null 
+          ? List<String>.from(data['photoUrls'])
+          : (data['imageUrl'] != null ? [data['imageUrl']] : []), // Migration support
       tags: List<String>.from(data['tags'] ?? []),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
@@ -56,6 +61,7 @@ class VendorProduct extends Equatable {
       'description': description,
       'basePrice': basePrice,
       'imageUrl': imageUrl,
+      'photoUrls': photoUrls,
       'tags': tags,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -71,6 +77,7 @@ class VendorProduct extends Equatable {
     String? description,
     double? basePrice,
     String? imageUrl,
+    List<String>? photoUrls,
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -84,6 +91,7 @@ class VendorProduct extends Equatable {
       description: description ?? this.description,
       basePrice: basePrice ?? this.basePrice,
       imageUrl: imageUrl ?? this.imageUrl,
+      photoUrls: photoUrls ?? this.photoUrls,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -100,6 +108,7 @@ class VendorProduct extends Equatable {
         description,
         basePrice,
         imageUrl,
+        photoUrls,
         tags,
         createdAt,
         updatedAt,
@@ -143,5 +152,28 @@ class VendorProduct extends Equatable {
   /// Get formatted tags string
   String get formattedTags {
     return tags.join(', ');
+  }
+
+  /// Get primary image URL (first photo or imageUrl for backward compatibility)
+  String? get primaryImageUrl {
+    if (photoUrls.isNotEmpty) {
+      return photoUrls.first;
+    }
+    return imageUrl;
+  }
+
+  /// Check if product has any images
+  bool get hasImages {
+    return photoUrls.isNotEmpty || imageUrl != null;
+  }
+
+  /// Get all image URLs (combines photoUrls with imageUrl for migration)
+  List<String> get allImageUrls {
+    final urls = <String>[];
+    urls.addAll(photoUrls);
+    if (imageUrl != null && !urls.contains(imageUrl)) {
+      urls.add(imageUrl!);
+    }
+    return urls;
   }
 }

@@ -1034,7 +1034,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     buffer.writeln();
     
     buffer.writeln('Discovered on HiPop - Discover local pop-ups and markets');
-    buffer.writeln('Download: https://hipopapp.com');
+    buffer.writeln('Download: https://hipop-markets.web.app');
     buffer.writeln();
     buffer.writeln('#LocalVendor #SmallBusiness #SupportLocal #HiPop');
     

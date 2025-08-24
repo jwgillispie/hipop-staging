@@ -27,6 +27,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _termsAccepted = false;
   
   bool get _isLogin => widget.isLogin;
 
@@ -47,6 +48,11 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_isLogin) {
       if (_passwordController.text != _confirmPasswordController.text) {
         _showErrorSnackBar('Passwords do not match');
+        return;
+      }
+      
+      if (!_termsAccepted) {
+        _showErrorSnackBar('Please accept the Terms of Service and Privacy Policy to continue');
         return;
       }
       
@@ -121,6 +127,10 @@ class _AuthScreenState extends State<AuthScreen> {
                           _buildHeader(),
                           const SizedBox(height: 32),
                           _buildForm(),
+                          if (!_isLogin) ...[
+                            const SizedBox(height: 16),
+                            _buildTermsAcceptance(),
+                          ],
                           const SizedBox(height: 24),
                           _buildSubmitButton(),
                           const SizedBox(height: 16),
@@ -346,5 +356,80 @@ class _AuthScreenState extends State<AuthScreen> {
       default:
         return [HiPopColors.shopperAccent, HiPopColors.shopperAccentDark];
     }
+  }
+
+  Widget _buildTermsAcceptance() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: _termsAccepted,
+            onChanged: (value) {
+              setState(() {
+                _termsAccepted = value ?? false;
+              });
+            },
+            activeColor: _getUserTypeColor(),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  children: [
+                    const Text(
+                      'I agree to the ',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.go('/legal'),
+                      child: Text(
+                        'Terms of Service',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _getUserTypeColor(),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      ' and ',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.go('/legal'),
+                      child: Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _getUserTypeColor(),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'This includes consent for payment processing through Stripe, analytics data collection, and our three-sided marketplace platform terms.',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

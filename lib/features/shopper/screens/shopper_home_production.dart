@@ -1160,6 +1160,51 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   ),
                 ],
               ),
+              // Market flyer display
+              if (market.flyerUrls.isNotEmpty) ...[                
+                const SizedBox(height: 12),
+                Container(
+                  height: 160,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      market.flyerUrls.first,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 160,
+                          color: Colors.grey.shade100,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.green,
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 160,
+                          color: Colors.grey.shade100,
+                          child: Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey.shade400,
+                            size: 48,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
               if (market.description != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -1168,7 +1213,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                     fontSize: 13,
                     color: HiPopColors.darkTextSecondary,
                   ),
-                  maxLines: 2,
+                  maxLines: market.flyerUrls.isNotEmpty ? 1 : 2, // Limit to 1 line if flyer is shown
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -1320,7 +1365,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     buffer.writeln();
     
     buffer.writeln('Discovered on HiPop - Find local markets & pop-ups');
-    buffer.writeln('Download: https://hipopapp.com');
+    buffer.writeln('Download: https://hipop-markets.web.app');
     buffer.writeln();
     buffer.writeln('#FarmersMarket #LocalMarket #SupportLocal #HiPop');
     

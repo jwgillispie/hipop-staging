@@ -7,7 +7,6 @@ import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
-import 'package:hipop/features/premium/services/subscription_service.dart';
 import 'package:hipop/core/widgets/hipop_app_bar.dart';
 
 class OrganizerPremiumDashboard extends StatefulWidget {
@@ -22,8 +21,6 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   late TabController _tabController;
   Stream<List<VendorPost>>? _marketPostsStream;
   Stream<Map<String, int>>? _marketAnalyticsStream;
-  bool _isLoadingSubscription = true;
-  bool _hasPremiumAccess = false;
   String? _userId;
 
   @override
@@ -33,40 +30,11 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
       _userId = authState.user.uid;
-      _checkSubscriptionFeatures(_userId!);
       _marketPostsStream = _getMarketPosts(_userId!);
       _marketAnalyticsStream = _getMarketAnalytics(_userId!);
       debugPrint('🔍 Organizer premium dashboard initialized for organizer: $_userId');
     }
   }
-
-  Future<void> _checkSubscriptionFeatures(String userId) async {
-    try {
-      // 🔒 SECURITY: Check premium access via subscription service
-      final hasAccess = await SubscriptionService.hasFeature(userId, 'vendor_post_creation');
-      
-      if (!hasAccess) {
-        // Show upgrade screen instead of redirecting
-        debugPrint('🚨 Non-premium user attempted to access organizer premium dashboard: $userId');
-        debugPrint('📈 Showing upgrade opportunity instead of redirect');
-      } else {
-        debugPrint('✅ Premium access validated for organizer: $userId');
-      }
-      
-      setState(() {
-        _hasPremiumAccess = hasAccess;
-        _isLoadingSubscription = false;
-      });
-    } catch (e) {
-      debugPrint('❌ Error checking subscription features: $e');
-      // On error, show upgrade screen rather than redirect
-      setState(() {
-        _hasPremiumAccess = false;
-        _isLoadingSubscription = false;
-      });
-    }
-  }
-
 
   @override
   void dispose() {
@@ -182,48 +150,64 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
 
   @override
   Widget build(BuildContext context) {
-    // 🔒 SECURITY: Show loading while validating premium access
-    if (_isLoadingSubscription) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Validating premium access...'),
-            ],
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is! Authenticated) {
+          return const Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading user profile...'),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // 🔒 SECURITY: Check premium access via user profile
+        final userProfile = state.userProfile;
+        final hasPremiumAccess = userProfile?.isPremium ?? false;
+        
+        // Debug logging
+        if (hasPremiumAccess) {
+          debugPrint('✅ Premium access validated for organizer: ${state.user.uid}');
+          debugPrint('🔍 Organizer User profile isPremium: ${userProfile?.isPremium}');
+        } else {
+          debugPrint('🚨 Non-premium user attempting to access organizer premium dashboard: ${state.user.uid}');
+          debugPrint('📈 Showing upgrade opportunity instead of redirect');
+        }
+        
+        return Scaffold(
+          appBar: HiPopAppBar(
+            title: 'Organizer Premium Dashboard',
+            userRole: 'vendor',
+            centerTitle: true,
+            bottom: hasPremiumAccess ? TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              tabs: const [
+                Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
+                Tab(text: 'Analytics', icon: Icon(Icons.analytics)),
+                Tab(text: 'Vendor Posts', icon: Icon(Icons.campaign)),
+              ],
+            ) : null,
           ),
-        ),
-      );
-    }
-    
-    return Scaffold(
-      appBar: HiPopAppBar(
-        title: 'Organizer Premium Dashboard',
-        userRole: 'vendor',
-        centerTitle: true,
-        bottom: _hasPremiumAccess ? TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
-            Tab(text: 'Analytics', icon: Icon(Icons.analytics)),
-            Tab(text: 'Vendor Posts', icon: Icon(Icons.campaign)),
-          ],
-        ) : null,
-      ),
-      body: _hasPremiumAccess 
-        ? TabBarView(
-            controller: _tabController,
-            children: [
-              _buildOverviewTab(),
-              _buildAnalyticsTab(),
-              _buildVendorPostsTab(),
-            ],
-          )
-        : _buildUpgradeScreen(),
+          body: hasPremiumAccess 
+            ? TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(),
+                  _buildAnalyticsTab(),
+                  _buildVendorPostsTab(),
+                ],
+              )
+            : _buildUpgradeScreen(),
+        );
+      },
     );
   }
 
@@ -340,10 +324,6 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
       builder: (context, state) {
         if (state is! Authenticated) {
           return const LoadingWidget(message: 'Loading analytics...');
-        }
-
-        if (_isLoadingSubscription) {
-          return const LoadingWidget(message: 'Checking subscription features...');
         }
 
         return SingleChildScrollView(
@@ -894,33 +874,34 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
           ),
           const SizedBox(height: 24),
 
-          // Premium features grid
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 1.0,
+          // Premium features list
+          Column(
             children: [
-              _buildUpgradeFeatureCard(
+              _buildUpgradeFeatureListItem(
                 '🎯 Unlimited Vendor Posts',
                 'Create targeted "Looking for Vendors" posts that appear in vendor discovery feeds',
+                Icons.campaign,
                 Colors.orange,
               ),
-              _buildUpgradeFeatureCard(
+              const SizedBox(height: 12),
+              _buildUpgradeFeatureListItem(
                 '📊 Advanced Analytics',
                 'Track vendor responses, conversion rates, and market performance metrics',
+                Icons.analytics,
                 Colors.blue,
               ),
-              _buildUpgradeFeatureCard(
+              const SizedBox(height: 12),
+              _buildUpgradeFeatureListItem(
                 '💼 Vendor Response Management',
                 'View and manage all vendor inquiries and applications in one place',
+                Icons.inbox,
                 Colors.green,
               ),
-              _buildUpgradeFeatureCard(
+              const SizedBox(height: 12),
+              _buildUpgradeFeatureListItem(
                 '🔍 Smart Vendor Matching',
                 'Your posts are automatically matched to relevant qualified vendors',
+                Icons.gps_fixed,
                 Colors.purple,
               ),
             ],
@@ -991,7 +972,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
                   Icon(Icons.diamond, size: 24, color: const Color(0xFF0A0A0A)),
                   const SizedBox(width: 12),
                   const Text(
-                    'Upgrade to Organizer Premium - \$69/month',
+                    'Upgrade',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -1020,34 +1001,51 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
     );
   }
 
-  Widget _buildUpgradeFeatureCard(String title, String description, Color color) {
+  Widget _buildUpgradeFeatureListItem(String title, String description, IconData icon, Color color) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            textAlign: TextAlign.center,
+            child: Icon(icon, size: 24, color: color),
           ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.7),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

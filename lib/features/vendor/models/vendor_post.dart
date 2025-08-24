@@ -23,6 +23,7 @@ class VendorPost extends Equatable {
   /// Contact information should come from the vendor's UserProfile.
   final String? instagramHandle;
   final List<String> photoUrls;
+  final List<String> flyerUrls;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
@@ -70,6 +71,7 @@ class VendorPost extends Equatable {
     required this.popUpEndDateTime,
     this.instagramHandle,
     this.photoUrls = const [],
+    this.flyerUrls = const [],
     required this.createdAt,
     required this.updatedAt,
     this.isActive = true,
@@ -123,6 +125,9 @@ class VendorPost extends Equatable {
         photoUrls: data['photoUrls'] != null 
             ? List<String>.from(data['photoUrls']) 
             : [],
+        flyerUrls: data['flyerUrls'] != null 
+            ? List<String>.from(data['flyerUrls'])
+            : [],
         createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         isActive: data['isActive'] ?? true,
@@ -172,6 +177,7 @@ class VendorPost extends Equatable {
       'popUpEndDateTime': Timestamp.fromDate(popUpEndDateTime),
       'instagramHandle': instagramHandle,
       'photoUrls': photoUrls,
+      'flyerUrls': flyerUrls,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'isActive': isActive,
@@ -212,6 +218,7 @@ class VendorPost extends Equatable {
     DateTime? popUpEndDateTime,
     String? instagramHandle,
     List<String>? photoUrls,
+    List<String>? flyerUrls,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isActive,
@@ -250,6 +257,7 @@ class VendorPost extends Equatable {
       popUpEndDateTime: popUpEndDateTime ?? this.popUpEndDateTime,
       instagramHandle: instagramHandle ?? this.instagramHandle,
       photoUrls: photoUrls ?? this.photoUrls,
+      flyerUrls: flyerUrls ?? this.flyerUrls,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
@@ -384,6 +392,26 @@ class VendorPost extends Equatable {
   bool get isApproved => approvalStatus == ApprovalStatus.approved;
   bool get isDenied => approvalStatus == ApprovalStatus.denied;
 
+  // Media helper methods
+  bool get hasPhotos => photoUrls.isNotEmpty;
+  bool get hasFlyers => flyerUrls.isNotEmpty;
+  bool get hasAnyMedia => hasPhotos || hasFlyers;
+  
+  /// Get all media URLs combined (photos + flyers)
+  List<String> get allMediaUrls {
+    return [...photoUrls, ...flyerUrls];
+  }
+
+  /// Get primary image URL (first photo, then first flyer)
+  String? get primaryImageUrl {
+    if (photoUrls.isNotEmpty) {
+      return photoUrls.first;
+    } else if (flyerUrls.isNotEmpty) {
+      return flyerUrls.first;
+    }
+    return null;
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -402,6 +430,7 @@ class VendorPost extends Equatable {
         popUpEndDateTime,
         instagramHandle,
         photoUrls,
+        flyerUrls,
         createdAt,
         updatedAt,
         isActive,
