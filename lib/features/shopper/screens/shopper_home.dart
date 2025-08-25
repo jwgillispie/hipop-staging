@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/blocs/favorites/favorites_bloc.dart';
@@ -23,10 +24,22 @@ import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
-import 'package:hipop/features/shopper/services/product_chip_filter_service.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
 
 enum FeedFilter { markets, vendors, events, all }
+
+/// Combined data class for merged streams
+class FeedData {
+  final List<Market> markets;
+  final List<VendorPost> vendorPosts;
+  final List<Event> events;
+  
+  const FeedData({
+    required this.markets,
+    required this.vendorPosts,
+    required this.events,
+  });
+}
 
 class ShopperHome extends StatefulWidget {
   const ShopperHome({super.key});
@@ -40,20 +53,14 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   PlaceDetails? _selectedSearchPlace;
   String _selectedCity = '';
   FeedFilter _selectedFilter = FeedFilter.all;
-  List<String> _selectedProductChips = [];
-  List<String> _availableProductChips = [];
-  bool _isLoadingChips = false;
   late VendorPostsRepository _vendorPostsRepository;
-  late ProductChipFilterService _productChipFilterService;
 
   @override
   void initState() {
     super.initState();
     _vendorPostsRepository = VendorPostsRepository();
-    _productChipFilterService = ProductChipFilterService();
     WidgetsBinding.instance.addObserver(this);
     _checkOnboardingStatus();
-    _loadAvailableChips();
   }
 
   Future<void> _checkOnboardingStatus() async {
@@ -64,62 +71,9 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadAvailableChips() async {
-    if (!mounted) return;
-    
-    setState(() {
-      _isLoadingChips = true;
-    });
 
-    try {
-      final chips = await _productChipFilterService.getAvailableProductChips(
-        city: _selectedCity,
-      );
-      
-      if (mounted) {
-        setState(() {
-          _availableProductChips = chips;
-          // Remove any selected chips that are no longer available
-          _selectedProductChips.removeWhere((chip) => !chips.contains(chip));
-          _isLoadingChips = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading available chips: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingChips = false;
-        });
-      }
-    }
-  }
 
-  void _toggleProductChip(String chip) {
-    setState(() {
-      if (_selectedProductChips.contains(chip)) {
-        _selectedProductChips.remove(chip);
-      } else {
-        _selectedProductChips.add(chip);
-      }
-    });
-  }
 
-  void _clearProductChips() {
-    setState(() {
-      _selectedProductChips.clear();
-    });
-  }
-
-  Future<List<VendorPost>> _applyProductChipFilter(List<VendorPost> posts) async {
-    if (_selectedProductChips.isEmpty) {
-      return posts;
-    }
-
-    return await _productChipFilterService.filterVendorPostsByChips(
-      posts: posts,
-      selectedChips: _selectedProductChips,
-    );
-  }
 
   @override
   void dispose() {
@@ -136,9 +90,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       _selectedSearchPlace = null;
       _selectedCity = '';
     });
-    
-    // Reload chips for all locations
-    _loadAvailableChips();
   }
   
   void _performPlaceSearch(PlaceDetails? placeDetails) {
@@ -154,9 +105,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       // Extract city from place details for market search using better logic
       _selectedCity = PlaceUtils.extractCityFromPlace(placeDetails);
     });
-    
-    // Reload available chips for the new location
-    _loadAvailableChips();
   }
   
 
@@ -302,171 +250,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildProductChipFilter() {
-    // Temporarily hidden - will be improved in future update
-    return const SizedBox.shrink();
-    
-    // Only show for vendors filter or all filter
-    if (_selectedFilter != FeedFilter.vendors && _selectedFilter != FeedFilter.all) {
-      return const SizedBox.shrink();
-    }
-
-    return Card(
-      color: HiPopColors.darkSurface,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.local_grocery_store,
-                  color: Colors.green[700],
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Filter by Products',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                if (_selectedProductChips.isNotEmpty)
-                  TextButton(
-                    onPressed: _clearProductChips,
-                    child: Text(
-                      'Clear',
-                      style: TextStyle(
-                        color: HiPopColors.shopperAccent,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _searchLocation.isEmpty
-                  ? 'Select products you\'re looking for from vendors everywhere'
-                  : 'Select products you\'re looking for from vendors in $_selectedCity',
-              style: TextStyle(
-                color: HiPopColors.darkTextSecondary,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_isLoadingChips)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_availableProductChips.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: HiPopColors.darkSurface,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _searchLocation.isEmpty
-                      ? 'No vendor products available yet'
-                      : 'No vendor products available in this location',
-                  style: TextStyle(
-                    color: HiPopColors.darkTextSecondary,
-                    fontSize: 14,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              )
-            else
-              SizedBox(
-                height: 40, // Fixed height for the horizontal slider
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _availableProductChips.length,
-                  itemBuilder: (context, index) {
-                    final chip = _availableProductChips[index];
-                    final isSelected = _selectedProductChips.contains(chip);
-                    return Padding(
-                      padding: EdgeInsets.only(
-                        left: index == 0 ? 0 : 4,
-                        right: index == _availableProductChips.length - 1 ? 0 : 4,
-                      ),
-                      child: FilterChip(
-                        label: Text(
-                          chip,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? Colors.white : HiPopColors.darkTextSecondary,
-                          ),
-                        ),
-                        selected: isSelected,
-                        onSelected: (selected) => _toggleProductChip(chip),
-                        backgroundColor: HiPopColors.darkSurface,
-                        selectedColor: HiPopColors.successGreen,
-                        checkmarkColor: Colors.white,
-                        side: BorderSide(
-                          color: isSelected ? HiPopColors.successGreen : HiPopColors.darkTextSecondary.withValues(alpha: 0.3),
-                          width: 1,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            if (_selectedProductChips.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green[200]!),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.filter_list,
-                          color: Colors.green[700],
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Filtering by ${_selectedProductChips.length} product${_selectedProductChips.length == 1 ? '' : 's'}:',
-                          style: TextStyle(
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _selectedProductChips.join(', '),
-                      style: TextStyle(
-                        color: Colors.green[600],
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 
 
   @override
@@ -594,8 +377,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 24),
                 _buildFilterSlider(),
-                const SizedBox(height: 16),
-                _buildProductChipFilter(),
                 const SizedBox(height: 24),
                 // Location search - main feature
                 Text(
@@ -753,46 +534,34 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
         final allPosts = snapshot.data ?? [];
         final currentAndFuturePosts = _filterCurrentAndFuturePosts(allPosts);
 
-        return FutureBuilder<List<VendorPost>>(
-          future: _applyProductChipFilter(currentAndFuturePosts),
-          builder: (context, chipFilterSnapshot) {
-            if (chipFilterSnapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingWidget(message: 'Applying product filters...');
-            }
+        final posts = currentAndFuturePosts;
 
-            final posts = chipFilterSnapshot.data ?? currentAndFuturePosts;
+        if (posts.isEmpty) {
+          return _buildNoResultsMessage();
+        }
 
-            if (posts.isEmpty) {
-              return _buildNoResultsMessage();
-            }
+        String countText = '${posts.length} found';
 
-            String countText = '${posts.length} found';
-            if (_selectedProductChips.isNotEmpty) {
-              countText += ' with selected products';
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  countText,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: HiPopColors.darkTextSecondary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: posts.length,
-                  itemBuilder: (context, index) {
-                    final post = posts[index];
-                    return _buildVendorPostCard(post);
-                  },
-                ),
-              ],
-            );
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              countText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: HiPopColors.darkTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: posts.length,
+              itemBuilder: (context, index) {
+                final post = posts[index];
+                return _buildVendorPostCard(post);
+              },
+            ),
+          ],
         );
       },
     );
@@ -844,91 +613,87 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     );
   }
 
+  /// Combines all three streams efficiently using RxDart
+  Stream<FeedData> _getCombinedFeedStream() {
+    final marketsStream = _selectedCity.isEmpty 
+        ? MarketService.getAllActiveMarketsStream()
+        : MarketService.getMarketsByCityStream(_selectedCity);
+        
+    final vendorPostsStream = _selectedCity.isEmpty 
+        ? _vendorPostsRepository.getAllActivePosts()
+        : _vendorPostsRepository.searchPostsByLocation(_selectedCity);
+        
+    final eventsStream = _selectedCity.isEmpty 
+        ? EventService.getAllActiveEventsStream()
+        : EventService.getEventsByCityStream(_selectedCity);
+
+    return Rx.combineLatest3(
+      marketsStream,
+      vendorPostsStream,
+      eventsStream,
+      (List<Market> markets, List<VendorPost> vendorPosts, List<Event> events) => FeedData(
+        markets: markets,
+        vendorPosts: vendorPosts,
+        events: events,
+      ),
+    );
+  }
+
   Widget _buildMixedContentStream() {
-    return StreamBuilder<List<Market>>(
-      stream: _selectedCity.isEmpty 
-          ? MarketService.getAllActiveMarketsStream()
-          : MarketService.getMarketsByCityStream(_selectedCity),
-      builder: (context, marketSnapshot) {
-        return StreamBuilder<List<VendorPost>>(
-          stream: _selectedCity.isEmpty 
-              ? _vendorPostsRepository.getAllActivePosts()
-              : _vendorPostsRepository.searchPostsByLocation(_selectedCity),
-          builder: (context, vendorSnapshot) {
-            return StreamBuilder<List<Event>>(
-              stream: _selectedCity.isEmpty 
-                  ? EventService.getAllActiveEventsStream()
-                  : EventService.getEventsByCityStream(_selectedCity),
-              builder: (context, eventSnapshot) {
-                if (marketSnapshot.connectionState == ConnectionState.waiting ||
-                    vendorSnapshot.connectionState == ConnectionState.waiting ||
-                    eventSnapshot.connectionState == ConnectionState.waiting) {
-                  return const LoadingWidget(message: 'Loading markets, vendors, and events...');
-                }
+    return StreamBuilder<FeedData>(
+      stream: _getCombinedFeedStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingWidget(message: 'Loading markets, vendors, and events...');
+        }
 
-                if (marketSnapshot.hasError || vendorSnapshot.hasError || eventSnapshot.hasError) {
-                  return _buildErrorMessage(
-                    'Error loading content', 
-                    '${marketSnapshot.error ?? ''} ${vendorSnapshot.error ?? ''} ${eventSnapshot.error ?? ''}'.trim()
-                  );
-                }
+        if (snapshot.hasError) {
+          return _buildErrorMessage('Error loading content', snapshot.error.toString());
+        }
 
-                final markets = marketSnapshot.data ?? [];
-                final allPosts = vendorSnapshot.data ?? [];
-                final currentAndFuturePosts = _filterCurrentAndFuturePosts(allPosts);
-                final allEvents = eventSnapshot.data ?? [];
-                final events = EventService.filterCurrentAndUpcomingEvents(allEvents);
-                
-                // Apply product chip filtering to vendor posts
-                return FutureBuilder<List<VendorPost>>(
-                  future: _applyProductChipFilter(currentAndFuturePosts),
-                  builder: (context, chipFilterSnapshot) {
-                    if (chipFilterSnapshot.connectionState == ConnectionState.waiting) {
-                      return const LoadingWidget(message: 'Applying product filters...');
-                    }
+        if (!snapshot.hasData) {
+          return const LoadingWidget(message: 'Loading markets, vendors, and events...');
+        }
 
-                    final posts = chipFilterSnapshot.data ?? currentAndFuturePosts;
-                    
-                    // Sort markets by event date (earliest first)
-                    final sortedMarkets = List<Market>.from(markets);
-                    sortedMarkets.sort((a, b) {
-                      return a.eventDate.compareTo(b.eventDate);
-                    });
-                    
-                    final totalCount = sortedMarkets.length + posts.length + events.length;
+        final feedData = snapshot.data!;
+        final allPosts = feedData.vendorPosts;
+        final currentAndFuturePosts = _filterCurrentAndFuturePosts(allPosts);
+        final allEvents = feedData.events;
+        final events = EventService.filterCurrentAndUpcomingEvents(allEvents);
+        
+        final posts = currentAndFuturePosts;
+        
+        // Sort markets by event date (earliest first)
+        final sortedMarkets = List<Market>.from(feedData.markets);
+        sortedMarkets.sort((a, b) {
+          return a.eventDate.compareTo(b.eventDate);
+        });
+        
+        final totalCount = sortedMarkets.length + posts.length + events.length;
 
-                    if (totalCount == 0) {
-                      return _buildNoResultsMessage();
-                    }
+        if (totalCount == 0) {
+          return _buildNoResultsMessage();
+        }
 
-                    String countText = '$totalCount found (${sortedMarkets.length} markets, ${posts.length} vendor pop-ups, ${events.length} events)';
-                    if (_selectedProductChips.isNotEmpty) {
-                      countText += ' - vendors filtered by products';
-                    }
+        String countText = '$totalCount found (${sortedMarkets.length} markets, ${posts.length} vendor pop-ups, ${events.length} events)';
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          countText,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: HiPopColors.darkTextSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Show markets first, sorted by earliest date
-                        ...sortedMarkets.map((market) => _buildMarketCard(market)),
-                        // Then show events, sorted by start date
-                        ...events.map((event) => _buildEventCard(event)),
-                        // Then show vendor posts (filtered by chips)
-                        ...posts.map((post) => _buildVendorPostCard(post)),
-                      ],
-                    );
-                  },
-                );
-              },
-            );
-          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              countText,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: HiPopColors.darkTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Show markets first, sorted by earliest date
+            ...sortedMarkets.map((market) => _buildMarketCard(market)),
+            // Then show events, sorted by start date
+            ...events.map((event) => _buildEventCard(event)),
+            // Then show vendor posts
+            ...posts.map((post) => _buildVendorPostCard(post)),
+          ],
         );
       },
     );
@@ -1178,7 +943,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     
     buffer.writeln('Pop-up Event Alert!');
     buffer.writeln();
-    buffer.writeln('${post.vendorName}');
+    buffer.writeln(post.vendorName);
     
     if (post.description.isNotEmpty) {
       buffer.writeln();
@@ -1622,7 +1387,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     
     buffer.writeln('Market Discovery!');
     buffer.writeln();
-    buffer.writeln('${market.name}');
+    buffer.writeln(market.name);
     if (market.description != null && market.description!.isNotEmpty) {
       buffer.writeln();
       buffer.writeln(market.description);
@@ -1632,7 +1397,8 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     buffer.writeln();
     
     // Add event information if available
-    if (market.eventDate != null) {
+    // Add event information
+    {
       buffer.writeln('Event Details:');
       buffer.writeln('• Date: ${market.eventDisplayInfo}');
       buffer.writeln('• Hours: ${market.startTime} - ${market.endTime}');
