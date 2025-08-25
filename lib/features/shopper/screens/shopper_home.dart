@@ -602,6 +602,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   _getSearchHeaderText(),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: HiPopColors.darkTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -652,6 +653,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                       _getResultsHeaderText(),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: HiPopColors.darkTextPrimary,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -993,6 +995,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color: HiPopColors.darkTextPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -1255,6 +1258,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color: HiPopColors.darkTextPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -1387,6 +1391,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color: HiPopColors.darkTextPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -1463,6 +1468,31 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              // Show Instagram handle if available
+              if (market.instagramHandle != null && market.instagramHandle!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.camera_alt, size: 14, color: HiPopColors.darkTextSecondary),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _launchInstagram(market.instagramHandle!),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '@${market.instagramHandle!}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -1606,6 +1636,11 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       buffer.writeln('Event Details:');
       buffer.writeln('• Date: ${market.eventDisplayInfo}');
       buffer.writeln('• Hours: ${market.startTime} - ${market.endTime}');
+      buffer.writeln();
+    }
+    
+    if (market.instagramHandle != null && market.instagramHandle!.isNotEmpty) {
+      buffer.writeln('Instagram: @${market.instagramHandle}');
       buffer.writeln();
     }
     

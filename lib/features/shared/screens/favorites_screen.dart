@@ -529,6 +529,31 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+              // Show Instagram handle if available
+              if (market.instagramHandle != null && market.instagramHandle!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () => _launchInstagram(market.instagramHandle!),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Text(
+                          '@${market.instagramHandle!}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[700],
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
