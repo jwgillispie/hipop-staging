@@ -51,11 +51,11 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
 
   int _getTabCount() {
     switch (widget.subscription.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 4; // Overview, Search, Recommendations, Insights
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 4; // Overview, Growth, Analytics, Reports
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 5; // Overview, Markets, Vendors, Finance, Intelligence
       case SubscriptionTier.enterprise:
         return 6; // Overview, Analytics, Reporting, API, White-label, Settings
@@ -73,9 +73,9 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
 
       Map<String, dynamic> data;
       switch (widget.subscription.tier) {
-        case SubscriptionTier.shopperPro:
+        case SubscriptionTier.shopperPremium:
           data = {
-            'tier': 'shopperPro',
+            'tier': 'shopperPremium',
             'userId': widget.userId,
             'enhancedSearchEnabled': true,
             'personalizedRecommendations': true,
@@ -84,10 +84,10 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
             'seasonalInsights': {},
           };
           break;
-        case SubscriptionTier.vendorPro:
+        case SubscriptionTier.vendorPremium:
           data = await VendorGrowthOptimizerService.getVendorGrowthDashboard(widget.userId);
           break;
-        case SubscriptionTier.marketOrganizerPro:
+        case SubscriptionTier.marketOrganizerPremium:
           data = await MarketManagementSuiteService.getMultiMarketDashboard(widget.userId);
           break;
         case SubscriptionTier.enterprise:
@@ -143,11 +143,11 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
 
   String _getTitleForTier() {
     switch (widget.subscription.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 'Shopper Pro Dashboard';
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 'Vendor Pro Dashboard';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 'Market Organizer Pro';
       case SubscriptionTier.enterprise:
         return 'Enterprise Analytics';
@@ -158,11 +158,11 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
 
   Color _getPrimaryColorForTier() {
     switch (widget.subscription.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return Colors.indigo.shade700;
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return Colors.green.shade700;
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return Colors.blue.shade700;
       case SubscriptionTier.enterprise:
         return Colors.purple.shade700;
@@ -173,21 +173,21 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
 
   List<Widget> _buildTabs() {
     switch (widget.subscription.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return [
           const Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
           const Tab(text: 'Search+', icon: Icon(Icons.search)),
           const Tab(text: 'Recommendations', icon: Icon(Icons.recommend)),
           const Tab(text: 'Insights', icon: Icon(Icons.insights)),
         ];
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return [
           const Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
           const Tab(text: 'Sales Tracker', icon: Icon(Icons.attach_money)),
           const Tab(text: 'Analytics', icon: Icon(Icons.analytics)),
           const Tab(text: 'Items List', icon: Icon(Icons.inventory)),
         ];
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return [
           const Tab(text: 'Overview', icon: Icon(Icons.dashboard)),
           const Tab(text: 'Markets', icon: Icon(Icons.store)),
@@ -297,7 +297,7 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
   Widget _buildTierCards() {
     final tiers = [
       {
-        'tier': SubscriptionTier.shopperPro,
+        'tier': SubscriptionTier.shopperPremium,
         'title': 'Shopper Pro',
         'price': '\$4.00/month',
         'description': 'Enhanced search, unlimited favorites, personalized recommendations',
@@ -312,7 +312,7 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
         ],
       },
       {
-        'tier': SubscriptionTier.vendorPro,
+        'tier': SubscriptionTier.vendorPremium,
         'title': 'Vendor Pro',
         'price': '\$29.00/month',
         'description': 'Full vendor analytics, unlimited markets, sales tracking',
@@ -327,7 +327,7 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
         ],
       },
       {
-        'tier': SubscriptionTier.marketOrganizerPro,
+        'tier': SubscriptionTier.marketOrganizerPremium,
         'title': 'Market Organizer Pro',
         'price': '\$69.00/month',
         'description': 'Multi-market management, vendor analytics, reporting',
@@ -466,21 +466,21 @@ class _TierSpecificDashboardState extends State<TierSpecificDashboard>
     }
 
     switch (widget.subscription.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return [
           ShopperProOverviewTab(data: _dashboardData!),
           ShopperProSearchTab(data: _dashboardData!),
           ShopperProRecommendationsTab(data: _dashboardData!),
           ShopperProInsightsTab(data: _dashboardData!),
         ];
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return [
           VendorProOverviewTab(data: _dashboardData!),
           VendorProGrowthTab(data: _dashboardData!),
           VendorProAnalyticsTab(data: _dashboardData!),
           VendorProReportsTab(data: _dashboardData!),
         ];
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return [
           MarketOrganizerOverviewTab(data: _dashboardData!),
           MarketOrganizerMarketsTab(data: _dashboardData!),

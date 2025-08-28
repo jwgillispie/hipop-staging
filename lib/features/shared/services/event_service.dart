@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:developer' as developer;
 import '../models/event.dart';
+import '../../organizer/services/organizer_monthly_tracking_service.dart';
+import 'real_time_analytics_service.dart';
 
 class EventService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -72,13 +74,87 @@ class EventService {
     }
   }
 
-  /// Create a new event
+  /// Create a new event with limit enforcement
   static Future<String> createEvent(Event event) async {
     try {
+      // Check if organizer can create event (enforce limits)
+      if (event.organizerId != null) {
+        final canCreate = await OrganizerMonthlyTrackingService.canCreateEvent(
+          event.organizerId!
+        );
+        
+        if (!canCreate) {
+          // Track analytics for limit encounter
+          RealTimeAnalyticsService.trackEvent(
+            'event_creation_limit_encountered',
+            {
+              'organizer_id': event.organizerId,
+              'monthly_limit': OrganizerMonthlyTrackingService.freeTierMonthlyLimit,
+              'is_premium': false,
+              'source': 'event_service',
+              'timestamp': DateTime.now().toIso8601String(),
+            },
+          );
+          
+          throw EventLimitException(
+            'You have reached your monthly event creation limit. '
+            'Upgrade to premium for unlimited events!'
+          );
+        }
+      }
+      
+      // Create the event
       final docRef = await _firestore.collection(_collection).add(event.toFirestore());
-      return docRef.id;
+      final eventId = docRef.id;
+      
+      // Track event creation in monthly tracking
+      if (event.organizerId != null) {
+        await OrganizerMonthlyTrackingService.incrementEventCount(
+          event.organizerId!,
+          eventId: eventId,
+        );
+        
+        // Track successful creation
+        RealTimeAnalyticsService.trackEvent(
+          'event_created_successfully',
+          {
+            'organizer_id': event.organizerId,
+            'event_id': eventId,
+            'source': 'event_service',
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+      }
+      
+      return eventId;
     } catch (e) {
+      if (e is EventLimitException) {
+        rethrow;
+      }
       throw Exception('Error creating event: $e');
+    }
+  }
+  
+  /// Check if an organizer can create more events
+  static Future<bool> canOrganizerCreateEvent(String organizerId) async {
+    try {
+      return await OrganizerMonthlyTrackingService.canCreateEvent(organizerId);
+    } catch (e) {
+      debugPrint('Error checking event creation ability: $e');
+      return false;
+    }
+  }
+  
+  /// Get event usage summary for an organizer
+  static Future<Map<String, dynamic>> getEventUsageSummary(String organizerId) async {
+    try {
+      return await OrganizerMonthlyTrackingService.getEventUsageSummary(organizerId);
+    } catch (e) {
+      debugPrint('Error getting event usage summary: $e');
+      return {
+        'error': true,
+        'message': e.toString(),
+      };
     }
   }
 
@@ -95,7 +171,26 @@ class EventService {
   /// Delete an event
   static Future<void> deleteEvent(String eventId) async {
     try {
-      await _firestore.collection(_collection).doc(eventId).delete();
+      // Get event details before deletion to update tracking
+      final eventDoc = await _firestore.collection(_collection).doc(eventId).get();
+      if (eventDoc.exists) {
+        final eventData = eventDoc.data() as Map<String, dynamic>;
+        final organizerId = eventData['organizerId'] as String?;
+        
+        // Delete the event
+        await _firestore.collection(_collection).doc(eventId).delete();
+        
+        // Update tracking if organizer exists
+        if (organizerId != null) {
+          await OrganizerMonthlyTrackingService.decrementEventCount(
+            organizerId,
+            eventId: eventId,
+          );
+        }
+      } else {
+        // Event doesn't exist, just try to delete anyway
+        await _firestore.collection(_collection).doc(eventId).delete();
+      }
     } catch (e) {
       throw Exception('Error deleting event: $e');
     }
@@ -203,4 +298,13 @@ class EventService {
                 event.location.toLowerCase().contains(searchText.toLowerCase()))
             .toList());
   }
+}
+
+/// Exception thrown when event creation limit is reached
+class EventLimitException implements Exception {
+  final String message;
+  EventLimitException(this.message);
+  
+  @override
+  String toString() => message;
 }

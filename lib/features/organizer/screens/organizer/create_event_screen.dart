@@ -9,6 +9,7 @@ import '../../../market/models/market.dart';
 import '../../../shared/widgets/common/simple_places_widget.dart';
 import '../../../shared/services/places_service.dart';
 import '../../../../core/theme/hipop_colors.dart';
+import '../../../premium/screens/subscription_management_screen.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -24,6 +25,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _tagsController = TextEditingController();
+  
+  // Event links
+  final List<EventLink> _eventLinks = [];
   
   // Form state
   DateTime _startDateTime = DateTime.now().add(const Duration(days: 1));
@@ -139,6 +143,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is! Authenticated) return;
 
+    // Check if organizer can create event
+    final canCreate = await EventService.canOrganizerCreateEvent(authState.user.uid);
+    if (!canCreate) {
+      if (!mounted) return;
+      _showEventLimitDialog();
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -180,6 +192,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             .where((tag) => tag.isNotEmpty)
             .toList(),
         imageUrl: '',
+        links: _eventLinks,
         isActive: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -195,9 +208,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error creating event: $e')),
-        );
+        // Check if it's a limit exception
+        if (e is EventLimitException) {
+          _showEventLimitDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error creating event: $e')),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -206,6 +224,103 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         });
       }
     }
+  }
+
+  void _showEventLimitDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: HiPopColors.darkBackground,
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: HiPopColors.warningAmber),
+            const SizedBox(width: 8),
+            const Text(
+              'Event Limit Reached',
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You have reached your monthly limit of 1 event.',
+              style: TextStyle(color: HiPopColors.darkTextSecondary),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: HiPopColors.primaryDeepSage),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: HiPopColors.primaryDeepSage, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Upgrade to Premium',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: HiPopColors.darkTextPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• Unlimited events per month\n'
+                    '• Advanced event features\n'
+                    '• Priority support\n'
+                    '• Analytics & insights',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: HiPopColors.darkTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: HiPopColors.darkTextSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Get current user ID from auth state
+              final authState = context.read<AuthBloc>().state;
+              if (authState is Authenticated) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SubscriptionManagementScreen(
+                      userId: authState.user.uid,
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HiPopColors.primaryDeepSage,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

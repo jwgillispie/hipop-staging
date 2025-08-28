@@ -52,32 +52,40 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    
+    // Clear data references to help with garbage collection
+    _summary = null;
+    _realTimeMetrics = null;
+    _marketIntelligence = null;
+    _advancedMetrics = null;
+    _revenueAnalytics = null;
+    
     super.dispose();
   }
 
   Future<void> _checkPremiumAccess() async {
     final authState = context.read<AuthBloc>().state;
-    if (authState is! Authenticated) return;
+    if (authState is! Authenticated || !mounted) return;
 
     final hasAccess = await SubscriptionService.hasFeature(
       authState.user.uid,
       'advanced_market_analytics',
     );
 
-    if (mounted) {
-      setState(() {
-        _hasPremiumAccess = hasAccess;
-        _isCheckingPremium = false;
-      });
+    if (!mounted) return;
 
-      if (hasAccess) {
-        _loadPremiumAnalytics();
-      }
+    setState(() {
+      _hasPremiumAccess = hasAccess;
+      _isCheckingPremium = false;
+    });
+
+    if (hasAccess && mounted) {
+      _loadPremiumAnalytics();
     }
   }
 
   Future<void> _loadPremiumAnalytics() async {
-    if (!_hasPremiumAccess || _currentMarketId == null) return;
+    if (!_hasPremiumAccess || _currentMarketId == null || !mounted) return;
 
     try {
       final marketIntelligence =
@@ -87,16 +95,20 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
             endDate: DateTime.now(),
           );
 
-      final revenueData = await _getRevenueAnalytics();
-      final advancedMetrics = await _getAdvancedMetrics();
+      // Check mounted state after async operation
+      if (!mounted) return;
 
-      if (mounted) {
-        setState(() {
-          _marketIntelligence = marketIntelligence;
-          _revenueAnalytics = revenueData;
-          _advancedMetrics = advancedMetrics;
-        });
-      }
+      final revenueData = await _getRevenueAnalytics();
+      if (!mounted) return;
+
+      final advancedMetrics = await _getAdvancedMetrics();
+      if (!mounted) return;
+
+      setState(() {
+        _marketIntelligence = marketIntelligence;
+        _revenueAnalytics = revenueData;
+        _advancedMetrics = advancedMetrics;
+      });
     } catch (e) {
       debugPrint('Error loading premium analytics: $e');
     }
@@ -180,9 +192,14 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
         marketId,
         _selectedTimeRange,
       );
+      
+      if (!mounted) return;
+      
       final realTimeMetrics = await AnalyticsService.getRealTimeMetrics(
         marketId,
       );
+
+      if (!mounted) return;
 
       setState(() {
         _currentMarketId = marketId;
@@ -192,14 +209,16 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
       });
 
       // Load premium analytics if user has access
-      if (_hasPremiumAccess) {
+      if (_hasPremiumAccess && mounted) {
         _loadPremiumAnalytics();
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -1348,7 +1367,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text('${entry.key.toString().toUpperCase()}'),
+                      child: Text(entry.key.toString().toUpperCase()),
                     ),
                     Text('${entry.value}% attendance'),
                   ],

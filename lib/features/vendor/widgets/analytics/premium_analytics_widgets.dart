@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../../blocs/auth/auth_bloc.dart';
 import '../../../../blocs/auth/auth_state.dart';
@@ -21,7 +22,7 @@ class PremiumAnalyticsWidgets {
       title: title,
       description: subtitle ?? 'Track your revenue performance over time',
       icon: Icons.trending_up,
-      color: Colors.green,
+      color: HiPopColors.successGreen,
       onTap: () {},
       showPremiumBadge: false,
       trailing: const SizedBox.shrink(),
@@ -47,12 +48,12 @@ class PremiumAnalyticsWidgets {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
+                    color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.bar_chart,
-                    color: Colors.blue,
+                    color: HiPopColors.primaryDeepSage,
                     size: 24,
                   ),
                 ),
@@ -125,12 +126,12 @@ class PremiumAnalyticsWidgets {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.1),
+                    color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.inventory,
-                    color: Colors.orange,
+                    color: HiPopColors.warningAmber,
                     size: 24,
                   ),
                 ),
@@ -166,7 +167,7 @@ class PremiumAnalyticsWidgets {
       title: title,
       description: 'Understand your customer base distribution',
       icon: Icons.people,
-      color: Colors.purple,
+      color: HiPopColors.accentMauve,
       onTap: () {},
       showPremiumBadge: false,
       trailing: SizedBox(
@@ -380,11 +381,11 @@ class PremiumAnalyticsWidgets {
 
   static List<PieChartSectionData> _buildPieChartSections(Map<String, double> data) {
     final colors = [
-      Colors.blue,
-      Colors.orange,
-      Colors.green,
-      Colors.red,
-      Colors.purple,
+      HiPopColors.primaryDeepSage,
+      HiPopColors.warningAmber,
+      HiPopColors.successGreen,
+      HiPopColors.errorPlum,
+      HiPopColors.accentMauve,
     ];
     
     return data.entries.map((entry) {
@@ -490,9 +491,9 @@ class PremiumAnalyticsWidgets {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.05),
+            color: HiPopColors.warningAmber.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.1)),
+            border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.1)),
           ),
           child: Row(
             children: [
@@ -541,9 +542,9 @@ class PremiumAnalyticsWidgets {
   }
 
   static Color _getPerformanceColor(double score) {
-    if (score >= 4.0) return Colors.green;
-    if (score >= 3.0) return Colors.orange;
-    return Colors.red;
+    if (score >= 4.0) return HiPopColors.successGreen;
+    if (score >= 3.0) return HiPopColors.warningAmber;
+    return HiPopColors.errorPlum;
   }
 
   // Tier-specific analytics builders

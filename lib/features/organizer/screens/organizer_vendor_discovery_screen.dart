@@ -381,7 +381,7 @@ class _OrganizerVendorDiscoveryScreenState extends State<OrganizerVendorDiscover
                 // Navigate to premium upgrade flow
                 final user = FirebaseAuth.instance.currentUser;
                 if (user != null) {
-                  context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+                  context.go('/premium/upgrade?tier=marketOrganizerPremium&userId=${user.uid}');
                 }
               },
               style: ElevatedButton.styleFrom(

@@ -23,10 +23,16 @@ class _SubscriptionCancelScreenState extends State<SubscriptionCancelScreen> {
   }
 
   Future<void> _handleInitialState() async {
-    // Clear any stored payment state since payment was cancelled
-    if (kIsWeb) {
-      debugPrint('🗑️ Clearing stored payment state after cancellation');
-      await PaymentStateStorageService.clearStoredPaymentState();
+    try {
+      // Clear any stored payment state since payment was cancelled
+      if (kIsWeb) {
+        debugPrint('🗑️ Clearing stored payment state after cancellation');
+        await PaymentStateStorageService.clearStoredPaymentState();
+        debugPrint('✅ Payment state cleared successfully');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error clearing payment state: $e');
+      // Don't prevent the screen from loading if clearing fails
     }
   }
 

@@ -6,7 +6,9 @@ import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/blocs/favorites/favorites_bloc.dart';
 import 'package:hipop/features/shared/services/places_service.dart';
+import 'package:hipop/features/shared/services/cache_service.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
+import 'package:hipop/features/shared/widgets/skeleton_loaders.dart';
 import 'package:hipop/features/shared/widgets/common/settings_dropdown.dart';
 import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
 import 'package:hipop/features/shared/widgets/share_button.dart';
@@ -25,6 +27,7 @@ import 'package:hipop/features/vendor/widgets/vendor/vendor_follow_button.dart';
 import 'package:hipop/features/auth/services/onboarding_service.dart';
 import 'package:hipop/features/vendor/services/vendor_market_items_service.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+import 'package:hipop/features/vendor/widgets/vendor_photo_preview.dart';
 
 enum FeedFilter { markets, vendors, events, all }
 
@@ -54,6 +57,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   String _selectedCity = '';
   FeedFilter _selectedFilter = FeedFilter.all;
   late VendorPostsRepository _vendorPostsRepository;
+  final CacheService _cacheService = CacheService();
 
   @override
   void initState() {
@@ -479,7 +483,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           : MarketService.getMarketsByCityStream(_selectedCity),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingWidget(message: 'Loading markets...');
+          return const FeedCardSkeleton(itemCount: 3);
         }
 
         if (snapshot.hasError) {
@@ -524,7 +528,13 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           : _vendorPostsRepository.searchPostsByLocation(_selectedCity),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingWidget(message: 'Loading vendor pop-ups...');
+          return const Column(
+            children: [
+              VendorCardSkeleton(),
+              SizedBox(height: 8),
+              VendorCardSkeleton(),
+            ],
+          );
         }
 
         if (snapshot.hasError) {
@@ -574,7 +584,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
           : EventService.getEventsByCityStream(_selectedCity),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingWidget(message: 'Loading events...');
+          return const FeedCardSkeleton(itemCount: 2);
         }
 
         if (snapshot.hasError) {
@@ -613,8 +623,25 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
     );
   }
 
-  /// Combines all three streams efficiently using RxDart
+  /// Combines all three streams efficiently using RxDart with caching
   Stream<FeedData> _getCombinedFeedStream() {
+    // Create cache key based on selected city
+    final cacheKey = 'feed_data_${_selectedCity.isEmpty ? "all" : _selectedCity}';
+    
+    // Check cache first
+    final cachedData = _cacheService.get<FeedData>(cacheKey);
+    if (cachedData != null) {
+      // Return cached data immediately, then fetch fresh data
+      return Rx.concat([
+        Stream.value(cachedData),
+        _fetchFreshFeedData(cacheKey),
+      ]);
+    }
+    
+    return _fetchFreshFeedData(cacheKey);
+  }
+  
+  Stream<FeedData> _fetchFreshFeedData(String cacheKey) {
     final marketsStream = _selectedCity.isEmpty 
         ? MarketService.getAllActiveMarketsStream()
         : MarketService.getMarketsByCityStream(_selectedCity);
@@ -631,11 +658,18 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       marketsStream,
       vendorPostsStream,
       eventsStream,
-      (List<Market> markets, List<VendorPost> vendorPosts, List<Event> events) => FeedData(
-        markets: markets,
-        vendorPosts: vendorPosts,
-        events: events,
-      ),
+      (List<Market> markets, List<VendorPost> vendorPosts, List<Event> events) {
+        final feedData = FeedData(
+          markets: markets,
+          vendorPosts: vendorPosts,
+          events: events,
+        );
+        
+        // Cache the data with 5 minute TTL
+        _cacheService.set(cacheKey, feedData, ttl: const Duration(minutes: 5));
+        
+        return feedData;
+      },
     );
   }
 
@@ -644,7 +678,13 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       stream: _getCombinedFeedStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const LoadingWidget(message: 'Loading markets, vendors, and events...');
+          return const Column(
+            children: [
+              FeedCardSkeleton(itemCount: 2),
+              SizedBox(height: 8),
+              VendorCardSkeleton(),
+            ],
+          );
         }
 
         if (snapshot.hasError) {
@@ -652,7 +692,13 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
         }
 
         if (!snapshot.hasData) {
-          return const LoadingWidget(message: 'Loading markets, vendors, and events...');
+          return const Column(
+            children: [
+              FeedCardSkeleton(itemCount: 2),
+              SizedBox(height: 8),
+              VendorCardSkeleton(),
+            ],
+          );
         }
 
         final feedData = snapshot.data!;
@@ -731,75 +777,89 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       child: InkWell(
         onTap: () => _handleVendorPostTap(post),
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Add photo preview at the top if photos or location are available
+            if (post.photoUrls.isNotEmpty || (post.latitude != null && post.longitude != null))
+              VendorPhotoPreview(
+                latitude: post.latitude,
+                longitude: post.longitude,
+                location: post.location,
+                photoUrls: post.photoUrls,
+                onPhotoTap: () => _handleVendorPostTap(post),
+                height: 200,
+                borderRadius: 12,
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.store,
-                      color: Colors.blue,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post.vendorName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: HiPopColors.darkTextPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Pop-up • ${_formatPostDateTime(post.popUpStartDateTime)}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: HiPopColors.darkTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   Row(
                     children: [
-                      ShareButton(
-                        onGetShareContent: () async {
-                          return _buildVendorPostShareContent(post);
-                        },
-                        style: ShareButtonStyle.icon,
-                        size: ShareButtonSize.small,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.store,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      VendorFollowButton(
-                        vendorId: post.vendorId,
-                        vendorName: post.vendorName,
-                        isCompact: true,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              post.vendorName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: HiPopColors.darkTextPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Pop-up • ${_formatPostDateTime(post.popUpStartDateTime)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: HiPopColors.darkTextSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      FavoriteButton(
-                        itemId: post.id,
-                        type: FavoriteType.post,
-                        size: 20,
+                      Row(
+                        children: [
+                          ShareButton(
+                            onGetShareContent: () async {
+                              return _buildVendorPostShareContent(post);
+                            },
+                            style: ShareButtonStyle.icon,
+                            size: ShareButtonSize.small,
+                          ),
+                          const SizedBox(width: 8),
+                          VendorFollowButton(
+                            vendorId: post.vendorId,
+                            vendorName: post.vendorName,
+                            isCompact: true,
+                          ),
+                          const SizedBox(width: 8),
+                          FavoriteButton(
+                            itemId: post.id,
+                            type: FavoriteType.post,
+                            size: 20,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
+                  const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(
@@ -898,8 +958,10 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
                   return const SizedBox.shrink();
                 },
               ),
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1354,7 +1416,7 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
   
   Future<void> _launchMaps(String address) async {
     try {
-      await UrlLauncherService.launchMaps(address);
+      await UrlLauncherService.launchMaps(address, context: context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

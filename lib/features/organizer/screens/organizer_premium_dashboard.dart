@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,6 +22,8 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   late TabController _tabController;
   Stream<List<VendorPost>>? _marketPostsStream;
   Stream<Map<String, int>>? _marketAnalyticsStream;
+  StreamSubscription? _postsSubscription;
+  StreamSubscription? _analyticsSubscription;
   String? _userId;
 
   @override
@@ -39,6 +42,14 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   @override
   void dispose() {
     _tabController.dispose();
+    // Cancel stream subscriptions to prevent memory leaks
+    _postsSubscription?.cancel();
+    _analyticsSubscription?.cancel();
+    
+    // Clear stream references
+    _marketPostsStream = null;
+    _marketAnalyticsStream = null;
+    
     super.dispose();
   }
 
@@ -71,6 +82,16 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
 
   Future<List<String>> _getOrganizerMarketIds(String organizerId) async {
     try {
+      // Get the user profile to access managedMarketIds directly
+      // This is more efficient than querying markets by organizerId
+      final authState = context.read<AuthBloc>().state;
+      if (authState is Authenticated && authState.userProfile != null) {
+        final marketIds = authState.userProfile!.managedMarketIds;
+        debugPrint('Found ${marketIds.length} markets for organizer from profile: $organizerId');
+        return marketIds;
+      }
+      
+      // Fallback to querying if profile not available
       final marketsQuery = await FirebaseFirestore.instance
         .collection('markets')
         .where('organizerId', isEqualTo: organizerId)
@@ -182,8 +203,8 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
         
         return Scaffold(
           appBar: HiPopAppBar(
-            title: 'Organizer Premium Dashboard',
-            userRole: 'vendor',
+            title: 'Premium Dashboard',
+            userRole: 'market_organizer',
             centerTitle: true,
             bottom: hasPremiumAccess ? TabBar(
               controller: _tabController,
@@ -659,62 +680,96 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
   }
 
   Widget _buildAnalyticsPreview() {
-    return _marketAnalyticsStream == null || _marketPostsStream == null
-        ? const LoadingWidget(message: 'Loading analytics preview...')
-        : StreamBuilder<Map<String, int>>(
-            stream: _marketAnalyticsStream!,
-            builder: (context, analyticsSnapshot) {
-              return StreamBuilder<List<VendorPost>>(
-                stream: _marketPostsStream!,
-                builder: (context, postsSnapshot) {
-                  final posts = postsSnapshot.data ?? [];
-                  final analytics = analyticsSnapshot.data ?? {};
-                  final totalVendors = analytics['totalVendors'] ?? 0;
-                  final activeMarkets = analytics['activeMarkets'] ?? 0;
+    if (_marketAnalyticsStream == null || _marketPostsStream == null) {
+      return const LoadingWidget(message: 'Loading analytics preview...');
+    }
 
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.2,
-                    children: [
-                      // Free metrics - always visible
-                      _buildMetricCard(
-                        'Total Vendors',
-                        '$totalVendors',
-                        Icons.people,
-                        Colors.blue,
-                        isLocked: false,
-                      ),
-                      _buildMetricCard(
-                        'Active Markets',
-                        '$activeMarkets',
-                        Icons.store,
-                        Colors.green,
-                        isLocked: false,
-                      ),
-                      
-                      // Basic premium metrics - available to all premium users
-                      _buildMetricCard(
-                        'Vendor Posts',
-                        '${posts.length}',
-                        Icons.campaign,
-                        Colors.orange,
-                        isLocked: false,
-                      ),
-                      _buildMetricCard(
-                        'Post Views',
-                        '0', // Will be populated with real data
-                        Icons.visibility,
-                        Colors.purple,
-                        isLocked: false,
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
+    return StreamBuilder<Map<String, int>>(
+      stream: _marketAnalyticsStream!,
+      builder: (context, analyticsSnapshot) {
+        // Check if widget is still mounted to prevent memory leaks
+        if (!mounted) {
+          return const SizedBox.shrink();
+        }
+
+        if (analyticsSnapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingWidget(message: 'Loading analytics...');
+        }
+
+        if (analyticsSnapshot.hasError) {
+          debugPrint('Analytics stream error: ${analyticsSnapshot.error}');
+          return const Center(
+            child: Text('Analytics temporarily unavailable'),
           );
+        }
+
+        return StreamBuilder<List<VendorPost>>(
+          stream: _marketPostsStream!,
+          builder: (context, postsSnapshot) {
+            // Check if widget is still mounted
+            if (!mounted) {
+              return const SizedBox.shrink();
+            }
+
+            if (postsSnapshot.connectionState == ConnectionState.waiting) {
+              return const LoadingWidget(message: 'Loading posts...');
+            }
+
+            if (postsSnapshot.hasError) {
+              debugPrint('Posts stream error: ${postsSnapshot.error}');
+              return const Center(
+                child: Text('Posts data temporarily unavailable'),
+              );
+            }
+
+            final posts = postsSnapshot.data ?? [];
+            final analytics = analyticsSnapshot.data ?? {};
+            final totalVendors = analytics['totalVendors'] ?? 0;
+            final activeMarkets = analytics['activeMarkets'] ?? 0;
+
+            return GridView.count(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.2,
+              children: [
+                // Free metrics - always visible
+                _buildMetricCard(
+                  'Total Vendors',
+                  '$totalVendors',
+                  Icons.people,
+                  Colors.blue,
+                  isLocked: false,
+                ),
+                _buildMetricCard(
+                  'Active Markets',
+                  '$activeMarkets',
+                  Icons.store,
+                  Colors.green,
+                  isLocked: false,
+                ),
+                
+                // Basic premium metrics - available to all premium users
+                _buildMetricCard(
+                  'Vendor Posts',
+                  '${posts.length}',
+                  Icons.campaign,
+                  Colors.orange,
+                  isLocked: false,
+                ),
+                _buildMetricCard(
+                  'Post Views',
+                  '0', // Will be populated with real data
+                  Icons.visibility,
+                  Colors.purple,
+                  isLocked: false,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Widget _buildMetricCard(
@@ -956,7 +1011,7 @@ class _OrganizerPremiumDashboardState extends State<OrganizerPremiumDashboard>
               onPressed: () {
                 final authState = context.read<AuthBloc>().state;
                 if (authState is Authenticated) {
-                  context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${authState.user.uid}');
+                  context.go('/premium/upgrade?tier=marketOrganizerPremium&userId=${authState.user.uid}');
                 }
               },
               style: ElevatedButton.styleFrom(

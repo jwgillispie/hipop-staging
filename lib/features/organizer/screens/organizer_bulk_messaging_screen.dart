@@ -93,6 +93,12 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
       }
     } catch (e) {
       debugPrint('Error loading vendors: $e');
+      // Clear vendors list on error to prevent showing stale data
+      if (mounted) {
+        setState(() {
+          _availableVendors = [];
+        });
+      }
     }
   }
 
@@ -106,6 +112,12 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
       }
     } catch (e) {
       debugPrint('Error loading templates: $e');
+      // Clear templates list on error to prevent showing stale data
+      if (mounted) {
+        setState(() {
+          _savedTemplates = [];
+        });
+      }
     }
   }
 
@@ -848,12 +860,10 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
       context: context,
       builder: (context) => _TemplateCreationDialog(
         onSave: (template) async {
+          final authState = context.read<AuthBloc>().state;
           await _bulkMessagingService.saveMessageTemplate(template);
-          if (mounted) {
-            final authState = context.read<AuthBloc>().state;
-            if (authState is Authenticated) {
-              await _loadSavedTemplates(authState.user.uid);
-            }
+          if (mounted && authState is Authenticated) {
+            await _loadSavedTemplates(authState.user.uid);
           }
         },
       ),
@@ -885,12 +895,10 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
       builder: (context) => _TemplateCreationDialog(
         template: template,
         onSave: (updatedTemplate) async {
+          final authState = context.read<AuthBloc>().state;
           await _bulkMessagingService.saveMessageTemplate(updatedTemplate);
-          if (mounted) {
-            final authState = context.read<AuthBloc>().state;
-            if (authState is Authenticated) {
-              await _loadSavedTemplates(authState.user.uid);
-            }
+          if (mounted && authState is Authenticated) {
+            await _loadSavedTemplates(authState.user.uid);
           }
         },
       ),
@@ -911,13 +919,11 @@ class _OrganizerBulkMessagingScreenState extends State<OrganizerBulkMessagingScr
           ElevatedButton(
             onPressed: () async {
               if (mounted) {
+                final authState = context.read<AuthBloc>().state;
                 Navigator.of(context).pop();
                 await _bulkMessagingService.deleteMessageTemplate(template.id);
-                if (mounted) {
-                  final authState = context.read<AuthBloc>().state;
-                  if (authState is Authenticated) {
-                    await _loadSavedTemplates(authState.user.uid);
-                  }
+                if (mounted && authState is Authenticated) {
+                  await _loadSavedTemplates(authState.user.uid);
                 }
               }
             },

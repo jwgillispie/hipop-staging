@@ -19,7 +19,6 @@ import '../../premium/widgets/upgrade_prompt_widget.dart';
 /// - Enter daily/weekly sales data
 /// - Track product performance  
 /// - Monitor revenue, commissions, and fees
-/// - Export data for business reporting
 /// - View historical sales data and analytics
 /// - Comprehensive sales dashboard with charts and insights
 class VendorSalesTrackerScreen extends StatefulWidget {
@@ -197,11 +196,15 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
         ],
       ),
       body: _isCheckingPremium
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    ))
           : !_hasPremiumAccess
               ? _buildPremiumRequiredScreen()
               : _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    ))
                   : Form(
                       key: _formKey,
                       child: TabBarView(
@@ -509,12 +512,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                         'Compare performance across different venues',
                         isDarkMode,
                       ),
-                      _buildEnhancedFeatureItem(
-                        Icons.download,
-                        'Export & Reporting',
-                        'Download CSV reports for tax and accounting',
-                        isDarkMode,
-                      ),
                       const SizedBox(height: 24),
                       // CTA Button with gradient
                       Container(
@@ -725,15 +722,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   }
   
   Future<void> _saveSalesData() async {
-    print('\n🔵 SAVE REVENUE DATA PRESSED');
-    print('Form valid: ${_formKey.currentState?.validate()}');
-    print('Selected venue: ${_selectedVenueDetails?.displayText}');
-    print('Selected market ID: $_selectedMarketId');
-    
     if (!_formKey.currentState!.validate() || _selectedVenueDetails == null) {
-      print('❌ Validation failed or no venue selected');
-      print('Form validation: ${_formKey.currentState?.validate()}');
-      print('Venue Details is null: ${_selectedVenueDetails == null}');
       
       // Show error message to user
       if (mounted) {
@@ -749,7 +738,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       return;
     }
     
-    print('✅ Validation passed, starting save process...');
     setState(() => _isSaving = true);
     
     try {
@@ -758,18 +746,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       final marketFee = double.tryParse(_marketFeeController.text) ?? 0.0;
       final commissionRate = double.tryParse(_commissionRateController.text) ?? 5.0;
       final commissionPaid = revenue * (commissionRate / 100);
-      
-      print('📊 Sales Data to Save:');
-      print('  Revenue: \$$revenue');
-      print('  Transactions: $transactions');
-      print('  Market Fee: \$$marketFee');
-      print('  Commission Rate: $commissionRate%');
-      print('  Commission Paid: \$$commissionPaid');
-      print('  Date: $_selectedDate');
-      print('  Venue Type: ${_selectedVenueDetails!.type.displayName}');
-      print('  Venue Details: ${_selectedVenueDetails!.displayText}');
-      print('  Market ID: $_selectedMarketId');
-      print('  Is Update: ${_existingSalesData != null}');
       
       final salesData = VendorSalesData(
         id: _existingSalesData?.id ?? '',
@@ -790,17 +766,12 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       );
       
       if (_existingSalesData != null) {
-        print('📝 Updating existing sales data with ID: ${_existingSalesData!.id}');
         await _salesService.updateSalesData(salesData);
-        print('✅ Update successful');
       } else {
-        print('📝 Creating new sales data entry');
-        final newId = await _salesService.createSalesData(salesData);
-        print('✅ Created with ID: $newId');
+        await _salesService.createSalesData(salesData);
       }
       
       // Track sales entry completion
-      print('📈 Tracking analytics event...');
       await RealTimeAnalyticsService.trackEvent(
         'sales_data_saved',
         {
@@ -816,7 +787,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       );
       
       // Refresh historical data and analytics
-      print('🔄 Refreshing history and analytics...');
       _loadSalesHistory();
       _loadSalesAnalytics();
       
@@ -829,18 +799,12 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           ),
         );
         
-        print('🔙 Navigating back with saved data');
         Navigator.of(context).pop(salesData);
       }
       
     } catch (e) {
-      print('❌ ERROR saving sales data: $e');
-      print('Error type: ${e.runtimeType}');
-      print('Stack trace: ${StackTrace.current}');
-      
       if (mounted) _showError('Error saving sales data: $e');
     } finally {
-      print('🏁 Save process complete, resetting saving state');
       if (mounted) setState(() => _isSaving = false);
     }
   }
@@ -1482,7 +1446,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
         content: SizedBox(
           width: double.maxFinite,
           child: _loadingMarkets
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    ))
               : _approvedMarkets.isEmpty
                   ? const Padding(
                       padding: EdgeInsets.all(16),
@@ -1761,7 +1727,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    )),
         ),
       );
     }
@@ -1869,7 +1837,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   
   Widget _buildHistoryList() {
     if (_loadingHistory) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    ));
     }
     
     if (_salesHistory.isEmpty) {
@@ -2158,8 +2128,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
           _buildPerformanceInsights(),
           const SizedBox(height: 24),
           _buildMarketPerformance(),
-          const SizedBox(height: 24),
-          _buildExportSection(),
         ],
       ),
     );
@@ -2361,12 +2329,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
               'Identify your best performing days',
               isDarkMode,
             ),
-            _buildEnhancedFeatureItem(
-              Icons.download,
-              'Export Capabilities',
-              'CSV and PDF reports for accounting',
-              isDarkMode,
-            ),
           ],
         ),
       ),
@@ -2378,7 +2340,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    )),
         ),
       );
     }
@@ -2490,7 +2454,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    )),
         ),
       );
     }
@@ -2771,7 +2737,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    )),
         ),
       );
     }
@@ -2869,7 +2837,9 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(24.0),
-          child: Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                    )),
         ),
       );
     }
@@ -2967,88 +2937,6 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     );
   }
   
-  Widget _buildExportSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Export Data',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _exportSalesData(),
-                    icon: Icon(Icons.download, color: HiPopColors.vendorAccent),
-                    label: Text(
-                      'Export CSV',
-                      style: TextStyle(color: HiPopColors.vendorAccent),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _shareAnalytics(),
-                    icon: Icon(Icons.share, color: HiPopColors.accentMauve),
-                    label: Text(
-                      'Share Report',
-                      style: TextStyle(color: HiPopColors.accentMauve),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Future<void> _exportSalesData() async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return;
-      
-      await _salesService.exportSalesDataToCsv(
-        vendorId: userId,
-        marketId: _historyMarketFilter,
-        startDate: _historyStartDate,
-        endDate: _historyEndDate,
-      );
-      
-      // TODO: Implement file saving when share_plus is available
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Export feature coming soon!'),
-            backgroundColor: HiPopColors.accentMauve,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) _showError('Error exporting data: $e');
-    }
-  }
-  
-  Future<void> _shareAnalytics() async {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Share feature coming soon!'),
-          backgroundColor: HiPopColors.accentMauve,
-        ),
-      );
-    }
-  }
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(

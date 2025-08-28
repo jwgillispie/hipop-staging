@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/features/market/models/market.dart';
+import 'package:hipop/features/market/services/market_batch_service.dart';
 import 'package:hipop/features/market/services/market_calendar_service.dart';
 import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
@@ -62,13 +63,9 @@ class _OrganizerCalendarScreenState extends State<OrganizerCalendarScreen> {
       }
       
       final managedMarketIds = userProfile.managedMarketIds;
-      final markets = <Market>[];
-      for (final marketId in managedMarketIds) {
-        final market = await MarketService.getMarket(marketId);
-        if (market != null) {
-          markets.add(market);
-        }
-      }
+      // Use batch loading instead of N+1 queries
+      // This reduces Firebase reads by up to 90%
+      final markets = await MarketBatchService.batchLoadMarkets(managedMarketIds);
       
       // Generate calendar events for the next 3 months
       final startDate = DateTime.now().subtract(const Duration(days: 30));

@@ -10,6 +10,7 @@ import 'organizer/create_event_screen.dart';
 import 'organizer/edit_event_screen.dart';
 import '../../../core/widgets/hipop_app_bar.dart';
 import '../../../core/theme/hipop_colors.dart';
+import '../../premium/screens/subscription_management_screen.dart';
 
 class OrganizerEventManagementScreen extends StatefulWidget {
   const OrganizerEventManagementScreen({super.key});
@@ -21,16 +22,26 @@ class OrganizerEventManagementScreen extends StatefulWidget {
 class _OrganizerEventManagementScreenState extends State<OrganizerEventManagementScreen> {
   Stream<List<Event>>? _eventsStream;
   StreamSubscription<List<Event>>? _eventsSubscription;
+  Map<String, dynamic>? _eventUsageSummary;
+  bool _isLoadingUsage = true;
 
   @override
   void initState() {
     super.initState();
     _initializeEvents();
+    _loadEventUsage();
   }
 
   @override
   void dispose() {
+    // Cancel stream subscription to prevent memory leaks
     _eventsSubscription?.cancel();
+    _eventsSubscription = null;
+    
+    // Clear stream and data references
+    _eventsStream = null;
+    _eventUsageSummary = null;
+    
     super.dispose();
   }
 
@@ -43,6 +54,139 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
     }
   }
 
+  Future<void> _loadEventUsage() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      try {
+        final summary = await EventService.getEventUsageSummary(authState.user.uid);
+        if (mounted) {
+          setState(() {
+            _eventUsageSummary = summary;
+            _isLoadingUsage = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading event usage: $e');
+        if (mounted) {
+          setState(() {
+            _isLoadingUsage = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _checkAndCreateEvent() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) return;
+
+    // Check if organizer can create event
+    final canCreate = await EventService.canOrganizerCreateEvent(authState.user.uid);
+    if (!mounted) return;
+    
+    if (!canCreate) {
+      _showEventLimitDialog();
+    } else {
+      _showCreateEventDialog(context);
+    }
+  }
+
+  void _showEventLimitDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: HiPopColors.darkBackground,
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: HiPopColors.warningAmber),
+            const SizedBox(width: 8),
+            const Text(
+              'Event Limit Reached',
+              style: TextStyle(color: HiPopColors.darkTextPrimary),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You have reached your monthly limit of 1 event.',
+              style: TextStyle(color: HiPopColors.darkTextSecondary),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: HiPopColors.primaryDeepSage),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.star, color: HiPopColors.primaryDeepSage, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Upgrade to Premium',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: HiPopColors.darkTextPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• Unlimited events per month\n'
+                    '• Advanced event features\n'
+                    '• Priority support\n'
+                    '• Analytics & insights',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: HiPopColors.darkTextSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: HiPopColors.darkTextSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              final authState = context.read<AuthBloc>().state;
+              if (authState is Authenticated) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => SubscriptionManagementScreen(
+                      userId: authState.user.uid,
+                    ),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HiPopColors.primaryDeepSage,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Upgrade Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,7 +197,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showCreateEventDialog(context),
+            onPressed: _checkAndCreateEvent,
           ),
         ],
       ),
@@ -107,7 +251,11 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+                      
+                      // Event Usage Card
+                      _buildEventUsageCard(),
+                      const SizedBox(height: 16),
                       
                       // Create Event Button
                       _buildCreateEventButton(context),
@@ -243,6 +391,236 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
         },
       ),
     );
+  }
+
+  Widget _buildEventUsageCard() {
+    if (_isLoadingUsage) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.primaryDeepSage),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final isPremium = _eventUsageSummary?['is_premium'] ?? false;
+    final eventsUsed = _eventUsageSummary?['events_used'] ?? 0;
+    final eventsLimit = _eventUsageSummary?['events_limit'] ?? 1;
+    final remainingEvents = _eventUsageSummary?['remaining_events'] ?? 1;
+    final canCreateMore = _eventUsageSummary?['can_create_more'] ?? true;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isPremium 
+            ? HiPopColors.primaryDeepSage.withValues(alpha: 0.3)
+            : (canCreateMore ? HiPopColors.successGreen.withValues(alpha: 0.3) : HiPopColors.warningAmber.withValues(alpha: 0.3)),
+          width: 1,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isPremium
+              ? [
+                  HiPopColors.primaryDeepSage.withValues(alpha: 0.05),
+                  HiPopColors.primaryDeepSage.withValues(alpha: 0.02),
+                ]
+              : [
+                  canCreateMore 
+                    ? HiPopColors.successGreen.withValues(alpha: 0.05)
+                    : HiPopColors.warningAmber.withValues(alpha: 0.05),
+                  Colors.transparent,
+                ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isPremium ? Icons.star : Icons.calendar_month,
+                        color: isPremium 
+                          ? HiPopColors.primaryDeepSage
+                          : (canCreateMore ? HiPopColors.successGreen : HiPopColors.warningAmber),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Monthly Event Usage',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: HiPopColors.darkTextPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (isPremium)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: HiPopColors.primaryDeepSage,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'PREMIUM',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (isPremium) ...[
+                Row(
+                  children: [
+                    Icon(Icons.all_inclusive, color: HiPopColors.primaryDeepSage, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Unlimited Events',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: HiPopColors.darkTextPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Create as many events as you need!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: HiPopColors.darkTextSecondary,
+                  ),
+                ),
+              ] else ...[
+                // Progress bar for free tier
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$eventsUsed / $eventsLimit Event${eventsLimit != 1 ? 's' : ''} Used',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: HiPopColors.darkTextPrimary,
+                          ),
+                        ),
+                        Text(
+                          remainingEvents == 0 ? 'Limit Reached' : '$remainingEvents Remaining',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: remainingEvents == 0 
+                              ? HiPopColors.warningAmber 
+                              : HiPopColors.darkTextSecondary,
+                            fontWeight: remainingEvents == 0 ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: eventsLimit > 0 ? eventsUsed / eventsLimit : 0,
+                        minHeight: 8,
+                        backgroundColor: Colors.grey[300],
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          remainingEvents == 0 
+                            ? HiPopColors.warningAmber 
+                            : HiPopColors.successGreen,
+                        ),
+                      ),
+                    ),
+                    if (remainingEvents == 0) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: HiPopColors.warningAmber.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: HiPopColors.warningAmber.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: HiPopColors.warningAmber,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Upgrade for Unlimited Events',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: HiPopColors.darkTextPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Get premium to create unlimited events every month',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: HiPopColors.darkTextSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCreateEventDialog(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CreateEventScreen()),
+    ).then((_) {
+      // Refresh event usage after returning from create screen
+      _loadEventUsage();
+    });
   }
 
   Widget _buildCreateEventButton(BuildContext context) {
@@ -528,15 +906,6 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
         _showDeleteConfirmation(event);
         break;
     }
-  }
-
-  void _showCreateEventDialog(BuildContext context) {
-    if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const CreateEventScreen(),
-      ),
-    );
   }
 
   void _showEditEventDialog(Event event) {

@@ -282,19 +282,19 @@ class UpgradePromptWidget extends StatelessWidget {
         return {
           'title': 'Vendor Premium',
           'price': '\$29.00',
-          'tier': SubscriptionTier.vendorPro,
+          'tier': SubscriptionTier.vendorPremium,
         };
       case 'market_organizer':
         return {
           'title': 'Market Organizer Premium',
           'price': '\$69.00',
-          'tier': SubscriptionTier.marketOrganizerPro,
+          'tier': SubscriptionTier.marketOrganizerPremium,
         };
       default:
         return {
           'title': 'Vendor Premium',
           'price': '\$29.00',
-          'tier': SubscriptionTier.vendorPro,
+          'tier': SubscriptionTier.vendorPremium,
         };
     }
   }

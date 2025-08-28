@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:hipop/features/vendor/services/vendor_product_service.dart';
 import 'package:hipop/features/vendor/models/vendor_product.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+import 'package:hipop/features/vendor/widgets/vendor_photo_carousel.dart';
 
 class VendorPostDetailScreen extends StatefulWidget {
   final VendorPost vendorPost;
@@ -97,12 +98,23 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Card - Improved Organization
-            Card(
+            // Photo carousel at the top if photos are available
+            if (widget.vendorPost.photoUrls.isNotEmpty)
+              VendorPhotoCarousel(
+                photoUrls: widget.vendorPost.photoUrls,
+                height: 300,
+                borderRadius: 0,
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Card - Improved Organization
+                  Card(
               elevation: 4,
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -259,7 +271,10 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
               'About',
               style: Theme.of(
                 context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Card(
@@ -280,7 +295,10 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                 'Products Available',
                 style: Theme.of(
                   context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: HiPopColors.darkTextPrimary,
+                ),
               ),
               const SizedBox(height: 8),
               _buildProductsCard(),
@@ -292,7 +310,10 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
               'Event Details',
               style: Theme.of(
                 context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Card(
@@ -372,6 +393,9 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
                 ),
               ),
             ],
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -440,12 +464,12 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
       // Use coordinates if available for more precise location
       if (widget.vendorPost.latitude != null &&
           widget.vendorPost.longitude != null) {
-        final url =
-            'https://maps.google.com/?q=${widget.vendorPost.latitude},${widget.vendorPost.longitude}';
-        await UrlLauncherService.launchWebsite(url);
+        // Use coordinates for more precise location
+        final coordinateString = '${widget.vendorPost.latitude},${widget.vendorPost.longitude}';
+        await UrlLauncherService.launchMaps(coordinateString, context: context);
       } else {
         // Fall back to address search
-        await UrlLauncherService.launchMaps(widget.vendorPost.location);
+        await UrlLauncherService.launchMaps(widget.vendorPost.location, context: context);
       }
     } catch (e) {
       if (context.mounted) {

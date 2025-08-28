@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/url_launcher_service.dart';
 
@@ -85,7 +86,7 @@ class LegalDocumentsScreen extends StatelessWidget {
                       _buildDocumentCard(
                         context: context,
                         title: 'Payment Terms',
-                        description: 'Stripe integration, subscription tiers, and payment security details',
+                        description: 'Vendor and organizer subscriptions, Stripe integration, and payment security',
                         icon: Icons.payment,
                         color: Colors.green,
                         onTap: () => _showPaymentTermsDialog(context),
@@ -131,7 +132,7 @@ class LegalDocumentsScreen extends StatelessWidget {
                       TextButton.icon(
                         onPressed: () => _launchEmail(context),
                         icon: const Icon(Icons.email, size: 18),
-                        label: const Text('support@hipopmarkets.com'),
+                        label: const Text('hipopmarkets@gmail.com'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.orange,
                         ),
@@ -266,12 +267,12 @@ class LegalDocumentsScreen extends StatelessWidget {
 
   Future<void> _launchEmail(BuildContext context) async {
     try {
-      await UrlLauncherService.launchEmail('support@hipopmarkets.com');
+      await UrlLauncherService.launchEmail('hipopmarkets@gmail.com');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Unable to open email app. Please contact support@hipopmarkets.com'),
+            content: Text('Unable to open email app. Please contact hipopmarkets@gmail.com'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -280,25 +281,26 @@ class LegalDocumentsScreen extends StatelessWidget {
   }
 
   void _showTermsDialog(BuildContext context) {
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Terms of Service'),
         content: SingleChildScrollView(
           child: Text(
-            '''HiPop Markets Terms of Service
+'''HiPop Markets Terms of Service
 
 ABOUT HIPOP MARKETS
 HiPop is a comprehensive three-sided marketplace platform that connects vendors, shoppers, and market organizers in the local pop-up market ecosystem. Our app facilitates discovery, booking, payment processing, and analytics across all user types.
 
 USER TYPES AND FEATURES:
 
-1. SHOPPERS (\$4/month premium tier)
+1. SHOPPERS (Free)
    • Discover local pop-up markets and vendors
    • Browse vendor products and services
    • Save favorite vendors and events
    • Access enhanced search and filtering
-   • Premium: Advanced notifications and exclusive market access
+   • All features are free for shoppers
 
 2. VENDORS (\$29/month premium tier)
    • Create and manage vendor profiles
@@ -359,13 +361,14 @@ Last updated: 2024''',
   }
 
   void _showPrivacyDialog(BuildContext context) {
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Privacy Policy'),
         content: SingleChildScrollView(
           child: Text(
-            '''HiPop Markets Privacy Policy
+'''HiPop Markets Privacy Policy
 
 DATA COLLECTION:
 We collect information you provide directly, including:
@@ -422,7 +425,7 @@ RETENTION:
 • Analytics data may be retained in aggregate form
 • Deleted account data purged within 30 days
 
-For questions about privacy, contact: privacy@hipopmarkets.com
+For questions about privacy, contact: hipopmarkets@gmail.com
 
 Last updated: 2024''',
             style: TextStyle(fontSize: 14),
@@ -448,12 +451,6 @@ Last updated: 2024''',
             '''HiPop Markets Payment Terms
 
 SUBSCRIPTION TIERS:
-
-Shopper Premium - \$4.00/month
-• Enhanced market discovery features
-• Priority notifications for new markets
-• Advanced filtering and search capabilities
-• Exclusive access to select vendor events
 
 Vendor Premium - \$29.00/month
 • Advanced analytics dashboard
@@ -517,7 +514,7 @@ TAXES:
 • Compliance with state and federal tax laws
 • Tax receipts available upon request
 
-For payment support, contact: billing@hipopmarkets.com
+For payment support, contact: hipopmarkets@gmail.com
 
 Last updated: 2024''',
             style: TextStyle(fontSize: 14),

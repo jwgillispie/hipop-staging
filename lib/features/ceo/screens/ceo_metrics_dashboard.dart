@@ -910,7 +910,7 @@ class _CEOMetricsDashboardState extends State<CEOMetricsDashboard>
         children: [
           _buildSubscriptionRow('Vendor Basic', subscriptions['vendorBasic'] ?? 0, HiPopColors.primaryDeepSage),
           _buildSubscriptionRow('Vendor Growth', subscriptions['vendorGrowth'] ?? 0, HiPopColors.secondarySoftSage),
-          _buildSubscriptionRow('Vendor Pro', subscriptions['vendorPro'] ?? 0, HiPopColors.accentMauve),
+          _buildSubscriptionRow('Vendor Premium', subscriptions['vendorPremium'] ?? 0, HiPopColors.accentMauve),
           _buildSubscriptionRow('Organizer Basic', subscriptions['organizerBasic'] ?? 0, HiPopColors.infoBlueGray),
           _buildSubscriptionRow('Organizer Pro', subscriptions['organizerPro'] ?? 0, HiPopColors.warningAmber),
           _buildSubscriptionRow('Shopper Premium', subscriptions['shopperPremium'] ?? 0, HiPopColors.successGreen),

@@ -217,6 +217,51 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      
+                      // Trust-Based System Info Card
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: HiPopColors.successGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.verified_user,
+                              color: HiPopColors.successGreen,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Trust-Based System Active',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: HiPopColors.successGreen,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'All markets and vendor posts are automatically approved',
+                                    style: TextStyle(
+                                      color: HiPopColors.darkTextSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
                       const SizedBox(height: 24),
                       Text(
                         'Dashboard',

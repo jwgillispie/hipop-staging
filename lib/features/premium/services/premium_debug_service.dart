@@ -193,10 +193,10 @@ class PremiumDebugService {
         final result = await _functions.httpsCallable('createCheckoutSession').call({
           'userId': userId,
           'userType': 'vendor',
-          'priceId': 'price_test_12345',
-          'customerEmail': 'test@example.com',
-          'successUrl': 'https://test.com/success',
-          'cancelUrl': 'https://test.com/cancel',
+          'priceId': 'price_test_\${userId.substring(0, 8)}',
+          'customerEmail': 'test+\${userId.substring(0, 8)}@example.com',
+          'successUrl': 'https://test.com/success?userId=\$userId',
+          'cancelUrl': 'https://test.com/cancel?userId=\$userId',
           'environment': 'test',
         });
         
@@ -212,10 +212,10 @@ class PremiumDebugService {
         try {
           // This should fail due to security measures
           await _functions.httpsCallable('createCheckoutSession').call({
-            'userId': 'different-user-id', // Different user
+            'userId': 'invalid_${DateTime.now().millisecondsSinceEpoch}', // Different user
             'userType': 'vendor',
-            'priceId': 'price_test_12345',
-            'customerEmail': 'test@example.com',
+            'priceId': 'price_test_\${userId.substring(0, 8)}',
+            'customerEmail': 'test+\${userId.substring(0, 8)}@example.com',
             'successUrl': 'https://test.com/success',
             'cancelUrl': 'https://test.com/cancel',
             'environment': 'test',

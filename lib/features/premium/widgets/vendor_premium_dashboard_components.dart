@@ -431,7 +431,7 @@ class VendorPremiumDashboardComponents {
               const SizedBox(height: 12),
               const Center(
                 child: Text(
-                  'Cancel anytime • 30-day money back guarantee',
+                  'Cancel anytime • Secure Payment',
                   style: TextStyle(
                     fontSize: 12,
                     color: HiPopColors.lightTextSecondary,

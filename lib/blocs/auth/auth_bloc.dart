@@ -34,6 +34,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ForgotPasswordEvent>(_onForgotPasswordEvent);
     on<SendEmailVerificationEvent>(_onSendEmailVerificationEvent);
     on<ReloadUserEvent>(_onReloadUserEvent);
+    
+    // Phone Authentication Handlers
+    on<PhoneSignInRequestedEvent>(_onPhoneSignInRequested);
+    on<PhoneCodeSentEvent>(_onPhoneCodeSent);
+    on<PhoneVerificationCompletedEvent>(_onPhoneVerificationCompleted);
+    on<PhoneVerificationFailedEvent>(_onPhoneVerificationFailed);
+    on<VerifyPhoneCodeEvent>(_onVerifyPhoneCode);
+    on<ResendPhoneCodeEvent>(_onResendPhoneCode);
+    on<LinkPhoneNumberEvent>(_onLinkPhoneNumber);
   }
 
   Future<void> _onAuthStarted(AuthStarted event, Emitter<AuthState> emit) async {
@@ -278,6 +287,212 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+
+  // Phone Authentication Handlers
+  Future<void> _onPhoneSignInRequested(
+    PhoneSignInRequestedEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const PhoneAuthInProgress(message: 'Sending verification code...'));
+    
+    try {
+      await (_authRepository as AuthRepository).verifyPhoneNumber(
+        phoneNumber: event.phoneNumber,
+        codeSent: (String verificationId, int? resendToken) {
+          add(PhoneCodeSentEvent(
+            verificationId: verificationId,
+            resendToken: resendToken,
+          ));
+        },
+        verificationCompleted: (PhoneAuthCredential credential) {
+          add(PhoneVerificationCompletedEvent(credential: credential));
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          add(PhoneVerificationFailedEvent(
+            error: _getPhoneAuthErrorMessage(e),
+          ));
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          emit(PhoneAuthTimeout(verificationId: verificationId));
+        },
+      );
+    } catch (e) {
+      emit(PhoneAuthError(message: e.toString()));
+    }
+  }
+
+  Future<void> _onPhoneCodeSent(
+    PhoneCodeSentEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(PhoneAuthCodeSent(
+      verificationId: event.verificationId,
+      resendToken: event.resendToken,
+      phoneNumber: '', // Pass the phone number from previous state
+    ));
+  }
+
+  Future<void> _onPhoneVerificationCompleted(
+    PhoneVerificationCompletedEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const PhoneAuthInProgress(message: 'Verifying...'));
+    
+    try {
+      final userCredential = await (_authRepository as AuthRepository)
+          .signInWithPhoneCredential(event.credential);
+      
+      if (userCredential.user != null) {
+        add(AuthUserChanged(userCredential.user));
+      }
+    } catch (e) {
+      emit(PhoneAuthError(message: e.toString()));
+    }
+  }
+
+  Future<void> _onPhoneVerificationFailed(
+    PhoneVerificationFailedEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(PhoneAuthError(message: event.error));
+  }
+
+  Future<void> _onVerifyPhoneCode(
+    VerifyPhoneCodeEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const PhoneAuthInProgress(message: 'Verifying code...'));
+    
+    try {
+      // Create credential from verification ID and SMS code
+      final credential = PhoneAuthProvider.credential(
+        verificationId: event.verificationId,
+        smsCode: event.smsCode,
+      );
+      
+      final userCredential = await (_authRepository as AuthRepository)
+          .signInWithPhoneCredential(credential);
+      
+      if (userCredential.user != null) {
+        // Check if this is a new user
+        if (userCredential.additionalUserInfo?.isNewUser == true &&
+            event.userType != null) {
+          // Create user profile for new phone auth users
+          await (_authRepository as AuthRepository).createUserProfile(
+            uid: userCredential.user!.uid,
+            name: event.displayName ?? 'Phone User',
+            email: '', // Phone users might not have email
+            userType: event.userType!,
+          );
+          
+          // Update display name if provided
+          if (event.displayName != null) {
+            await _authRepository.updateDisplayName(event.displayName!);
+          }
+        }
+        
+        add(AuthUserChanged(userCredential.user));
+      }
+    } catch (e) {
+      emit(PhoneAuthError(message: e.toString()));
+    }
+  }
+
+  Future<void> _onResendPhoneCode(
+    ResendPhoneCodeEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const PhoneAuthInProgress(message: 'Resending code...'));
+    
+    try {
+      await (_authRepository as AuthRepository).verifyPhoneNumber(
+        phoneNumber: event.phoneNumber,
+        resendToken: event.resendToken,
+        codeSent: (String verificationId, int? resendToken) {
+          add(PhoneCodeSentEvent(
+            verificationId: verificationId,
+            resendToken: resendToken,
+          ));
+        },
+        verificationCompleted: (PhoneAuthCredential credential) {
+          add(PhoneVerificationCompletedEvent(credential: credential));
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          add(PhoneVerificationFailedEvent(
+            error: _getPhoneAuthErrorMessage(e),
+          ));
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          emit(PhoneAuthTimeout(verificationId: verificationId));
+        },
+      );
+    } catch (e) {
+      emit(PhoneAuthError(message: e.toString()));
+    }
+  }
+
+  Future<void> _onLinkPhoneNumber(
+    LinkPhoneNumberEvent event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const PhoneAuthInProgress(message: 'Linking phone number...'));
+    
+    try {
+      // Start phone verification for linking
+      await (_authRepository as AuthRepository).verifyPhoneNumber(
+        phoneNumber: event.phoneNumber,
+        codeSent: (String verificationId, int? resendToken) {
+          emit(PhoneAuthCodeSent(
+            verificationId: verificationId,
+            resendToken: resendToken,
+            phoneNumber: event.phoneNumber,
+          ));
+        },
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Auto-link if verification completes
+          try {
+            await (_authRepository as AuthRepository).linkPhoneNumber(credential);
+            emit(const AuthSuccess(message: 'Phone number linked successfully'));
+          } catch (e) {
+            emit(PhoneAuthError(message: e.toString()));
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          emit(PhoneAuthError(message: _getPhoneAuthErrorMessage(e)));
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          emit(PhoneAuthTimeout(verificationId: verificationId));
+        },
+      );
+    } catch (e) {
+      emit(PhoneAuthError(message: e.toString()));
+    }
+  }
+
+  String _getPhoneAuthErrorMessage(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'invalid-phone-number':
+        return 'The phone number is invalid. Please check and try again.';
+      case 'missing-phone-number':
+        return 'Please enter a phone number.';
+      case 'quota-exceeded':
+        return 'SMS quota exceeded. Please try again later.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'operation-not-allowed':
+        return 'Phone authentication is not enabled. Please contact support.';
+      case 'invalid-verification-code':
+        return 'Invalid verification code. Please try again.';
+      case 'invalid-verification-id':
+        return 'Invalid verification ID. Please request a new code.';
+      case 'session-expired':
+        return 'Verification session expired. Please request a new code.';
+      case 'too-many-requests':
+        return 'Too many requests. Please try again later.';
+      default:
+        return 'Phone authentication failed: ${e.message}';
+    }
+  }
 
   @override
   Future<void> close() {

@@ -529,9 +529,7 @@ class HiPopTheme {
         surfaceTintColor: Colors.transparent,
       ),
       
-      // Continue with other dark theme configurations...
-      // (Similar structure to light theme but with dark colors)
-      
+      // ======= Card Theme =======
       cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -546,6 +544,125 @@ class HiPopTheme {
         surfaceTintColor: Colors.transparent,
         clipBehavior: Clip.antiAliasWithSaveLayer,
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      ),
+      
+      // ======= Elevated Button Theme =======
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: HiPopColors.secondarySoftSage,
+          foregroundColor: HiPopColors.darkTextPrimary,
+          disabledBackgroundColor: HiPopColors.backgroundWarmGray,
+          disabledForegroundColor: HiPopColors.darkTextDisabled,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.pressed)) {
+              return HiPopColors.secondarySoftSageLight.withValues(alpha: 0.2);
+            }
+            if (states.contains(WidgetState.hovered)) {
+              return HiPopColors.accentMauveLight.withValues(alpha: 0.1);
+            }
+            return null;
+          }),
+        ),
+      ),
+      
+      // ======= Text Button Theme =======
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: HiPopColors.secondarySoftSage,
+          disabledForegroundColor: HiPopColors.darkTextDisabled,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          minimumSize: const Size(64, 36),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          textStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      
+      // ======= Input Decoration Theme =======
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: HiPopColors.darkSurfaceVariant,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: HiPopColors.darkBorder,
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: HiPopColors.darkBorder,
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: HiPopColors.secondarySoftSage,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: HiPopColors.errorPlumLight,
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: HiPopColors.errorPlumLight,
+            width: 2,
+          ),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: HiPopColors.darkBorder.withValues(alpha: 0.5),
+            width: 1,
+          ),
+        ),
+        labelStyle: GoogleFonts.inter(
+          fontSize: 14,
+          color: HiPopColors.darkTextSecondary,
+        ),
+        hintStyle: GoogleFonts.inter(
+          fontSize: 14,
+          color: HiPopColors.darkTextTertiary,
+        ),
+        errorStyle: GoogleFonts.inter(
+          fontSize: 12,
+          color: HiPopColors.errorPlumLight,
+        ),
+        prefixIconColor: HiPopColors.darkTextSecondary,
+        suffixIconColor: HiPopColors.darkTextSecondary,
+      ),
+      
+      // ======= Icon Theme =======
+      iconTheme: const IconThemeData(
+        color: HiPopColors.darkTextPrimary,
+        size: 24,
       ),
     );
   }

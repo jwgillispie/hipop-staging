@@ -128,8 +128,8 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
   }
 
   int _getPhotoLimit() {
-    if (_subscription?.isVendorPro == true) {
-      return -1; // Unlimited for Vendor Pro
+    if (_subscription?.isVendorPremium == true) {
+      return -1; // Unlimited for Vendor Premium
     }
     return _subscription?.getLimit('photo_uploads_per_post') ?? 3;
   }
@@ -186,7 +186,7 @@ class _PhotoUploadWidgetState extends State<PhotoUploadWidget> {
           ),
         ),
         const SizedBox(width: 8),
-        if (_subscription?.isVendorPro == true)
+        if (_subscription?.isVendorPremium == true)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(

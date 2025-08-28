@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../shared/models/event.dart';
 import '../../shared/blocs/event_detail/event_detail_bloc.dart';
+import '../../shared/services/url_launcher_service.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../../shared/widgets/common/error_widget.dart' as common_error;
 import '../../../core/theme/hipop_colors.dart';
@@ -235,6 +235,7 @@ class EventDetailView extends StatelessWidget {
       button: onTap != null,
       child: Card(
         elevation: 2,
+        color: HiPopColors.darkSurface,
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
@@ -295,6 +296,7 @@ class EventDetailView extends StatelessWidget {
   Widget _buildDescriptionCard(BuildContext context, String description) {
     return Card(
       elevation: 2,
+      color: HiPopColors.darkSurface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -484,25 +486,16 @@ class EventDetailView extends StatelessWidget {
   }
 
   void _openMaps(BuildContext context, Event event) async {
-    final url = 'https://maps.google.com/?q=${event.latitude},${event.longitude}';
     try {
-      if (await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open maps'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
+      // Use coordinates for precise location
+      final locationString = '${event.latitude},${event.longitude}';
+      
+      await UrlLauncherService.launchMaps(locationString, context: context);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open maps'),
+          SnackBar(
+            content: Text('Error opening maps: $e'),
             backgroundColor: Colors.red,
           ),
         );

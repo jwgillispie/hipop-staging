@@ -17,6 +17,8 @@ import 'blocs/subscription/subscription_bloc.dart';
 import 'core/routing/app_router.dart';
 import 'features/shared/services/remote_config_service.dart';
 import 'features/shared/services/real_time_analytics_service.dart';
+import 'features/premium/services/revenuecat_service.dart';
+import 'features/premium/services/subscription_sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +56,9 @@ Future<void> _initializeApp() async {
     
     // Initialize Stripe AFTER Remote Config
     await _initializeStripe();
+    
+    // Initialize RevenueCat for mobile subscriptions
+    await _initializeRevenueCat();
     
     // Initialize Analytics with consent
     await _initializeAnalytics();
@@ -100,6 +105,37 @@ Future<void> _initializeStripe() async {
   } catch (e) {
     debugPrint('ERROR: Failed to initialize Stripe: $e');
     // Continue without Stripe rather than crash the app
+  }
+}
+
+Future<void> _initializeRevenueCat() async {
+  try {
+    // Only initialize on mobile platforms
+    if (kIsWeb) {
+      debugPrint('⚠️ RevenueCat skipped - Web platform detected');
+      return;
+    }
+    
+    // Skip on unsupported platforms (desktop)
+    // Use defaultTargetPlatform to avoid Platform calls on web
+    if (defaultTargetPlatform != TargetPlatform.iOS && 
+        defaultTargetPlatform != TargetPlatform.android) {
+      debugPrint('⚠️ RevenueCat skipped - Unsupported platform');
+      return;
+    }
+    
+    // Initialize RevenueCat service
+    await RevenueCatService().initialize();
+    debugPrint('✅ RevenueCat initialized successfully');
+    
+    // Start listening to subscription changes
+    SubscriptionSyncService.startListeningToSubscriptionChanges();
+    
+    // Check current subscription status
+    await SubscriptionSyncService.checkAndSyncSubscriptionStatus();
+  } catch (e) {
+    debugPrint('⚠️ RevenueCat initialization failed: $e');
+    // Continue without RevenueCat - Stripe will be used as fallback
   }
 }
 

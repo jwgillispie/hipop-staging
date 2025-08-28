@@ -140,23 +140,17 @@ class VendorSalesService {
       
       return snapshot.docs.map((doc) => VendorSalesData.fromFirestore(doc)).toList();
     } catch (e) {
-      // Debug print for Firestore index errors
-      print('\n🔴 ERROR in getSalesDataForRange:');
-      print('Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      
+      // Check for Firestore index errors
       final errorString = e.toString();
       if (errorString.contains('index')) {
-        print('\n⚠️ FIRESTORE INDEX REQUIRED for vendor_sales range query!');
-        print('Query: vendor_sales where vendorId=X, date range, orderBy date desc');
-        print('Full error: $errorString');
+        // Firestore index required for vendor_sales range query
+        debugPrint('Firestore index required: vendor_sales where vendorId=X, date range, orderBy date desc');
         
         // Extract URL if present
         final urlPattern = RegExp(r'https://console\.firebase\.google\.com/[^\s]+');
         final match = urlPattern.firstMatch(errorString);
         if (match != null) {
-          print('\n🔗 INDEX CREATION LINK:');
-          print(match.group(0));
+          debugPrint('Index creation link: ${match.group(0)}');
         }
       }
       

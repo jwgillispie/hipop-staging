@@ -101,10 +101,19 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
 
   @override
   Widget build(BuildContext context) {
+    // Get the correct user role for the app bar
+    final authState = context.read<AuthBloc>().state;
+    String userRole = 'vendor'; // Default fallback
+    
+    if (authState is Authenticated) {
+      // Use subscription userType if available, otherwise use authState userType
+      userRole = _subscription?.userType ?? authState.userType;
+    }
+    
     return Scaffold(
       appBar: HiPopAppBar(
         title: 'Manage Subscription',
-        userRole: 'vendor',
+        userRole: userRole,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => _handleBackNavigation(),
@@ -1026,11 +1035,11 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     switch (subscription.tier) {
       case SubscriptionTier.free:
         return 'Free Plan';
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 'Shopper Pro';
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 'Vendor Premium';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 'Market Organizer Premium';
       case SubscriptionTier.enterprise:
         return 'Enterprise';
@@ -1043,11 +1052,11 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     switch (subscription.tier) {
       case SubscriptionTier.free:
         return 'Basic features included';
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 'Enhanced shopping experience';
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 'Advanced vendor tools';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 'Complete market management';
       case SubscriptionTier.enterprise:
         return 'Full enterprise solution';
@@ -1100,8 +1109,29 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   void _navigateToUpgrade() {
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
-      // Navigate to premium upgrade flow with vendor tier (most common for subscription management)
-      context.go('/premium/upgrade?tier=vendor&userId=${authState.user.uid}');
+      // Determine the correct tier based on user type
+      String tier = 'vendor'; // Default fallback
+      
+      // First check subscription userType, then fall back to authState
+      final userType = _subscription?.userType ?? authState.userType;
+      
+      switch (userType) {
+        case 'market_organizer':
+          tier = 'organizer';
+          break;
+        case 'vendor':
+          tier = 'vendor';
+          break;
+        case 'shopper':
+          tier = 'shopper';
+          break;
+        default:
+          // Keep default as vendor
+          debugPrint('Unknown user type: $userType, defaulting to vendor tier');
+      }
+      
+      debugPrint('Navigating to upgrade with tier: $tier for user type: $userType');
+      context.go('/premium/upgrade?tier=$tier&userId=${authState.user.uid}');
     }
   }
   
@@ -1389,11 +1419,17 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
       
       debugPrint('Executing cancellation: type=$cancellationType, feedback=$feedback');
       
-      // Call enhanced cancellation service
+      // Call enhanced cancellation service with timeout
       final success = await StripeService.cancelSubscriptionEnhanced(
         widget.userId,
         cancellationType: cancellationType,
         feedback: feedback,
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          debugPrint('⏰ Cancellation request timed out');
+          return false;
+        },
       );
       
       debugPrint('Cancellation result: $success');
@@ -1449,14 +1485,14 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     if (subscription == null) return [];
     
     switch (subscription.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return [
           'Enhanced search and filters',
           'Unlimited vendor following',
           'Personalized recommendations',
           'Priority customer support',
         ];
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return [
           'Advanced analytics dashboard',
           'Unlimited products and markets',
@@ -1464,7 +1500,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           'Market discovery tools',
           'Priority customer support',
         ];
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return [
           'Advanced market analytics',
           'Vendor management tools',

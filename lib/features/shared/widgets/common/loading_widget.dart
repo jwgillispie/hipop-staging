@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/hipop_colors.dart';
 
 class LoadingWidget extends StatelessWidget {
   final String? message;
@@ -17,14 +18,14 @@ class LoadingWidget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+            valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.shopperAccent),
           ),
           if (showMessage && message != null) ...[
             const SizedBox(height: 16),
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.lightTextTertiary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -54,7 +55,7 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (isLoading)
           Container(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: HiPopColors.lightOverlay,
             child: LoadingWidget(
               message: loadingMessage ?? 'Loading...',
             ),
@@ -110,7 +111,7 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
       height: widget.height,
       decoration: BoxDecoration(
         borderRadius: widget.borderRadius ?? BorderRadius.circular(4),
-        color: Colors.grey[300],
+        color: HiPopColors.lightBorder,
       ),
       child: AnimatedBuilder(
         animation: _animation,
@@ -122,9 +123,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
                 begin: Alignment(_animation.value - 1, 0),
                 end: Alignment(_animation.value, 0),
                 colors: [
-                  Colors.grey[300]!,
-                  Colors.grey[100]!,
-                  Colors.grey[300]!,
+                  HiPopColors.lightBorder,
+                  HiPopColors.lightShimmer,
+                  HiPopColors.lightBorder,
                 ],
               ),
             ),

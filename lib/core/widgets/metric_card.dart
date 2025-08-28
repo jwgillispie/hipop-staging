@@ -57,15 +57,16 @@ class MetricCard extends StatelessWidget {
   Color _getBackgroundColorForType(BuildContext context) {
     final color = _getColorForType(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     
-    // Use Soft Pink background for light mode, dark surface for dark mode
+    // Use appropriate theme surface colors
     if (isDarkMode) {
       return HiPopColors.darkSurfaceVariant;
     } else {
-      // Return a very light tinted version of the metric color mixed with Soft Pink
+      // Use light surface with subtle metric color tint
       return Color.alphaBlend(
-        color.withValues(alpha: 0.08),
-        HiPopColors.surfaceSoftPink,
+        color.withValues(alpha: 0.05),
+        theme.colorScheme.surface,
       );
     }
   }
@@ -328,6 +329,220 @@ class MetricCardList extends StatelessWidget {
             child: cards[index],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Vertical list of metric cards as clickable rows
+/// Better for mobile screens and prevents overflow issues
+class MetricCardRowList extends StatelessWidget {
+  final List<MetricCard> cards;
+  final EdgeInsets padding;
+  final double spacing;
+
+  const MetricCardRowList({
+    super.key,
+    required this.cards,
+    this.padding = EdgeInsets.zero,
+    this.spacing = 12,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Column(
+        children: cards
+            .asMap()
+            .entries
+            .map((entry) => Column(
+                  children: [
+                    _MetricCardRow(card: entry.value),
+                    if (entry.key < cards.length - 1)
+                      SizedBox(height: spacing),
+                  ],
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+/// Internal widget for metric card row representation
+class _MetricCardRow extends StatelessWidget {
+  final MetricCard card;
+
+  const _MetricCardRow({required this.card});
+
+  Color _getColorForType(BuildContext context, MetricType type) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    switch (type) {
+      case MetricType.success:
+      case MetricType.active:
+        return HiPopColors.primaryDeepSage;
+      case MetricType.warning:
+      case MetricType.happening:
+        return HiPopColors.accentMauve;
+      case MetricType.error:
+        return HiPopColors.errorPlum;
+      case MetricType.info:
+        return HiPopColors.infoBlueGray;
+      case MetricType.premium:
+        return HiPopColors.premiumGold;
+      case MetricType.neutral:
+      default:
+        return isDarkMode 
+            ? HiPopColors.darkTextSecondary 
+            : HiPopColors.lightTextSecondary;
+    }
+  }
+
+  Color _getBackgroundColorForType(BuildContext context, MetricType type) {
+    final color = _getColorForType(context, type);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    
+    if (isDarkMode) {
+      return HiPopColors.darkSurfaceVariant;
+    } else {
+      // Use light surface with subtle metric color tint
+      return Color.alphaBlend(
+        color.withValues(alpha: 0.05),
+        theme.colorScheme.surface,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final metricColor = _getColorForType(context, card.type);
+    final backgroundColor = _getBackgroundColorForType(context, card.type);
+
+    return GestureDetector(
+      onTap: card.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: metricColor.withValues(alpha: 0.2),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: metricColor.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: metricColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  card.icon,
+                  size: 28,
+                  color: metricColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      card.title,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isDarkMode
+                            ? HiPopColors.darkTextSecondary
+                            : HiPopColors.lightTextSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      card.value,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: metricColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (card.subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        card.subtitle!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isDarkMode
+                              ? HiPopColors.darkTextTertiary
+                              : HiPopColors.lightTextTertiary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              // Trailing widget and trend indicator
+              if (card.trailing != null || (card.showTrend && card.trendValue != null))
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (card.showTrend && card.trendValue != null)
+                      _buildTrendIndicator(card.trendValue!, theme),
+                    if (card.trailing != null) ...[
+                      const SizedBox(width: 8),
+                      card.trailing!,
+                    ],
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrendIndicator(double trend, ThemeData theme) {
+    final isPositive = trend > 0;
+    final trendColor = isPositive 
+        ? HiPopColors.successGreen 
+        : HiPopColors.errorPlum;
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: trendColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isPositive ? Icons.trending_up : Icons.trending_down,
+            size: 14,
+            color: trendColor,
+          ),
+          const SizedBox(width: 2),
+          Text(
+            '${trend.abs().toStringAsFixed(1)}%',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: trendColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

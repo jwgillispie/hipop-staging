@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+import 'package:hipop/blocs/auth/auth_bloc.dart';
+import 'package:hipop/blocs/auth/auth_event.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../models/user_subscription.dart';
 import '../services/staging_test_service.dart';
 import '../services/payment_service.dart';
+import '../services/revenuecat_service.dart';
+import '../services/promotional_offers_service.dart';
 import '../widgets/stripe_payment_form.dart';
 
 /// Premium onboarding screen that guides users through tier selection and setup
@@ -292,16 +299,28 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       return Container(
         margin: const EdgeInsets.only(bottom: 16),
         child: GestureDetector(
-          onTap: () => setState(() {
-            _selectedTier = tier;
-            _selectedPlan = tierData;
-            // Load pricing when tier is selected
-            try {
-              _selectedPricing = PaymentService.getPricingForUserType(widget.userType);
-            } catch (e) {
-              debugPrint('❌ Error loading pricing for $tier: $e');
-            }
-          }),
+          onTap: () {
+            debugPrint('\n📱 === PLAN TAPPED ===');
+            debugPrint('🎯 Tier: $tier');
+            debugPrint('👤 User type: ${widget.userType}');
+            debugPrint('📋 Tier data: $tierData');
+            
+            setState(() {
+              _selectedTier = tier;
+              _selectedPlan = tierData;
+              // Load pricing when tier is selected
+              try {
+                debugPrint('💳 Loading pricing for ${widget.userType}...');
+                _selectedPricing = PaymentService.getPricingForUserType(widget.userType);
+                debugPrint('✅ Pricing loaded successfully');
+                debugPrint('💰 Price ID: ${_selectedPricing?.priceId}');
+              } catch (e, stack) {
+                debugPrint('❌ Error loading pricing for $tier: $e');
+                debugPrint('📍 Stack trace: $stack');
+              }
+            });
+            debugPrint('📱 === END PLAN TAP ===\n');
+          },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
@@ -439,7 +458,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       case 'vendor':
         return [
           {
-            'tier': SubscriptionTier.vendorPro,
+            'tier': SubscriptionTier.vendorPremium,
             'title': 'Vendor Premium',
             'price': '\$29.00',
             'description': 'Perfect for growing food vendors and artisans',
@@ -475,7 +494,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       case 'market_organizer':
         return [
           {
-            'tier': SubscriptionTier.marketOrganizerPro,
+            'tier': SubscriptionTier.marketOrganizerPremium,
             'title': 'Market Organizer Premium',
             'price': '\$69.00',
             'description': 'Comprehensive tools for market management',
@@ -511,7 +530,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
       default:
         return [
           {
-            'tier': SubscriptionTier.vendorPro,
+            'tier': SubscriptionTier.vendorPremium,
             'title': 'Vendor Premium',
             'price': '\$29.00',
             'description': 'Great for individual vendors',
@@ -529,7 +548,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   Widget _buildFeatureOverviewPage() {
     if (_selectedPlan == null) return const SizedBox();
 
-    final features = _selectedPlan!['features'] as List<String>;
+    final features = (_selectedPlan?['features'] as List<dynamic>?)?.cast<String>() ?? [];
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -537,7 +556,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${_selectedPlan!['title']} Features',
+            '${_selectedPlan?['title'] ?? 'Premium'} Features',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: HiPopColors.lightTextPrimary,
@@ -545,7 +564,7 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Here\'s what you\'ll get with your ${_selectedPlan!['title']} subscription:',
+            'Here\'s what you\'ll get with your ${_selectedPlan?['title'] ?? 'Premium'} subscription:',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
               color: HiPopColors.lightTextSecondary,
             ),
@@ -707,55 +726,83 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
   }
 
   Widget _buildPaymentPage() {
-    if (_selectedPlan == null || _selectedPricing == null) {
-      return const Center(
-        child: Text('Please select a plan first'),
-      );
-    }
-
-    // Always use real Stripe payment form
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      return const Center(
-        child: Text('Please sign in to continue'),
-      );
-    }
-    
-    // Use the price ID from the selected pricing
-    String priceId = _selectedPricing?.priceId ?? '';
-    
-    // If no price ID from pricing, fall back to constructing it
-    if (priceId.isEmpty && _selectedTier != null) {
-      final isMonthly = _selectedPricing?.interval == 'month';
-      switch (_selectedTier) {
-        case SubscriptionTier.vendorPro:
-          priceId = isMonthly 
-            ? 'price_vendorPro_monthly' 
-            : 'price_vendorPro_annual';
-          break;
-        case SubscriptionTier.marketOrganizerPro:
-          priceId = isMonthly
-            ? 'price_marketOrganizerPro_monthly'
-            : 'price_marketOrganizerPro_annual';
-          break;
-        case SubscriptionTier.shopperPro:
-          priceId = isMonthly
-            ? 'price_shopperPro_monthly'
-            : 'price_shopperPro_annual';
-          break;
-        default:
-          priceId = '';
+    try {
+      debugPrint('\n🎨 === BUILDING PAYMENT PAGE ===');
+      debugPrint('📊 _selectedPlan is null? ${_selectedPlan == null}');
+      debugPrint('💳 _selectedPricing is null? ${_selectedPricing == null}');
+      debugPrint('🌐 Platform: ${kIsWeb ? "Web" : "Mobile"}');
+      
+      if (_selectedPlan == null || _selectedPricing == null) {
+        debugPrint('⚠️ Missing plan or pricing data');
+        return const Center(
+          child: Text('Please select a plan first'),
+        );
       }
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('⚠️ User not authenticated');
+        return const Center(
+          child: Text('Please sign in to continue'),
+        );
+      }
+      
+      debugPrint('✅ All checks passed, building ${kIsWeb ? "Stripe" : "RevenueCat"} payment page');
+      debugPrint('🎨 === END PAYMENT PAGE BUILD ===\n');
+      
+      // Check platform: Use RevenueCat for mobile, Stripe for web
+      if (!kIsWeb) {
+        return _buildRevenueCatPaymentPage();
+      }
+    } catch (e, stackTrace) {
+      debugPrint('\n❌ === ERROR IN _buildPaymentPage ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace:\n$stackTrace');
+      debugPrint('❌ === END ERROR ===\n');
+      
+      return Center(
+        child: Text('Error: ${e.toString()}', style: const TextStyle(color: Colors.red)),
+      );
     }
     
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: StripePaymentForm(
-        userId: currentUser.uid,
-        userEmail: currentUser.email ?? '',
+    // Stripe payment path for web
+    final currentUser = FirebaseAuth.instance.currentUser!;
+      
+      // Use the price ID from the selected pricing
+      String priceId = _selectedPricing?.priceId ?? '';
+      
+      // If no price ID from pricing, fall back to constructing it
+      if (priceId.isEmpty && _selectedTier != null) {
+        final isMonthly = _selectedPricing?.interval == 'month';
+        switch (_selectedTier) {
+          case SubscriptionTier.vendorPremium:
+            priceId = isMonthly 
+              ? 'price_vendorPremium_monthly' 
+              : 'price_vendorPremium_annual';
+            break;
+          case SubscriptionTier.marketOrganizerPremium:
+            priceId = isMonthly
+              ? 'price_marketOrganizerPremium_monthly'
+              : 'price_marketOrganizerPremium_annual';
+            break;
+          case SubscriptionTier.shopperPremium:
+            priceId = isMonthly
+              ? 'price_shopperPremium_monthly'
+              : 'price_shopperPremium_annual';
+            break;
+          default:
+            priceId = '';
+        }
+      }
+      
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: StripePaymentForm(
+          userId: currentUser.uid,
+          userEmail: currentUser.email ?? '',
         userType: widget.userType,
         priceId: priceId,
-        tier: _selectedPlan!['title'],
+        tier: _selectedPlan?['title'] ?? 'Premium',
         onSuccess: () {
           debugPrint('✅ Payment success callback triggered');
           try {
@@ -793,6 +840,407 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
     );
   }
 
+
+  Widget _buildRevenueCatPaymentPage() {
+    try {
+      debugPrint('\n🔍 === BUILDING REVENUECAT PAYMENT PAGE ===');
+      debugPrint('📊 _selectedPlan: $_selectedPlan');
+      debugPrint('🎯 _selectedTier: $_selectedTier');
+      debugPrint('💳 _selectedPricing: $_selectedPricing');
+      
+      // Set default plan if not already set
+      if (_selectedPlan == null) {
+        debugPrint('⚠️ _selectedPlan is null, attempting to set default...');
+        final availableTiers = _getAvailableTiers();
+        debugPrint('📋 Available tiers count: ${availableTiers.length}');
+        
+        if (availableTiers.isNotEmpty) {
+          _selectedPlan = availableTiers.first;
+          _selectedTier = _selectedPlan?['tier'];
+          debugPrint('🌟 Setting default plan: ${_selectedPlan?['title']}');
+        } else {
+          debugPrint('❌ No available tiers found for user type: ${widget.userType}');
+          return Center(
+            child: Text('No subscription plans available for ${widget.userType}'),
+          );
+        }
+      }
+      
+      // Debug each field access
+      debugPrint('🔍 Accessing _selectedPlan fields...');
+      final title = _selectedPlan?['title'];
+      debugPrint('  - title: $title (type: ${title.runtimeType})');
+      final price = _selectedPlan?['price'];
+      debugPrint('  - price: $price (type: ${price.runtimeType})');
+      final description = _selectedPlan?['description'];
+      debugPrint('  - description: $description (type: ${description.runtimeType})');
+      final features = _selectedPlan?['features'];
+      debugPrint('  - features: $features (type: ${features.runtimeType})');
+      debugPrint('🔍 === END PAYMENT PAGE BUILD ===\n');
+      
+      return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Complete Your Purchase',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: HiPopColors.lightTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Your payment will be processed securely through the App Store',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: HiPopColors.lightTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          // Show selected plan details
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: HiPopColors.primaryOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: HiPopColors.primaryDeepSage.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedPlan?['title'] ?? 'Premium Subscription',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${_selectedPlan?['price'] ?? '\$29.00'}/month',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: HiPopColors.primaryDeepSage,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _selectedPlan?['subtitle'] ?? 'Premium subscription for your business',
+                  style: TextStyle(
+                    color: HiPopColors.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Purchase button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isProcessing ? null : _handleRevenueCatPurchase,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: HiPopColors.primaryDeepSage,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: _isProcessing
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Subscribe for ${_selectedPlan?['price'] ?? '\$29.00'}/month',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Restore purchases button
+          Center(
+            child: TextButton(
+              onPressed: _isProcessing ? null : _handleRestorePurchases,
+              child: Text(
+                'Restore Previous Purchases',
+                style: TextStyle(color: HiPopColors.primaryDeepSage),
+              ),
+            ),
+          ),
+          
+          // Promo code button
+          Center(
+            child: TextButton.icon(
+              onPressed: _isProcessing ? null : _handlePromoCode,
+              icon: const Icon(Icons.local_offer),
+              label: const Text('Have a promo code?'),
+              style: TextButton.styleFrom(
+                foregroundColor: HiPopColors.primaryDeepSage,
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Terms and conditions
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: HiPopColors.backgroundWarmGray.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Subscription Terms',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: HiPopColors.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '• Payment will be charged to your Apple ID account\n'
+                  '• Subscription automatically renews monthly\n'
+                  '• Cancel anytime in your device settings\n'
+                  '• No refunds for partial months',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: HiPopColors.lightTextSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    } catch (e, stackTrace) {
+      debugPrint('\n❌ === ERROR IN _buildRevenueCatPaymentPage ===');
+      debugPrint('Error: $e');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Stack trace:\n$stackTrace');
+      debugPrint('❌ === END ERROR ===\n');
+      
+      // Return an error widget instead of crashing
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'Error Loading Payment Page',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Error: ${e.toString()}',
+                style: const TextStyle(color: Colors.red),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => setState(() {
+                  // Reset and try again
+                  _selectedPlan = null;
+                  _selectedTier = null;
+                }),
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleRevenueCatPurchase() async {
+    debugPrint('🔄 _handleRevenueCatPurchase started');
+    debugPrint('👤 User type: ${widget.userType}');
+    debugPrint('🎯 Selected tier: $_selectedTier');
+    
+    setState(() => _isProcessing = true);
+    
+    try {
+      // Initialize RevenueCat if not already done
+      debugPrint('🔄 Initializing RevenueCat...');
+      await RevenueCatService().initialize();
+      debugPrint('✅ RevenueCat initialized');
+      
+      // Purchase subscription based on user type
+      debugPrint('🛒 Starting purchase for user type: ${widget.userType}');
+      final result = await RevenueCatService().purchaseSubscription(widget.userType);
+      debugPrint('📦 Purchase result - Success: ${result.success}, Error: ${result.errorMessage}');
+      
+      if (result.success) {
+        // Navigate to success page
+        debugPrint('✅ Purchase successful, navigating to success page');
+        
+        // Add a delay to ensure RevenueCat has fully processed the purchase
+        debugPrint('⏳ Waiting 2 seconds for RevenueCat processing...');
+        await Future.delayed(const Duration(seconds: 2));
+        
+        // Force a manual sync to ensure Firebase is updated
+        debugPrint('🔧 Forcing manual sync to Firebase...');
+        try {
+          await RevenueCatService().forceSyncToFirebase();
+          debugPrint('✅ Manual sync completed');
+        } catch (e) {
+          debugPrint('❌ Manual sync failed: $e');
+        }
+        
+        // Trigger auth reload to update premium status
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null && mounted) {
+          debugPrint('🔄 Triggering auth refresh after purchase');
+          context.read<AuthBloc>().add(AuthUserChanged(currentUser));
+        }
+        
+        if (mounted) {
+          setState(() {
+            _currentPage = 4; // Success page
+            _isProcessing = false;
+          });
+          _pageController.animateToPage(
+            4,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      } else {
+        // Show error
+        debugPrint('❌ Purchase failed: ${result.errorMessage}');
+        if (mounted) {
+          // Don't show error for cancellations
+          final errorMessage = result.errorMessage ?? 'Purchase failed';
+          if (!errorMessage.toLowerCase().contains('cancel')) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(errorMessage),
+                backgroundColor: HiPopColors.errorPlum,
+              ),
+            );
+          }
+          setState(() => _isProcessing = false);
+        }
+      }
+    } catch (e, stackTrace) {
+      debugPrint('❌ Purchase error: $e');
+      debugPrint('📝 Stack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _handlePromoCode() async {
+    try {
+      // This opens the native iOS promo code redemption sheet
+      await Purchases.presentCodeRedemptionSheet();
+      
+      // After user enters code, check if they now have premium
+      await Future.delayed(const Duration(seconds: 2));
+      final hasSubscription = await RevenueCatService().hasActiveSubscription();
+      
+      if (hasSubscription && mounted) {
+        // Navigate to success
+        setState(() {
+          _currentPage = 4;
+          _isProcessing = false;
+        });
+        _pageController.animateToPage(
+          4,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Promo code error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleRestorePurchases() async {
+    setState(() => _isProcessing = true);
+    
+    try {
+      final customerInfo = await RevenueCatService().restorePurchases();
+      
+      if (customerInfo != null && customerInfo.entitlements.active.isNotEmpty) {
+        // Purchases restored successfully
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Subscription restored successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate to success or close
+          Navigator.of(context).pop(true);
+        }
+      } else {
+        // No purchases to restore
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('No previous subscription found'),
+              backgroundColor: HiPopColors.warningAmber,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Restore error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Restore failed: ${e.toString()}'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
 
   Widget _buildSuccessPage() {
     return Padding(

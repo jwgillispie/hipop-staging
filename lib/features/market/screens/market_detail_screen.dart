@@ -176,6 +176,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
         children: [
           // Market Header Card
           Card(
+            color: HiPopColors.darkSurface,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -204,6 +205,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                               widget.market.name,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                color: HiPopColors.darkTextPrimary,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -212,7 +214,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                                 Icon(
                                   Icons.location_on,
                                   size: 16,
-                                  color: Colors.grey[600],
+                                  color: HiPopColors.darkTextTertiary,
                                 ),
                                 const SizedBox(width: 4),
                                 Expanded(
@@ -243,7 +245,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                     const SizedBox(height: 16),
                     Text(
                       widget.market.description!,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: HiPopColors.darkTextSecondary,
+                      ),
                     ),
                   ],
                 ],
@@ -258,6 +262,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
             'Market Stats',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: HiPopColors.darkTextPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -270,10 +275,12 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
             'Event Schedule',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
+              color: HiPopColors.darkTextPrimary,
             ),
           ),
           const SizedBox(height: 12),
           Card(
+            color: HiPopColors.darkSurface,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -284,7 +291,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                       Icon(
                         Icons.calendar_today,
                         size: 16,
-                        color: Colors.grey[600],
+                        color: HiPopColors.darkTextTertiary,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -292,13 +299,14 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 13,
+                          color: HiPopColors.darkTextPrimary,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '${widget.market.eventDate.month}/${widget.market.eventDate.day}/${widget.market.eventDate.year}',
-                        style: TextStyle(
-                          color: Colors.grey[700],
+                        style: const TextStyle(
+                          color: HiPopColors.darkTextSecondary,
                           fontSize: 13,
                         ),
                       ),
@@ -310,7 +318,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                       Icon(
                         Icons.access_time,
                         size: 16,
-                        color: Colors.grey[600],
+                        color: HiPopColors.darkTextTertiary,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -318,13 +326,14 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 13,
+                          color: HiPopColors.darkTextPrimary,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         widget.market.timeRange,
-                        style: TextStyle(
-                          color: Colors.grey[700],
+                        style: const TextStyle(
+                          color: HiPopColors.darkTextSecondary,
                           fontSize: 13,
                         ),
                       ),
@@ -346,6 +355,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 13,
+                          color: HiPopColors.darkTextPrimary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -365,9 +375,169 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
               ),
             ),
           ),
+          
+          // Event Links Section
+          if (_hasEventLinks()) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Event Links',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: HiPopColors.darkTextPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildEventLinksSection(),
+          ],
         ],
       ),
     );
+  }
+  
+  bool _hasEventLinks() {
+    return widget.market.eventWebsite != null ||
+           widget.market.instagramHandle != null ||
+           widget.market.facebookUrl != null ||
+           widget.market.ticketUrl != null;
+  }
+  
+  Widget _buildEventLinksSection() {
+    return Card(
+      color: HiPopColors.darkSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.market.eventWebsite != null) ...[
+              _buildLinkTile(
+                icon: Icons.language,
+                label: 'Event Website',
+                url: widget.market.eventWebsite!,
+                color: HiPopColors.primaryDeepSage,
+              ),
+              if (_hasMoreLinks()) const Divider(height: 24),
+            ],
+            if (widget.market.instagramHandle != null) ...[
+              _buildLinkTile(
+                icon: Icons.camera_alt,
+                label: 'Instagram',
+                url: 'https://instagram.com/${widget.market.instagramHandle}',
+                color: HiPopColors.vendorAccent,
+                displayText: '@${widget.market.instagramHandle}',
+              ),
+              if (_hasMoreLinksAfterInstagram()) const Divider(height: 24),
+            ],
+            if (widget.market.facebookUrl != null) ...[
+              _buildLinkTile(
+                icon: Icons.facebook,
+                label: 'Facebook',
+                url: widget.market.facebookUrl!,
+                color: const Color(0xFF1877F2),
+              ),
+              if (widget.market.ticketUrl != null) const Divider(height: 24),
+            ],
+            if (widget.market.ticketUrl != null) ...[
+              _buildLinkTile(
+                icon: Icons.confirmation_number,
+                label: 'Registration/Tickets',
+                url: widget.market.ticketUrl!,
+                color: HiPopColors.warningAmber,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+  bool _hasMoreLinks() {
+    return widget.market.instagramHandle != null ||
+           widget.market.facebookUrl != null ||
+           widget.market.ticketUrl != null;
+  }
+  
+  bool _hasMoreLinksAfterInstagram() {
+    return widget.market.facebookUrl != null ||
+           widget.market.ticketUrl != null;
+  }
+  
+  Widget _buildLinkTile({
+    required IconData icon,
+    required String label,
+    required String url,
+    required Color color,
+    String? displayText,
+  }) {
+    return InkWell(
+      onTap: () => _launchURL(url),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: HiPopColors.darkTextTertiary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    displayText ?? url,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.open_in_new,
+              size: 16,
+              color: HiPopColors.darkTextTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Future<void> _launchURL(String url) async {
+    try {
+      await UrlLauncherService.launchURL(url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open link: $e'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildStatsCards() {
@@ -409,9 +579,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
-      color: Theme.of(context).brightness == Brightness.dark 
-          ? HiPopColors.darkSurfaceVariant 
-          : HiPopColors.lightSurface,
+      color: HiPopColors.darkSurface,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -429,7 +597,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
             Text(
               title,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.darkTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -511,6 +679,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
 
   Widget _buildVendorCard(ManagedVendor vendor, List<String> marketItems) {
     return Card(
+      color: HiPopColors.darkSurface,
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -541,14 +710,15 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: HiPopColors.darkTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         vendor.categoriesDisplay,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextSecondary,
                         ),
                       ),
                     ],
@@ -605,7 +775,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
               const SizedBox(height: 12),
               Text(
                 vendor.description,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: HiPopColors.darkTextSecondary,
+                ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -620,18 +792,18 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                   if (marketItems.isNotEmpty) ...[
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.local_grocery_store,
                           size: 14,
-                          color: HiPopColors.successGreen,
+                          color: HiPopColors.primaryDeepSage,
                         ),
                         const SizedBox(width: 4),
-                        Text(
+                        const Text(
                           'Available at this market:',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: HiPopColors.successGreenDark,
+                            color: HiPopColors.primaryDeepSage,
                           ),
                         ),
                       ],
@@ -641,18 +813,18 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                   ] else if (vendor.products.isNotEmpty) ...[
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.inventory_2,
                           size: 14,
-                          color: Colors.grey[600],
+                          color: HiPopColors.darkTextTertiary,
                         ),
                         const SizedBox(width: 4),
-                        Text(
+                        const Text(
                           'General products:',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
+                            color: HiPopColors.darkTextSecondary,
                           ),
                         ),
                       ],
@@ -669,7 +841,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
               Row(
                 children: [
                   if (vendor.phoneNumber != null) ...[
-                    Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                    const Icon(Icons.phone, size: 14, color: HiPopColors.darkTextTertiary),
                     const SizedBox(width: 4),
                     InkWell(
                       onTap: () => _launchPhone(vendor.phoneNumber!),
@@ -678,7 +850,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Text(
                           vendor.phoneNumber!,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
                             color: HiPopColors.primaryDeepSage,
                             decoration: TextDecoration.underline,
@@ -690,7 +862,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                   if (vendor.phoneNumber != null && vendor.email != null)
                     const SizedBox(width: 16),
                   if (vendor.email != null) ...[
-                    Icon(Icons.email, size: 14, color: Colors.grey[600]),
+                    const Icon(Icons.email, size: 14, color: HiPopColors.darkTextTertiary),
                     const SizedBox(width: 4),
                     Expanded(
                       child: InkWell(
@@ -700,7 +872,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Text(
                             vendor.email!,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: HiPopColors.primaryDeepSage,
                               decoration: TextDecoration.underline,
@@ -719,7 +891,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                  const Icon(Icons.camera_alt, size: 14, color: HiPopColors.darkTextTertiary),
                   const SizedBox(width: 4),
                   InkWell(
                     onTap: () => _launchInstagram(vendor.instagramHandle!),
@@ -728,9 +900,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Text(
                         '@${vendor.instagramHandle!}',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.blue[700],
+                          color: HiPopColors.primaryDeepSage,
                           decoration: TextDecoration.underline,
                         ),
                       ),
@@ -747,7 +919,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
   
   Future<void> _launchMaps(String address) async {
     try {
-      await UrlLauncherService.launchMaps(address);
+      await UrlLauncherService.launchMaps(address, context: context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

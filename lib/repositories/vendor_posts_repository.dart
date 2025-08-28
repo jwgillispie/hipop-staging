@@ -393,7 +393,8 @@ class VendorPostsRepository implements IVendorPostsRepository {
     String? location,
     DateTime? startDate,
     DateTime? endDate,
-    int limit = 50,
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
   }) async {
     try {
       Query query = _firestore
@@ -410,7 +411,14 @@ class VendorPostsRepository implements IVendorPostsRepository {
             isLessThanOrEqualTo: Timestamp.fromDate(endDate));
       }
 
-      query = query.orderBy('popUpStartDateTime').limit(limit);
+      query = query.orderBy('popUpStartDateTime');
+      
+      // Add pagination support
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+      
+      query = query.limit(limit);
 
       final snapshot = await query.get();
       List<VendorPost> posts = snapshot.docs
@@ -430,23 +438,47 @@ class VendorPostsRepository implements IVendorPostsRepository {
       throw VendorPostException('Failed to search posts: ${e.toString()}');
     }
   }
+  
+  /// Get paginated vendor posts
+  Stream<List<VendorPost>> getVendorPostsPaginated(
+    String vendorId, {
+    int pageSize = 20,
+    DocumentSnapshot? lastDocument,
+  }) {
+    Query query = _firestore
+        .collection(_collection)
+        .where('vendorId', isEqualTo: vendorId)
+        .orderBy('popUpStartDateTime', descending: false);
+    
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument);
+    }
+    
+    return query.limit(pageSize).snapshots().map((snapshot) => 
+        snapshot.docs.map((doc) => VendorPost.fromFirestore(doc)).toList());
+  }
 
   Future<List<VendorPost>> getPostsNearLocation({
     required double latitude,
     required double longitude,
     required double radiusInKm,
-    int limit = 50,
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
   }) async {
     try {
       // Note: This is a simplified proximity search
       // For production, consider using GeoFlutterFire or similar
-      final snapshot = await _firestore
+      Query query = _firestore
           .collection(_collection)
           .where('isActive', isEqualTo: true)
           .where('latitude', isNotEqualTo: null)
-          .where('longitude', isNotEqualTo: null)
-          .limit(limit * 2) // Get more to filter
-          .get();
+          .where('longitude', isNotEqualTo: null);
+      
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+      
+      final snapshot = await query.limit(limit * 2).get(); // Get more to filter
 
       final posts = snapshot.docs
           .map((doc) => VendorPost.fromFirestore(doc))

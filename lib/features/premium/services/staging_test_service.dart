@@ -171,13 +171,13 @@ class StagingTestService {
   static SubscriptionTier _getTierForUserType(String userType) {
     switch (userType) {
       case 'shopper':
-        return SubscriptionTier.shopperPro;
+        return SubscriptionTier.shopperPremium;
       case 'vendor':
-        return SubscriptionTier.vendorPro;
+        return SubscriptionTier.vendorPremium;
       case 'market_organizer':
-        return SubscriptionTier.marketOrganizerPro;
+        return SubscriptionTier.marketOrganizerPremium;
       default:
-        return SubscriptionTier.shopperPro;
+        return SubscriptionTier.shopperPremium;
     }
   }
   
@@ -185,11 +185,11 @@ class StagingTestService {
     switch (tier) {
       case SubscriptionTier.free:
         return 0.00;
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 4.00;
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 29.00;
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 69.00;
       case SubscriptionTier.enterprise:
         return 199.99;
@@ -200,14 +200,14 @@ class StagingTestService {
     switch (tier) {
       case SubscriptionTier.free:
         return {};
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return {
           'enhanced_search': true,
           'unlimited_favorites': true,
           'vendor_following': true,
           'personalized_recommendations': true,
         };
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return {
           'market_discovery': true,
           'full_vendor_analytics': true,
@@ -215,7 +215,7 @@ class StagingTestService {
           'sales_tracking': true,
           'unlimited_markets': true,
         };
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return {
           'vendor_discovery': true,
           'multi_market_management': true,

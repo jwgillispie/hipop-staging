@@ -149,7 +149,7 @@ class _UpgradeToPremiumButtonState extends State<UpgradeToPremiumButton> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    'Cancel anytime • 30-day money back guarantee',
+                    'Cancel anytime • Secure Payment',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.grey[600],
                     ),

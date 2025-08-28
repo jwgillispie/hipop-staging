@@ -92,26 +92,23 @@ class _HiPopCardState extends State<HiPopCard> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     
     // Determine colors based on theme and state
-    final backgroundColor = widget.backgroundColor ?? 
-      (isDark ? HiPopColors.darkSurface : HiPopColors.lightSurface);
+    // Force dark surface for consistent shopper UI
+    final backgroundColor = widget.backgroundColor ?? HiPopColors.darkSurface;
     
     final borderColor = widget.isSelected
-      ? (isDark ? HiPopColors.secondarySoftSage : HiPopColors.primaryDeepSage)
+      ? HiPopColors.primaryDeepSage
       : widget.isPremium
         ? HiPopColors.premiumGold
-        : (isDark ? HiPopColors.darkBorder : HiPopColors.lightBorder);
+        : HiPopColors.darkBorder;
     
     final borderWidth = widget.isSelected ? 2.0 : widget.isPremium ? 1.5 : 1.0;
     
     // Build shadows
     final shadows = widget.customShadows ?? [
       BoxShadow(
-        color: isDark 
-          ? Colors.black.withValues(alpha: 0.3)
-          : HiPopColors.lightShadow.withValues(alpha: 0.1),
+        color: Colors.black.withValues(alpha: 0.3),
         blurRadius: 8,
         offset: const Offset(0, 2),
       ),
@@ -249,7 +246,6 @@ class MarketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     
     return HiPopCard(
       onTap: onTap,
@@ -264,7 +260,7 @@ class MarketCard extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                color: isDark ? HiPopColors.darkSurfaceVariant : HiPopColors.lightSurfaceVariant,
+                color: HiPopColors.darkSurfaceVariant,
               ),
               child: Stack(
                 fit: StackFit.expand,
@@ -276,11 +272,11 @@ class MarketCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          color: isDark ? HiPopColors.darkSurfaceVariant : HiPopColors.lightSurfaceVariant,
+                          color: HiPopColors.darkSurfaceVariant,
                           child: Icon(
                             Icons.store_rounded,
                             size: 48,
-                            color: isDark ? HiPopColors.darkTextTertiary : HiPopColors.lightTextTertiary,
+                            color: HiPopColors.darkTextTertiary,
                           ),
                         );
                       },
@@ -341,7 +337,7 @@ class MarketCard extends StatelessWidget {
                       Icon(
                         Icons.location_on_outlined,
                         size: 16,
-                        color: isDark ? HiPopColors.darkTextSecondary : HiPopColors.lightTextSecondary,
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
@@ -362,7 +358,7 @@ class MarketCard extends StatelessWidget {
                       Icon(
                         Icons.schedule_outlined,
                         size: 16,
-                        color: isDark ? HiPopColors.darkTextSecondary : HiPopColors.lightTextSecondary,
+                        color: HiPopColors.darkTextSecondary,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
@@ -390,13 +386,13 @@ class MarketCard extends StatelessWidget {
                         Icon(
                           Icons.storefront_outlined,
                           size: 14,
-                          color: isDark ? HiPopColors.secondarySoftSageLight : HiPopColors.secondarySoftSage,
+                          color: HiPopColors.secondarySoftSage,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '$vendorCount vendors',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: isDark ? HiPopColors.secondarySoftSageLight : HiPopColors.secondarySoftSage,
+                            color: HiPopColors.secondarySoftSage,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

@@ -8,6 +8,8 @@ import 'package:hipop/features/shared/widgets/common/favorite_button.dart';
 import 'package:hipop/features/vendor/models/managed_vendor.dart';
 import 'package:hipop/features/vendor/services/managed_vendor_service.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+import 'package:hipop/core/widgets/hipop_card.dart';
+import 'package:hipop/features/vendor/widgets/vendor_photo_carousel.dart';
 
 
 class VendorDetailScreen extends StatefulWidget {
@@ -73,18 +75,46 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
+        backgroundColor: HiPopColors.darkBackground,
         appBar: AppBar(
-          backgroundColor: Colors.orange,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  HiPopColors.vendorAccent,
+                  HiPopColors.accentMauve,
+                ],
+              ),
+            ),
+          ),
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(child: CircularProgressIndicator(
+          color: HiPopColors.vendorAccent,
+        )),
       );
     }
 
     if (_vendor == null) {
       return Scaffold(
+        backgroundColor: HiPopColors.darkBackground,
         appBar: AppBar(
-          backgroundColor: Colors.orange,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  HiPopColors.vendorAccent,
+                  HiPopColors.accentMauve,
+                ],
+              ),
+            ),
+          ),
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
         ),
         body: _buildErrorView(),
@@ -92,9 +122,22 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     }
 
     return Scaffold(
+      backgroundColor: HiPopColors.darkBackground,
       body: CustomScrollView(
         slivers: [
           _buildSliverAppBar(),
+          // Add photo carousel at the top if vendor has photos
+          if (_vendor!.imageUrls.isNotEmpty || _vendor!.imageUrl != null)
+            SliverToBoxAdapter(
+              child: VendorPhotoCarousel(
+                photoUrls: [
+                  if (_vendor!.imageUrl != null) _vendor!.imageUrl!,
+                  ..._vendor!.imageUrls,
+                ],
+                height: 300,
+                borderRadius: 0,
+              ),
+            ),
           SliverToBoxAdapter(
             child: Column(
               children: [
@@ -120,12 +163,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildSliverAppBar() {
+    // Simplified app bar when photo carousel is shown separately
     final hasImages = _vendor!.imageUrls.isNotEmpty || _vendor!.imageUrl != null;
     
     return SliverAppBar(
-      expandedHeight: 250,
+      expandedHeight: hasImages ? 120 : 250,
       pinned: true,
-      backgroundColor: Colors.orange,
+      backgroundColor: HiPopColors.vendorAccent,
       foregroundColor: Colors.white,
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
@@ -142,8 +186,19 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             ],
           ),
         ),
-        background: hasImages
-            ? _buildImageCarousel()
+        background: hasImages 
+            ? Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      HiPopColors.vendorAccent,
+                      HiPopColors.accentMauve,
+                    ],
+                  ),
+                ),
+              )
             : _buildImagePlaceholder(),
       ),
       actions: [
@@ -162,29 +217,6 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     );
   }
 
-  Widget _buildImageCarousel() {
-    final allImages = [
-      if (_vendor!.imageUrl != null) _vendor!.imageUrl!,
-      ..._vendor!.imageUrls,
-    ];
-
-    if (allImages.isEmpty) {
-      return _buildImagePlaceholder();
-    }
-
-    return PageView.builder(
-      itemCount: allImages.length,
-      itemBuilder: (context, index) {
-        return Image.network(
-          allImages[index],
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildImagePlaceholder();
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildImagePlaceholder() {
     final category = _vendor!.categories.isNotEmpty 
@@ -223,7 +255,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildVendorHeader() {
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            HiPopColors.darkSurface.withValues(alpha: 0.5),
+            HiPopColors.darkBackground,
+          ],
+        ),
+      ),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,16 +283,16 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     if (_vendor!.slogan != null && _vendor!.slogan!.isNotEmpty) ...[
                       const SizedBox(height: 6),
                       Text(
                         _vendor!.slogan!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 15,
-                          color: Colors.grey[700],
+                          color: HiPopColors.darkTextSecondary,
                           fontStyle: FontStyle.italic,
                           height: 1.3,
                         ),
@@ -264,15 +306,11 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   margin: const EdgeInsets.only(left: 12),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber[600]!, Colors.amber[700]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    gradient: HiPopColors.premiumGradient,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.amber.withValues(alpha: 0.3),
+                        color: HiPopColors.premiumGold.withValues(alpha: 0.3),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -357,7 +395,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   _buildEnhancedInfoChip(
                     Icons.attach_money,
                     _vendor!.priceRange!,
-                    Colors.green[700]!,
+                    HiPopColors.successGreen,
                   ),
                 ],
                 if (_vendor!.isOrganic) ...[
@@ -365,7 +403,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   _buildEnhancedInfoChip(
                     Icons.eco,
                     'Organic',
-                    Colors.green[600]!,
+                    HiPopColors.primaryDeepSage,
                   ),
                 ],
                 if (_vendor!.acceptsOrders) ...[
@@ -373,7 +411,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   _buildEnhancedInfoChip(
                     Icons.shopping_cart,
                     'Accepts Orders',
-                    Colors.blue[600]!,
+                    HiPopColors.infoBlueGray,
                   ),
                 ],
                 if (_vendor!.canDeliver) ...[
@@ -381,7 +419,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   _buildEnhancedInfoChip(
                     Icons.local_shipping,
                     'Delivery',
-                    Colors.purple[600]!,
+                    HiPopColors.accentMauve,
                   ),
                 ],
               ],
@@ -393,9 +431,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
           // Description Preview
           Text(
             _vendor!.description,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
-              color: Colors.grey[700],
+              color: HiPopColors.darkTextSecondary,
               height: 1.4,
             ),
             maxLines: 3,
@@ -410,7 +448,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: color.withValues(alpha: 0.3),
@@ -445,12 +483,21 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
 
   Widget _buildTabBar() {
     return Container(
-      color: Colors.grey[50],
+      decoration: BoxDecoration(
+        color: HiPopColors.darkSurface,
+        border: Border(
+          bottom: BorderSide(
+            color: HiPopColors.darkBorder,
+            width: 1,
+          ),
+        ),
+      ),
       child: TabBar(
         controller: _tabController,
-        labelColor: Colors.orange,
-        unselectedLabelColor: Colors.grey[600],
-        indicatorColor: Colors.orange,
+        labelColor: HiPopColors.vendorAccent,
+        unselectedLabelColor: HiPopColors.darkTextTertiary,
+        indicatorColor: HiPopColors.vendorAccent,
+        indicatorWeight: 3,
         tabs: const [
           Tab(text: 'About'),
           Tab(text: 'Products'),
@@ -468,12 +515,12 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         if (_vendor!.description.isNotEmpty) ...[
           const Text(
             'About Us',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
           ),
           const SizedBox(height: 8),
           Text(
             _vendor!.description,
-            style: const TextStyle(fontSize: 16, height: 1.5),
+            style: const TextStyle(fontSize: 16, height: 1.5, color: HiPopColors.darkTextSecondary),
           ),
           const SizedBox(height: 24),
         ],
@@ -482,12 +529,12 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         if (_vendor!.story != null && _vendor!.story!.isNotEmpty) ...[
           const Text(
             'Our Story',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
           ),
           const SizedBox(height: 8),
           Text(
             _vendor!.story!,
-            style: const TextStyle(fontSize: 16, height: 1.5),
+            style: const TextStyle(fontSize: 16, height: 1.5, color: HiPopColors.darkTextSecondary),
           ),
           const SizedBox(height: 24),
         ],
@@ -496,7 +543,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         if (_vendor!.specialties.isNotEmpty) ...[
           const Text(
             'Our Specialties',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -505,8 +552,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
             children: _vendor!.specialties.map((specialty) {
               return Chip(
                 label: Text(specialty),
-                backgroundColor: Colors.purple[100],
-                labelStyle: TextStyle(color: Colors.purple[800]),
+                backgroundColor: HiPopColors.accentMauve.withValues(alpha: 0.1),
+                labelStyle: const TextStyle(color: HiPopColors.accentMauve),
               );
             }).toList(),
           ),
@@ -559,7 +606,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       children: [
         const Text(
           'Quality & Certifications',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
         ),
         const SizedBox(height: 12),
         ...qualityIndicators,
@@ -569,15 +616,28 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildQualityIndicator(IconData icon, String text, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
       child: Row(
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 12),
           Text(
             text,
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(
+              fontSize: 14,
+              color: color.withValues(alpha: 0.9),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -590,7 +650,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       children: [
         const Text(
           'Market Information',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
         ),
         const SizedBox(height: 12),
         
@@ -635,7 +695,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.grey[600], size: 20),
+          Icon(icon, color: HiPopColors.darkTextTertiary, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -646,13 +706,14 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    color: HiPopColors.darkTextPrimary,
                   ),
                 ),
                 Text(
                   value,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[700],
+                    color: HiPopColors.darkTextSecondary,
                   ),
                 ),
               ],
@@ -670,7 +731,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         // All Categories
         const Text(
           'Categories',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -690,7 +751,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         if (_vendor!.products.isNotEmpty) ...[
           const Text(
             'Products & Services',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
           ),
           const SizedBox(height: 12),
           ...(_vendor!.products.map((product) => _buildProductCard(product))),
@@ -699,18 +760,46 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         
         // Price Range
         if (_vendor!.priceRange != null && _vendor!.priceRange!.isNotEmpty) ...[
-          Card(
-            color: HiPopColors.darkSurface,
-            child: ListTile(
-              leading: Icon(Icons.attach_money, color: HiPopColors.successGreen),
-              title: Text(
-                'Price Range',
-                style: TextStyle(color: HiPopColors.darkTextPrimary),
-              ),
-              subtitle: Text(
-                _vendor!.priceRange!,
-                style: TextStyle(color: HiPopColors.darkTextSecondary),
-              ),
+          HiPopCard(
+            borderRadius: 12,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: HiPopColors.successGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.attach_money,
+                    color: HiPopColors.successGreen,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Price Range',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: HiPopColors.darkTextTertiary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _vendor!.priceRange!,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: HiPopColors.darkTextPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -719,18 +808,70 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildProductCard(String product) {
-    return Card(
-      color: HiPopColors.darkSurface,
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(Icons.shopping_basket, color: HiPopColors.accentMauve),
-        title: Text(
-          product,
-          style: TextStyle(color: HiPopColors.darkTextPrimary),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: HiPopColors.darkSurface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: HiPopColors.darkBorder,
+          width: 1,
         ),
-        trailing: _vendor!.acceptsOrders 
-            ? Icon(Icons.add_shopping_cart, color: HiPopColors.darkTextTertiary)
-            : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.shopping_basket,
+              color: HiPopColors.primaryDeepSage,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              product,
+              style: TextStyle(
+                fontSize: 14,
+                color: HiPopColors.darkTextPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (_vendor!.acceptsOrders)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: HiPopColors.successGreen.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_shopping_cart,
+                    size: 14,
+                    color: HiPopColors.successGreen,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Order',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: HiPopColors.successGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -742,7 +883,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         // Contact Information
         const Text(
           'Contact Information',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
         ),
         const SizedBox(height: 16),
         
@@ -787,7 +928,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         // Social Media
         const Text(
           'Social Media',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
         ),
         const SizedBox(height: 16),
         
@@ -814,7 +955,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         // Location
         const Text(
           'Location',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
         ),
         const SizedBox(height: 16),
         
@@ -829,21 +970,57 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
   }
 
   Widget _buildContactCard(IconData icon, String label, String value, VoidCallback? onTap) {
-    return Card(
-      color: HiPopColors.darkSurface,
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(icon, color: HiPopColors.accentMauve),
-        title: Text(
-          label,
-          style: TextStyle(color: HiPopColors.darkTextPrimary),
-        ),
-        subtitle: Text(
-          value,
-          style: TextStyle(color: HiPopColors.darkTextSecondary),
-        ),
-        trailing: onTap != null ? Icon(Icons.launch, color: HiPopColors.darkTextTertiary) : null,
-        onTap: onTap,
+    return HiPopCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      borderRadius: 12,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: HiPopColors.accentMauve.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: HiPopColors.accentMauve,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: HiPopColors.darkTextTertiary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: onTap != null ? Colors.blue[700] : HiPopColors.darkTextPrimary,
+                    fontWeight: FontWeight.w600,
+                    decoration: onTap != null ? TextDecoration.underline : null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null)
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: HiPopColors.darkTextTertiary,
+            ),
+        ],
       ),
     );
   }
@@ -853,12 +1030,19 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            HiPopColors.darkSurface.withValues(alpha: 0.95),
+            HiPopColors.darkSurface,
+          ],
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: 0.3),
             spreadRadius: 1,
-            blurRadius: 4,
+            blurRadius: 8,
             offset: const Offset(0, -2),
           ),
         ],
@@ -872,7 +1056,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 icon: const Icon(Icons.phone),
                 label: const Text('Call'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: HiPopColors.primaryDeepSage,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -888,7 +1072,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Instagram'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
+                  backgroundColor: HiPopColors.accentMauve,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -904,17 +1088,35 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error, size: 64, color: Colors.red),
+          Icon(
+            Icons.store_outlined,
+            size: 64,
+            color: HiPopColors.darkTextTertiary,
+          ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Vendor not found',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: HiPopColors.darkTextPrimary,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text('The vendor you\'re looking for doesn\'t exist.'),
-          const SizedBox(height: 16),
+          Text(
+            'The vendor you\'re looking for doesn\'t exist.',
+            style: TextStyle(
+              color: HiPopColors.darkTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => context.pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HiPopColors.vendorAccent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
             child: const Text('Go Back'),
           ),
         ],
@@ -938,7 +1140,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
         final uri = Uri.parse(url);
         final query = uri.queryParameters['q'];
         if (query != null) {
-          await UrlLauncherService.launchMaps(query);
+          await UrlLauncherService.launchMaps(query, context: context);
         } else {
           await UrlLauncherService.launchWebsite(url);
         }
@@ -1009,7 +1211,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen>
     
     buffer.writeln('Vendor Spotlight!');
     buffer.writeln();
-    buffer.writeln('${vendor.businessName}');
+    buffer.writeln(vendor.businessName);
     if (vendor.description.isNotEmpty) {
       buffer.writeln(vendor.description);
     }

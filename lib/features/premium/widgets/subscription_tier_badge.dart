@@ -248,7 +248,7 @@ class _SubscriptionTierBadgeState extends State<SubscriptionTierBadge>
           icon: Icons.person,
         );
       
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return TierConfiguration(
           displayName: 'Vendor Premium',
           primaryColor: Colors.orange.shade600,
@@ -258,7 +258,7 @@ class _SubscriptionTierBadgeState extends State<SubscriptionTierBadge>
           icon: Icons.diamond,
         );
       
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return TierConfiguration(
           displayName: 'Organizer Premium',
           primaryColor: Colors.purple.shade600,
@@ -268,7 +268,7 @@ class _SubscriptionTierBadgeState extends State<SubscriptionTierBadge>
           icon: Icons.business_center,
         );
       
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return TierConfiguration(
           displayName: 'Shopper Pro',
           primaryColor: Colors.blue.shade600,

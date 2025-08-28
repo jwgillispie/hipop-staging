@@ -66,3 +66,55 @@ class EmailVerificationRequired extends AuthState {
   @override
   List<Object> get props => [user];
 }
+
+// Phone Authentication States
+class PhoneAuthInProgress extends AuthState {
+  final String message;
+  
+  const PhoneAuthInProgress({required this.message});
+  
+  @override
+  List<Object> get props => [message];
+}
+
+class PhoneAuthCodeSent extends AuthState {
+  final String verificationId;
+  final int? resendToken;
+  final String phoneNumber;
+  
+  const PhoneAuthCodeSent({
+    required this.verificationId,
+    this.resendToken,
+    required this.phoneNumber,
+  });
+  
+  @override
+  List<Object?> get props => [verificationId, resendToken, phoneNumber];
+}
+
+class PhoneAuthError extends AuthState {
+  final String message;
+  
+  const PhoneAuthError({required this.message});
+  
+  @override
+  List<Object> get props => [message];
+}
+
+class PhoneAuthTimeout extends AuthState {
+  final String verificationId;
+  
+  const PhoneAuthTimeout({required this.verificationId});
+  
+  @override
+  List<Object> get props => [verificationId];
+}
+
+class AuthSuccess extends AuthState {
+  final String message;
+  
+  const AuthSuccess({required this.message});
+  
+  @override
+  List<Object> get props => [message];
+}

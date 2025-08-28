@@ -169,6 +169,80 @@ class AuthRepository implements IAuthRepository {
     }
   }
 
+  // Phone Authentication Methods
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required Function(String verificationId, int? resendToken) codeSent,
+    required Function(PhoneAuthCredential credential) verificationCompleted,
+    required Function(FirebaseAuthException e) verificationFailed,
+    required Function(String verificationId) codeAutoRetrievalTimeout,
+    int? resendToken,
+  }) async {
+    await _firebaseAuth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: verificationCompleted,
+      verificationFailed: verificationFailed,
+      codeSent: codeSent,
+      codeAutoRetrievalTimeout: codeAutoRetrievalTimeout,
+      forceResendingToken: resendToken,
+      timeout: const Duration(seconds: 60),
+    );
+  }
+
+  Future<UserCredential> signInWithPhoneCredential(PhoneAuthCredential credential) async {
+    try {
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      
+      // Update or create user profile for phone auth users
+      if (userCredential.user != null) {
+        final uid = userCredential.user!.uid;
+        final userDoc = await _firestore.collection('user_profiles').doc(uid).get();
+        
+        if (!userDoc.exists) {
+          // Create minimal profile for phone users
+          await _firestore.collection('user_profiles').doc(uid).set({
+            'uid': uid,
+            'phoneNumber': userCredential.user!.phoneNumber ?? '',
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+            'userType': 'shopper', // Default to shopper, can be updated later
+          });
+        } else {
+          // Update last login
+          await updateLastLogin(uid);
+        }
+      }
+      
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
+  Future<void> linkPhoneNumber(PhoneAuthCredential credential) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        throw AuthException('No user logged in');
+      }
+      
+      await user.linkWithCredential(credential);
+      
+      // Update user profile with phone number
+      await _firestore.collection('user_profiles').doc(user.uid).update({
+        'phoneNumber': user.phoneNumber ?? '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'provider-already-linked') {
+        throw AuthException('A phone number is already linked to this account');
+      } else if (e.code == 'credential-already-in-use') {
+        throw AuthException('This phone number is already associated with another account');
+      }
+      throw _mapFirebaseAuthException(e);
+    }
+  }
+
   AuthException _mapFirebaseAuthException(FirebaseAuthException e) {
     switch (e.code) {
       case 'user-not-found':

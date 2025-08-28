@@ -562,10 +562,10 @@ class AppRouter {
                     id: userId, // Use userId as subscription ID
                     userId: userId,
                     tier: userProfile.userType == 'vendor' 
-                        ? SubscriptionTier.vendorPro
+                        ? SubscriptionTier.vendorPremium
                         : userProfile.userType == 'market_organizer'
-                        ? SubscriptionTier.marketOrganizerPro 
-                        : SubscriptionTier.shopperPro,
+                        ? SubscriptionTier.marketOrganizerPremium 
+                        : SubscriptionTier.shopperPremium,
                     status: SubscriptionStatus.active,
                     userType: userProfile.userType,
                     createdAt: userProfile.createdAt ?? DateTime.now(),
@@ -721,11 +721,11 @@ class AppRouter {
             
             // Map tier to actual user type
             String userType = 'vendor'; // default to vendor since most users upgrading are vendors
-            if (targetTier == 'marketOrganizerPro' || targetTier == 'market_organizer') {
+            if (targetTier == 'marketOrganizerPremium' || targetTier == 'market_organizer') {
               userType = 'market_organizer';
-            } else if (targetTier == 'vendorPro' || targetTier == 'vendor') {
+            } else if (targetTier == 'vendorPremium' || targetTier == 'vendor') {
               userType = 'vendor';
-            } else if (targetTier == 'shopperPro' || targetTier == 'shopper') {
+            } else if (targetTier == 'shopperPremium' || targetTier == 'shopper') {
               userType = 'shopper';
             }
             
@@ -1032,11 +1032,11 @@ class AppRouter {
   /// Validate that user type matches subscription tier
   static bool _validateUserTypeAccess(String userType, SubscriptionTier tier) {
     switch (tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return userType == 'shopper';
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return userType == 'vendor';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return userType == 'market_organizer';
       case SubscriptionTier.enterprise:
         return userType == 'market_organizer'; // Enterprise is for market organizers

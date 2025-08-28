@@ -316,7 +316,7 @@ class _VendorDirectoryScreenState extends State<VendorDirectoryScreen> {
               onPressed: () {
                 final user = FirebaseAuth.instance.currentUser;
                 if (user != null) {
-                  context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+                  context.go('/premium/upgrade?tier=marketOrganizerPremium&userId=${user.uid}');
                 }
               },
               style: ElevatedButton.styleFrom(

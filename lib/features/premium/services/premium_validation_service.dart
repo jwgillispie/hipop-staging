@@ -123,7 +123,7 @@ class PremiumValidationService {
       );
     }
     
-    const validTiers = ['free', 'shopperPro', 'vendorPro', 'marketOrganizerPro', 'enterprise'];
+    const validTiers = ['free', 'shopperPremium', 'vendorPremium', 'marketOrganizerPremium', 'enterprise'];
     final sanitizedTier = tier.trim();
     
     if (!validTiers.contains(sanitizedTier)) {

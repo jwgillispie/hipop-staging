@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/blocs/subscription/subscription_bloc.dart';
 import 'package:hipop/blocs/subscription/subscription_state.dart';
-import 'package:hipop/blocs/subscription/subscription_event.dart';
 import 'package:hipop/features/vendor/models/vendor_post.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/premium/widgets/vendor_premium_dashboard_components.dart';
 import 'package:hipop/core/widgets/hipop_app_bar.dart';
 import 'package:hipop/core/widgets/metric_card.dart';
-import 'package:hipop/core/widgets/premium_upgrade_card.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+
+class CombinedAnalyticsData {
+  final List<VendorPost> posts;
+  final Map<String, int> analytics;
+
+  CombinedAnalyticsData({
+    required this.posts,
+    required this.analytics,
+  });
+}
 
 class VendorAnalyticsScreen extends StatefulWidget {
   const VendorAnalyticsScreen({super.key});
@@ -24,6 +33,7 @@ class VendorAnalyticsScreen extends StatefulWidget {
 class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   Stream<List<VendorPost>>? _postsStream;
   Stream<Map<String, int>>? _analyticsStream;
+  Stream<CombinedAnalyticsData>? _combinedStream;
   bool _hasPremiumAccess = false;
   bool _isCheckingPremium = true;
   String? _currentUserId;
@@ -36,6 +46,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
       _currentUserId = authState.user.uid;
       _postsStream = _getVendorPosts(_currentUserId!);
       _analyticsStream = _getAnalytics(_currentUserId!);
+      _combinedStream = _createCombinedStream();
       _checkPremiumAccessWithBloc(_currentUserId!);
     }
   }
@@ -163,6 +174,31 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
     );
   }
 
+  Stream<CombinedAnalyticsData> _createCombinedStream() {
+    if (_analyticsStream == null || _postsStream == null) {
+      return Stream.empty();
+    }
+
+    return Rx.combineLatest2<Map<String, int>, List<VendorPost>, CombinedAnalyticsData>(
+      _analyticsStream!,
+      _postsStream!,
+      (analytics, posts) => CombinedAnalyticsData(
+        analytics: analytics,
+        posts: posts,
+      ),
+    );
+  }
+
+  void _refreshStreams() {
+    if (_currentUserId != null) {
+      setState(() {
+        _analyticsStream = _getAnalytics(_currentUserId!);
+        _postsStream = _getVendorPosts(_currentUserId!);
+        _combinedStream = _createCombinedStream();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
@@ -191,18 +227,10 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
           appBar: HiPopAppBar(
             title: 'Analytics Dashboard',
             userRole: 'vendor',
-            showPremiumBadge: _hasPremiumAccess,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  if (_currentUserId != null) {
-                    setState(() {
-                      _analyticsStream = _getAnalytics(_currentUserId!);
-                      _postsStream = _getVendorPosts(_currentUserId!);
-                    });
-                  }
-                },
+                onPressed: _refreshStreams,
               ),
             ],
           ),
@@ -229,84 +257,80 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   }
 
   Widget _buildPremiumAnalyticsView() {
-    return StreamBuilder<Map<String, int>>(
-      stream: _analyticsStream!,
-      builder: (context, analyticsSnapshot) {
-        return StreamBuilder<List<VendorPost>>(
-          stream: _postsStream!,
-          builder: (context, postsSnapshot) {
-            if (postsSnapshot.connectionState == ConnectionState.waiting ||
-                analyticsSnapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingWidget(message: 'Loading analytics...');
-            }
+    return StreamBuilder<CombinedAnalyticsData>(
+      stream: _combinedStream!,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingWidget(message: 'Loading analytics...');
+        }
 
-            final posts = postsSnapshot.data ?? [];
-            final analytics = analyticsSnapshot.data ?? {};
+        if (snapshot.hasError) {
+          debugPrint('Premium analytics error: ${snapshot.error}');
+          return _buildEmptyAnalyticsState();
+        }
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Only show premium header for non-premium users
-                  if (!_hasPremiumAccess) ...[
-                    VendorPremiumDashboardComponents.buildPremiumHeader(
-                      context,
-                      title: 'Vendor Premium Analytics',
-                      subtitle: 'Track your market performance and application analytics',
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  _buildBasicOverviewSection(analytics, posts),
-                  const SizedBox(height: 24),
-                  _buildPostPerformanceSection(posts),
-                  const SizedBox(height: 24),
-                  _buildLocationInsights(posts),
-                ],
-              ),
-            );
-          },
+        final data = snapshot.data;
+        final posts = data?.posts ?? [];
+        final analytics = data?.analytics ?? {};
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Only show premium header for non-premium users
+              if (!_hasPremiumAccess) ...[
+                VendorPremiumDashboardComponents.buildPremiumHeader(
+                  context,
+                  title: 'Vendor Premium Analytics',
+                  subtitle: 'Track your market performance and application analytics',
+                ),
+                const SizedBox(height: 24),
+              ],
+              _buildBasicOverviewSection(analytics, posts),
+              const SizedBox(height: 24),
+              _buildPostPerformanceSection(posts),
+              const SizedBox(height: 24),
+              _buildLocationInsights(posts),
+            ],
+          ),
         );
       },
     );
   }
 
   Widget _buildFreeAnalyticsView() {
-    return StreamBuilder<Map<String, int>>(
-      stream: _analyticsStream!,
-      builder: (context, analyticsSnapshot) {
-        return StreamBuilder<List<VendorPost>>(
-          stream: _postsStream!,
-          builder: (context, postsSnapshot) {
-            if (postsSnapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingWidget(message: 'Loading your analytics...');
-            }
+    return StreamBuilder<CombinedAnalyticsData>(
+      stream: _combinedStream!,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingWidget(message: 'Loading your analytics...');
+        }
 
-            if (postsSnapshot.hasError) {
-              debugPrint('Vendor analytics error: ${postsSnapshot.error}');
-              return _buildEmptyAnalyticsState();
-            }
+        if (snapshot.hasError) {
+          debugPrint('Vendor analytics error: ${snapshot.error}');
+          return _buildEmptyAnalyticsState();
+        }
 
-            final posts = postsSnapshot.data ?? [];
-            final analytics = analyticsSnapshot.data ?? {};
+        final data = snapshot.data;
+        final posts = data?.posts ?? [];
+        final analytics = data?.analytics ?? {};
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildPremiumOnlyMessage(),
-                  const SizedBox(height: 24),
-                  _buildBasicOverviewSection(analytics, posts),
-                  const SizedBox(height: 24),
-                  VendorPremiumDashboardComponents.buildUpgradePrompt(
-                    context,
-                    customMessage: 'Unlock advanced analytics to grow your vendor business!',
-                  ),
-                ],
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPremiumOnlyMessage(),
+              const SizedBox(height: 24),
+              _buildBasicOverviewSection(analytics, posts),
+              const SizedBox(height: 24),
+              VendorPremiumDashboardComponents.buildUpgradePrompt(
+                context,
+                customMessage: 'Unlock advanced analytics to grow your vendor business!',
               ),
-            );
-          },
+            ],
+          ),
         );
       },
     );
@@ -328,7 +352,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        MetricCardGrid(
+        MetricCardRowList(
           cards: [
             MetricCard(
               title: 'Total Views',
@@ -360,36 +384,6 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
     );
   }
 
-  Widget _buildBasicMetricCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildEmptyAnalyticsState() {
     return SingleChildScrollView(

@@ -73,80 +73,78 @@ class PremiumUpgradeCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with icon and title
-                Row(
+                // Header with title above icon
+                Column(
                   children: [
+                    // Title with Premium badge
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode
+                                ? HiPopColors.darkTextPrimary
+                                : HiPopColors.lightTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: HiPopColors.premiumGold,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'Premium',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        if (showDismiss)
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: isDarkMode
+                                  ? HiPopColors.darkTextTertiary
+                                  : HiPopColors.lightTextTertiary,
+                            ),
+                            onPressed: onDismiss,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Icon
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: HiPopColors.premiumGold.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
                         icon,
                         color: HiPopColors.premiumGold,
-                        size: 28,
+                        size: 48,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                title,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDarkMode
-                                      ? HiPopColors.darkTextPrimary
-                                      : HiPopColors.lightTextPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: HiPopColors.premiumGold,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text(
-                                  'Premium',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isDarkMode
-                                  ? HiPopColors.darkTextSecondary
-                                  : HiPopColors.lightTextSecondary,
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 16),
+                    // Subtitle
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: isDarkMode
+                            ? HiPopColors.darkTextSecondary
+                            : HiPopColors.lightTextSecondary,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    if (showDismiss)
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          color: isDarkMode
-                              ? HiPopColors.darkTextTertiary
-                              : HiPopColors.lightTextTertiary,
-                        ),
-                        onPressed: onDismiss,
-                      ),
                   ],
                 ),
                 if (customMessage != null) ...[

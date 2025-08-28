@@ -61,12 +61,6 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
               final userProfile = authState.userProfile;
               final hasPremiumAccess = userProfile?.isPremium ?? false;
               
-              if (kDebugMode) {
-                print('📊 Vendor Settings: User profile premium status');
-                print('📊 userProfile?.isPremium: ${userProfile?.isPremium}');
-                print('📊 hasPremiumAccess: $hasPremiumAccess');
-                print('📊 Will route to: ${hasPremiumAccess ? '/subscription-management/${user?.uid}' : '/premium/onboarding'}');
-              }
               
               return _buildSettingsTile(
                 icon: Icons.star_outline,

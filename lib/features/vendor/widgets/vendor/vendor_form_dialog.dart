@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../models/managed_vendor.dart';
 import '../../services/managed_vendor_service.dart';
 import '../../../shared/services/user_profile_service.dart';
@@ -114,18 +116,45 @@ class _VendorFormDialogState extends State<VendorFormDialog> {
     setState(() => _isLoading = true);
     
     try {
-      // This is a simplified search - in a real app you'd want a proper search endpoint
-      // For now, we'll assume email uniqueness and try to find the user
-      // This would need to be implemented in UserProfileService
-      // _linkedUserProfile = await _userProfileService.findUserByEmail(_userSearchEmail!);
-      // if (mounted) {
-      //   setState(() {});
-      //   _populateContactFromProfile();
-      // }
+      // Search for user by email using Firestore query
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('user_profiles')
+          .where('email', isEqualTo: _userSearchEmail!.toLowerCase().trim())
+          .limit(1)
+          .get();
+      
+      if (querySnapshot.docs.isNotEmpty && mounted) {
+        final doc = querySnapshot.docs.first;
+        final userProfile = UserProfile.fromFirestore(doc);
+        
+        setState(() {
+          _linkedUserProfile = userProfile;
+        });
+        _populateContactFromProfile();
+        
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User profile linked: ${userProfile.displayName}'),
+            backgroundColor: HiPopColors.successGreen,
+          ),
+        );
+      } else if (mounted) {
+        // No user found with that email
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No user found with email: $_userSearchEmail'),
+            backgroundColor: HiPopColors.warningAmber,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching for user: $e')),
+          SnackBar(
+            content: Text('Error searching for user: $e'),
+            backgroundColor: HiPopColors.errorPlum,
+          ),
         );
       }
     } finally {

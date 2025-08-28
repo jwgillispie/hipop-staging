@@ -5,9 +5,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 enum SubscriptionTier {
   free,
-  shopperPro,
-  vendorPro,
-  marketOrganizerPro,
+  shopperPremium,
+  vendorPremium,
+  marketOrganizerPremium,
   enterprise,
 }
 
@@ -185,9 +185,9 @@ class UserSubscription extends Equatable {
 
   bool get isFree => tier == SubscriptionTier.free;
   bool get isPremium => tier != SubscriptionTier.free;
-  bool get isShopperPro => tier == SubscriptionTier.shopperPro;
-  bool get isVendorPro => tier == SubscriptionTier.vendorPro;
-  bool get isMarketOrganizerPro => tier == SubscriptionTier.marketOrganizerPro;
+  bool get isShopperPremium => tier == SubscriptionTier.shopperPremium;
+  bool get isVendorPremium => tier == SubscriptionTier.vendorPremium;
+  bool get isMarketOrganizerPremium => tier == SubscriptionTier.marketOrganizerPremium;
   bool get isEnterprise => tier == SubscriptionTier.enterprise;
   bool get isActive => status == SubscriptionStatus.active;
   bool get isExpired => status == SubscriptionStatus.expired;
@@ -212,11 +212,11 @@ class UserSubscription extends Equatable {
     switch (tier) {
       case SubscriptionTier.free:
         return 0.00;
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 4.00; // $4.00/month
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 29.00; // $29.00/month
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 69.00; // $69.00/month
       case SubscriptionTier.enterprise:
         return 199.99; // $199.99/month
@@ -229,11 +229,11 @@ class UserSubscription extends Equatable {
     switch (tier) {
       case SubscriptionTier.free:
         return '';
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return dotenv.env['STRIPE_PRICE_SHOPPER_PREMIUM'] ?? '';
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '';
       case SubscriptionTier.enterprise:
         return dotenv.env['STRIPE_PRICE_ENTERPRISE'] ?? '';
@@ -333,9 +333,9 @@ class UserSubscription extends Equatable {
     switch (tier) {
       case SubscriptionTier.free:
         return {};
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return {
-          // Shopper Pro Features
+          // Shopper Premium Features
           'enhanced_search': true,
           'unlimited_favorites': true,
           'vendor_following': true,
@@ -347,9 +347,9 @@ class UserSubscription extends Equatable {
           'seasonal_insights': true,
           'recipe_integration': true,
         };
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return {
-          // Vendor Pro Features
+          // Vendor Premium Features
           'market_discovery': true,
           'full_vendor_analytics': true,
           'product_performance_analytics': true,
@@ -362,9 +362,9 @@ class UserSubscription extends Equatable {
           'seasonal_business_planning': true,
           'weather_correlation_data': true,
         };
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return {
-          // Market Organizer Pro Features
+          // Market Organizer Premium Features
           'vendor_discovery': true,
           'multi_market_management': true,
           'vendor_analytics_dashboard': true,
@@ -391,7 +391,7 @@ class UserSubscription extends Equatable {
         };
       case SubscriptionTier.enterprise:
         return {
-          // All Market Organizer Pro features
+          // All Market Organizer Premium features
           'vendor_discovery': true,
           'multi_market_management': true,
           'vendor_analytics_dashboard': true,
@@ -497,12 +497,12 @@ class UserSubscription extends Equatable {
   }) {
     // Default to appropriate tier based on user type
     final targetTier = userType == 'shopper' 
-        ? SubscriptionTier.shopperPro
+        ? SubscriptionTier.shopperPremium
         : userType == 'vendor' 
-        ? SubscriptionTier.vendorPro
+        ? SubscriptionTier.vendorPremium
         : userType == 'market_organizer'
-        ? SubscriptionTier.marketOrganizerPro
-        : SubscriptionTier.shopperPro; // Default fallback
+        ? SubscriptionTier.marketOrganizerPremium
+        : SubscriptionTier.shopperPremium; // Default fallback
     
     return upgradeToTier(
       targetTier,

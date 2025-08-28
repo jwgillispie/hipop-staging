@@ -26,15 +26,19 @@ class VendorMarketDiscoveryOptimized extends StatefulWidget {
 
 class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOptimized> {
   final _scrollController = ScrollController();
+  final _searchController = TextEditingController();
   
   // State management
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _error;
   List<Market> _markets = [];
+  List<Market> _filteredMarkets = [];
   DocumentSnapshot? _lastDocument;
   bool _hasMore = true;
   bool _hasPremiumAccess = false;
+  String _searchQuery = '';
+  bool _showSearch = false;
   
   // Pagination
   static const int _pageSize = 10;
@@ -49,6 +53,7 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
   
@@ -112,29 +117,20 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
       
       setState(() {
         _markets = markets;
+        _filteredMarkets = markets;
         _lastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
         _hasMore = snapshot.docs.length == _pageSize;
         _isLoading = false;
       });
     } catch (e) {
-      // Debug print for Firestore index errors
-      print('\n🔴 ERROR in _loadMarkets:');
-      print('Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      
-      // Extract and print Firestore index creation link if present
+      // Check for Firestore index errors
       final errorString = e.toString();
       if (errorString.contains('index')) {
-        print('\n⚠️ FIRESTORE INDEX REQUIRED!');
-        print('Full error with index link:');
-        print(errorString);
-        
-        // Try to extract the URL
+        // Firestore index required - extract URL if present
         final urlPattern = RegExp(r'https://console\.firebase\.google\.com/[^\s]+');
         final match = urlPattern.firstMatch(errorString);
         if (match != null) {
-          print('\n🔗 INDEX CREATION LINK:');
-          print(match.group(0));
+          debugPrint('Firestore index required. Create at: ${match.group(0)}');
         }
       }
       
@@ -171,29 +167,20 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
       
       setState(() {
         _markets.addAll(newMarkets);
+        _filterMarkets();
         _lastDocument = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
         _hasMore = snapshot.docs.length == _pageSize;
         _isLoadingMore = false;
       });
     } catch (e) {
-      // Debug print for Firestore index errors
-      print('\n🔴 ERROR in _loadMoreMarkets:');
-      print('Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      
-      // Extract and print Firestore index creation link if present
+      // Check for Firestore index errors
       final errorString = e.toString();
       if (errorString.contains('index')) {
-        print('\n⚠️ FIRESTORE INDEX REQUIRED!');
-        print('Full error with index link:');
-        print(errorString);
-        
-        // Try to extract the URL
+        // Firestore index required - extract URL if present
         final urlPattern = RegExp(r'https://console\.firebase\.google\.com/[^\s]+');
         final match = urlPattern.firstMatch(errorString);
         if (match != null) {
-          print('\n🔗 INDEX CREATION LINK:');
-          print(match.group(0));
+          debugPrint('Firestore index required. Create at: ${match.group(0)}');
         }
       }
       
@@ -201,6 +188,25 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
     }
   }
   
+  /// Filter markets based on search query
+  void _filterMarkets() {
+    if (_searchQuery.isEmpty) {
+      setState(() {
+        _filteredMarkets = _markets;
+      });
+    } else {
+      setState(() {
+        _filteredMarkets = _markets.where((market) {
+          final searchLower = _searchQuery.toLowerCase();
+          return market.name.toLowerCase().contains(searchLower) ||
+              market.city.toLowerCase().contains(searchLower) ||
+              market.state.toLowerCase().contains(searchLower) ||
+              (market.description?.toLowerCase().contains(searchLower) ?? false);
+        }).toList();
+      });
+    }
+  }
+
   /// Apply to a market
   Future<void> _applyToMarket(Market market) async {
     if (market.applicationUrl == null || market.applicationUrl!.isEmpty) {
@@ -404,7 +410,7 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
                       message: _error!,
                       onRetry: _loadMarkets,
                     )
-                  : _markets.isEmpty
+                  : _filteredMarkets.isEmpty
                       ? _buildEmptyState()
                       : _buildMarketsList(),
     );
@@ -423,7 +429,7 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
             ),
           ),
           Text(
-            '${_markets.length} active opportunities',
+            '${_filteredMarkets.length} active opportunities',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.normal,
@@ -432,6 +438,56 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
           ),
         ],
       ),
+      actions: [
+        IconButton(
+          icon: Icon(_showSearch ? Icons.close : Icons.search),
+          onPressed: () {
+            setState(() {
+              _showSearch = !_showSearch;
+              if (!_showSearch) {
+                _searchController.clear();
+                _searchQuery = '';
+                _filterMarkets();
+              }
+            });
+          },
+        ),
+      ],
+      bottom: _showSearch
+          ? PreferredSize(
+              preferredSize: const Size.fromHeight(56.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: TextStyle(color: HiPopColors.darkSurface, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: 'Search markets by name or location...',
+                    hintStyle: TextStyle(
+                      color: HiPopColors.darkSurface.withValues(alpha: 0.6),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: HiPopColors.darkSurface.withValues(alpha: 0.8),
+                    ),
+                    filled: true,
+                    fillColor: HiPopColors.darkSurface.withValues(alpha: 0.1),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                      _filterMarkets();
+                    });
+                  },
+                ),
+              ),
+            )
+          : null,
       flexibleSpace: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -579,16 +635,16 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.all(16),
-        itemCount: _markets.length + (_isLoadingMore ? 1 : 0),
+        itemCount: _filteredMarkets.length + (_isLoadingMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index == _markets.length) {
+          if (index == _filteredMarkets.length) {
             return const Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()),
             );
           }
           
-          final market = _markets[index];
+          final market = _filteredMarkets[index];
           return _buildMarketCard(market);
         },
       ),

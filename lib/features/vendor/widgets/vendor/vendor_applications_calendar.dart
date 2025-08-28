@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../models/vendor_application.dart';
 
 class VendorApplicationsCalendar extends StatefulWidget {
@@ -73,8 +74,8 @@ class _VendorApplicationsCalendarState extends State<VendorApplicationsCalendar>
             markerBuilder: (context, day, applications) {
               if (applications.isNotEmpty) {
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.orange,
+                  decoration: BoxDecoration(
+                    color: HiPopColors.warningAmber,
                     shape: BoxShape.circle,
                   ),
                   width: 16,
@@ -182,7 +183,7 @@ class _VendorApplicationsCalendarState extends State<VendorApplicationsCalendar>
   Color _getStatusColor(ApplicationStatus status) {
     switch (status) {
       case ApplicationStatus.pending:
-        return Colors.orange;
+        return HiPopColors.warningAmber;
       case ApplicationStatus.approved:
         return Colors.green;
       case ApplicationStatus.rejected:

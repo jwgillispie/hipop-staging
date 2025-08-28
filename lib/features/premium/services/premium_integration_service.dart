@@ -29,10 +29,10 @@ class PremiumIntegrationService {
       // Enhanced analytics for premium tiers
       Map<String, dynamic> enhancedAnalytics = {};
       
-      if (subscription.isVendorPro || subscription.isEnterprise) {
+      if (subscription.isVendorPremium || subscription.isEnterprise) {
         // Add vendor-specific premium analytics
         enhancedAnalytics = await VendorGrowthOptimizerService.getVendorGrowthDashboard(userId);
-      } else if (subscription.isMarketOrganizerPro || subscription.isEnterprise) {
+      } else if (subscription.isMarketOrganizerPremium || subscription.isEnterprise) {
         // Add market organizer premium analytics
         enhancedAnalytics = await MarketManagementSuiteService.getMultiMarketDashboard(userId);
       }
@@ -87,7 +87,7 @@ class PremiumIntegrationService {
       }
 
       // Add competitive analysis for higher tiers
-      if (subscription.isMarketOrganizerPro || subscription.isEnterprise) {
+      if (subscription.isMarketOrganizerPremium || subscription.isEnterprise) {
         final competitiveAnalysis = await _getCompetitiveSalesAnalysis(userId);
         baseSalesData['competitiveAnalysis'] = competitiveAnalysis;
       }

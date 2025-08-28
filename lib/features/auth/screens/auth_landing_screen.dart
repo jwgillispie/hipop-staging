@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
@@ -71,6 +72,7 @@ class AuthLandingScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Show all profile options
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -189,6 +191,7 @@ class AuthLandingScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
+            // Show all profile options
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

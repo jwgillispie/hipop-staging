@@ -1,6 +1,57 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 
+class EventLink extends Equatable {
+  final String label;
+  final String url;
+  final EventLinkType type;
+
+  const EventLink({
+    required this.label,
+    required this.url,
+    required this.type,
+  });
+
+  @override
+  List<Object?> get props => [label, url, type];
+
+  Map<String, dynamic> toMap() {
+    return {
+      'label': label,
+      'url': url,
+      'type': type.value,
+    };
+  }
+
+  factory EventLink.fromMap(Map<String, dynamic> map) {
+    return EventLink(
+      label: map['label'] ?? '',
+      url: map['url'] ?? '',
+      type: EventLinkType.fromString(map['type'] ?? 'website'),
+    );
+  }
+}
+
+enum EventLinkType {
+  tickets('tickets', 'Tickets'),
+  registration('registration', 'Registration'),
+  website('website', 'Website'),
+  facebook('facebook', 'Facebook'),
+  instagram('instagram', 'Instagram'),
+  other('other', 'Other');
+
+  final String value;
+  final String displayName;
+  const EventLinkType(this.value, this.displayName);
+
+  static EventLinkType fromString(String value) {
+    return EventLinkType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => EventLinkType.other,
+    );
+  }
+}
+
 class Event extends Equatable {
   final String id;
   final String name;
@@ -18,6 +69,12 @@ class Event extends Equatable {
   final String? marketId; // Optional: events can be associated with markets
   final List<String> tags;
   final String? imageUrl;
+  final List<EventLink> links; // Event links for tickets, registration, etc.
+  final String? eventWebsite;
+  final String? instagramUrl;
+  final String? facebookUrl;
+  final String? ticketUrl;
+  final Map<String, String>? additionalLinks;
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -39,6 +96,12 @@ class Event extends Equatable {
     this.marketId,
     this.tags = const [],
     this.imageUrl,
+    this.links = const [],
+    this.eventWebsite,
+    this.instagramUrl,
+    this.facebookUrl,
+    this.ticketUrl,
+    this.additionalLinks,
     this.isActive = true,
     required this.createdAt,
     required this.updatedAt,
@@ -62,6 +125,12 @@ class Event extends Equatable {
         marketId,
         tags,
         imageUrl,
+        links,
+        eventWebsite,
+        instagramUrl,
+        facebookUrl,
+        ticketUrl,
+        additionalLinks,
         isActive,
         createdAt,
         updatedAt,
@@ -84,6 +153,12 @@ class Event extends Equatable {
     String? marketId,
     List<String>? tags,
     String? imageUrl,
+    List<EventLink>? links,
+    String? eventWebsite,
+    String? instagramUrl,
+    String? facebookUrl,
+    String? ticketUrl,
+    Map<String, String>? additionalLinks,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -105,6 +180,12 @@ class Event extends Equatable {
       marketId: marketId ?? this.marketId,
       tags: tags ?? this.tags,
       imageUrl: imageUrl ?? this.imageUrl,
+      links: links ?? this.links,
+      eventWebsite: eventWebsite ?? this.eventWebsite,
+      instagramUrl: instagramUrl ?? this.instagramUrl,
+      facebookUrl: facebookUrl ?? this.facebookUrl,
+      ticketUrl: ticketUrl ?? this.ticketUrl,
+      additionalLinks: additionalLinks ?? this.additionalLinks,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -128,6 +209,12 @@ class Event extends Equatable {
       'marketId': marketId,
       'tags': tags,
       'imageUrl': imageUrl,
+      'links': links.map((link) => link.toMap()).toList(),
+      'eventWebsite': eventWebsite,
+      'instagramUrl': instagramUrl,
+      'facebookUrl': facebookUrl,
+      'ticketUrl': ticketUrl,
+      'additionalLinks': additionalLinks,
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -153,6 +240,16 @@ class Event extends Equatable {
       marketId: data['marketId'],
       tags: List<String>.from(data['tags'] ?? []),
       imageUrl: data['imageUrl'],
+      links: (data['links'] as List<dynamic>?)
+          ?.map((link) => EventLink.fromMap(link as Map<String, dynamic>))
+          .toList() ?? [],
+      eventWebsite: data['eventWebsite'],
+      instagramUrl: data['instagramUrl'],
+      facebookUrl: data['facebookUrl'],
+      ticketUrl: data['ticketUrl'],
+      additionalLinks: data['additionalLinks'] != null
+          ? Map<String, String>.from(data['additionalLinks'])
+          : null,
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
@@ -181,6 +278,16 @@ class Event extends Equatable {
       marketId: map['marketId'],
       tags: List<String>.from(map['tags'] ?? []),
       imageUrl: map['imageUrl'],
+      links: (map['links'] as List<dynamic>?)
+          ?.map((link) => EventLink.fromMap(link as Map<String, dynamic>))
+          .toList() ?? [],
+      eventWebsite: map['eventWebsite'],
+      instagramUrl: map['instagramUrl'],
+      facebookUrl: map['facebookUrl'],
+      ticketUrl: map['ticketUrl'],
+      additionalLinks: map['additionalLinks'] != null
+          ? Map<String, String>.from(map['additionalLinks'])
+          : null,
       isActive: map['isActive'] ?? true,
       createdAt: map['createdAt'] is Timestamp
           ? (map['createdAt'] as Timestamp).toDate()

@@ -42,8 +42,7 @@ class VendorMarket extends Equatable {
         joinedDate: (data['joinedDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       );
     } catch (e) {
-      print('Error parsing VendorMarket from Firestore: $e');
-      print('Document data: $data');
+      // Error parsing VendorMarket from Firestore
       rethrow;
     }
   }

@@ -619,11 +619,11 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
 
   String? _getTierDisplayName(SubscriptionTier? tier) {
     switch (tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return 'Shopper Pro';
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 'Vendor Premium';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 'Market Organizer Premium';
       case SubscriptionTier.enterprise:
         return 'Enterprise';
@@ -636,7 +636,7 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
 
   List<String> _getActivatedFeatures() {
     switch (_subscription?.tier) {
-      case SubscriptionTier.shopperPro:
+      case SubscriptionTier.shopperPremium:
         return [
           'Enhanced search & filtering',
           'Unlimited favorites',
@@ -644,7 +644,7 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           'Personalized recommendations',
           'Exclusive deals access',
         ];
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return [
           'Full vendor analytics dashboard',
           'Unlimited market participation',
@@ -652,7 +652,7 @@ class _SubscriptionSuccessScreenState extends State<SubscriptionSuccessScreen> {
           'Profit optimization insights',
           'Priority customer support',
         ];
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return [
           'Multi-market management dashboard',
           'Vendor performance analytics',

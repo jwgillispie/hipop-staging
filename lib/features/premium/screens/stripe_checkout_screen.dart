@@ -32,8 +32,8 @@ class _StripeCheckoutScreenState extends State<StripeCheckoutScreen> {
   
   // Price IDs from environment
   late final Map<SubscriptionTier, String> _priceIds = {
-    SubscriptionTier.vendorPro: dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '',
-    SubscriptionTier.marketOrganizerPro: dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '',
+    SubscriptionTier.vendorPremium: dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM'] ?? '',
+    SubscriptionTier.marketOrganizerPremium: dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM'] ?? '',
     SubscriptionTier.enterprise: dotenv.env['STRIPE_PRICE_ENTERPRISE'] ?? '',
   };
 
@@ -149,9 +149,9 @@ class _StripeCheckoutScreenState extends State<StripeCheckoutScreen> {
 
   String _getTierName(SubscriptionTier tier) {
     switch (tier) {
-      case SubscriptionTier.vendorPro:
+      case SubscriptionTier.vendorPremium:
         return 'Vendor Premium';
-      case SubscriptionTier.marketOrganizerPro:
+      case SubscriptionTier.marketOrganizerPremium:
         return 'Market Organizer Premium';
       case SubscriptionTier.enterprise:
         return 'Enterprise';

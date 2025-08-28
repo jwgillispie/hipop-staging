@@ -73,21 +73,21 @@ class SubscriptionSuccessService {
       if (userProfile != null) {
         switch (userProfile.userType) {
           case 'vendor':
-            targetTier = SubscriptionTier.vendorPro;
+            targetTier = SubscriptionTier.vendorPremium;
             break;
           case 'market_organizer':
-            targetTier = SubscriptionTier.marketOrganizerPro;
+            targetTier = SubscriptionTier.marketOrganizerPremium;
             break;
           case 'shopper':
-            targetTier = SubscriptionTier.shopperPro;
+            targetTier = SubscriptionTier.shopperPremium;
             break;
           default:
-            targetTier = SubscriptionTier.vendorPro; // Default fallback
+            targetTier = SubscriptionTier.vendorPremium; // Default fallback
         }
       } else {
         // If we can't get user profile, use the subscription's current tier if it's not free
         targetTier = subscription.tier == SubscriptionTier.free 
-            ? SubscriptionTier.vendorPro  // Default to vendor pro
+            ? SubscriptionTier.vendorPremium  // Default to vendor pro
             : subscription.tier;
       }
       

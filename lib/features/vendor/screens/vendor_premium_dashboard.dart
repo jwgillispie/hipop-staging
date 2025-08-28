@@ -154,21 +154,57 @@ class _VendorPremiumDashboardState extends State<VendorPremiumDashboard>
   Widget _buildOverviewTab() {
     return PremiumDashboardLayout(
       children: [
-        VendorPremiumDashboardComponents.buildPremiumHeader(
-          context,
-          title: 'Welcome to Vendor Premium!',
-          subtitle: 'Professional tools to grow your vendor business and maximize revenue opportunities.',
-        ),
-        VendorPremiumDashboardComponents.buildValueProposition(context),
+        _buildSimplifiedValueProposition(),
         _buildQuickStatsGrid(),
-        Text(
-          'Your Premium Features',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
         _buildPremiumFeaturesList(),
       ],
+    );
+  }
+
+  Widget _buildSimplifiedValueProposition() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.green.shade200,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.trending_up,
+            color: Colors.green.shade700,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Grow your business',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Our goal is to get more people to your pop ups.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
 import 'package:hipop/blocs/favorites/favorites_bloc.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 import '../../market/models/market.dart';
 import '../../vendor/models/managed_vendor.dart';
@@ -22,20 +23,13 @@ class FavoritesScreen extends StatefulWidget {
 class _FavoritesScreenState extends State<FavoritesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<ManagedVendor> _favoriteVendors = [];
-  List<Market> _favoriteMarkets = [];
-  bool _isLoadingVendors = false;
-  bool _isLoadingMarkets = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Favorites are now automatically loaded when auth state changes in main.dart
-    // But we also need to load them when the screen first loads in case they're already loaded in bloc
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadFavorites();
-    });
+    // Initialize favorites on first load
+    _initializeFavorites();
   }
 
   @override
@@ -44,253 +38,285 @@ class _FavoritesScreenState extends State<FavoritesScreen>
     super.dispose();
   }
 
-  Future<void> _loadFavorites() async {
-    await Future.wait([
-      _loadFavoriteVendors(),
-      _loadFavoriteMarkets(),
-    ]);
+  void _initializeFavorites() {
+    // Initialize favorites loading when screen first loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is Authenticated) {
+        context.read<FavoritesBloc>().add(LoadFavorites(userId: authState.user.uid));
+      }
+    });
   }
 
-  Future<void> _loadFavoriteVendors() async {
-    setState(() {
-      _isLoadingVendors = true;
-    });
+  Future<List<ManagedVendor>> _loadFavoriteVendors(List<String> vendorIds) async {
+    if (vendorIds.isEmpty) {
+      return [];
+    }
 
     try {
-      final favoritesState = context.read<FavoritesBloc>().state;
-      
-      if (favoritesState.favoriteVendorIds.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _favoriteVendors = [];
-            _isLoadingVendors = false;
-          });
-        }
-        return;
-      }
-      
       // Use batch loading with concurrent requests and timeout
-      final vendorFutures = favoritesState.favoriteVendorIds.map((vendorId) => 
+      final vendorFutures = vendorIds.map((vendorId) => 
         ManagedVendorService.getVendor(vendorId).timeout(
           const Duration(seconds: 10),
           onTimeout: () => null,
         ).catchError((_) => null));
       
       final vendorResults = await Future.wait(vendorFutures);
-      final vendors = vendorResults.whereType<ManagedVendor>().toList();
-
-      if (mounted) {
-        setState(() {
-          _favoriteVendors = vendors;
-          _isLoadingVendors = false;
-        });
-      }
+      return vendorResults.whereType<ManagedVendor>().toList();
     } catch (e) {
       debugPrint('Error loading favorite vendors: $e');
       if (mounted) {
-        setState(() {
-          _favoriteVendors = [];
-          _isLoadingVendors = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading favorite vendors: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
             action: SnackBarAction(
               label: 'Retry',
-              onPressed: _loadFavoriteVendors,
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() {}); // Trigger rebuild to retry
+              },
             ),
           ),
         );
       }
+      return [];
     }
   }
 
-  Future<void> _loadFavoriteMarkets() async {
-    setState(() {
-      _isLoadingMarkets = true;
-    });
+  Future<List<Market>> _loadFavoriteMarkets(List<String> marketIds) async {
+    if (marketIds.isEmpty) {
+      return [];
+    }
 
     try {
-      final favoritesState = context.read<FavoritesBloc>().state;
-      
-      if (favoritesState.favoriteMarketIds.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _favoriteMarkets = [];
-            _isLoadingMarkets = false;
-          });
-        }
-        return;
-      }
-      
       // Use batch loading with concurrent requests and timeout
-      final marketFutures = favoritesState.favoriteMarketIds.map((marketId) => 
+      final marketFutures = marketIds.map((marketId) => 
         MarketService.getMarket(marketId).timeout(
           const Duration(seconds: 10),
           onTimeout: () => null,
         ).catchError((_) => null));
       
       final marketResults = await Future.wait(marketFutures);
-      final markets = marketResults.whereType<Market>().toList();
-
-      if (mounted) {
-        setState(() {
-          _favoriteMarkets = markets;
-          _isLoadingMarkets = false;
-        });
-      }
+      return marketResults.whereType<Market>().toList();
     } catch (e) {
       debugPrint('Error loading favorite markets: $e');
       if (mounted) {
-        setState(() {
-          _favoriteMarkets = [];
-          _isLoadingMarkets = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error loading favorite markets: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
             action: SnackBarAction(
               label: 'Retry',
-              onPressed: _loadFavoriteMarkets,
+              textColor: Colors.white,
+              onPressed: () {
+                setState(() {}); // Trigger rebuild to retry
+              },
             ),
           ),
         );
       }
+      return [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<FavoritesBloc, FavoritesState>(
-      listener: (context, favoritesState) {
-        // Only reload if favorites have actually changed to prevent infinite loops
-        if (favoritesState.status == FavoritesStatus.loaded) {
-          _loadFavorites();
+    final theme = Theme.of(context);
+    
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (authState is! Authenticated) {
+          return const Scaffold(
+            body: LoadingWidget(message: 'Loading...'),
+          );
         }
-      },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state is! Authenticated) {
-            return const Scaffold(
-              body: LoadingWidget(message: 'Loading...'),
-            );
-          }
 
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('My Favorites'),
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () {
-                    // Reload favorites from BLoC
-                    final authState = context.read<AuthBloc>().state;
-                    if (authState is Authenticated) {
-                      context.read<FavoritesBloc>().add(LoadFavorites(userId: authState.user.uid));
-                    } else {
-                      context.read<FavoritesBloc>().add(const LoadFavorites());
-                    }
-                    // Reload the screen data
-                    _loadFavorites();
-                  },
-                  tooltip: 'Refresh favorites',
+        return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
+          appBar: AppBar(
+            title: const Text('My Favorites'),
+            backgroundColor: HiPopColors.primaryDeepSage,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  // Reload favorites from BLoC
+                  context.read<FavoritesBloc>().add(
+                    LoadFavorites(userId: authState.user.uid),
+                  );
+                },
+                tooltip: 'Refresh favorites',
+              ),
+            ],
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: HiPopColors.premiumGold,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.store),
+                  text: 'Vendors',
+                ),
+                Tab(
+                  icon: Icon(Icons.location_on),
+                  text: 'Markets',
                 ),
               ],
-              bottom: TabBar(
+            ),
+          ),
+          body: BlocBuilder<FavoritesBloc, FavoritesState>(
+            builder: (context, favoritesState) {
+              return TabBarView(
                 controller: _tabController,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.store),
-                    text: 'Vendors',
-                  ),
-                  Tab(
-                    icon: Icon(Icons.location_on),
-                    text: 'Markets',
-                  ),
+                children: [
+                  _buildFavoriteVendorsList(favoritesState),
+                  _buildFavoriteMarketsList(favoritesState),
                 ],
-              ),
-            ),
-            body: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildFavoriteVendorsList(),
-                _buildFavoriteMarketsList(),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildFavoriteVendorsList() {
-    if (_isLoadingVendors) {
+  Widget _buildFavoriteVendorsList(FavoritesState favoritesState) {
+    // Show loading only for initial load
+    if (favoritesState.status == FavoritesStatus.loading && 
+        favoritesState.favoriteVendorIds.isEmpty) {
       return const LoadingWidget(message: 'Loading favorite vendors...');
     }
 
-    if (_favoriteVendors.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.store,
-        title: 'No Favorite Vendors',
-        subtitle: 'Vendors you favorite will appear here.\nStart exploring markets to find vendors you love!',
-      );
-    }
+    // Real-time update using FutureBuilder with the current favorite IDs
+    return FutureBuilder<List<ManagedVendor>>(
+      future: _loadFavoriteVendors(favoritesState.favoriteVendorIds),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && 
+            !snapshot.hasData) {
+          return const LoadingWidget(message: 'Loading favorite vendors...');
+        }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _favoriteVendors.length,
-      itemBuilder: (context, index) {
-        final vendor = _favoriteVendors[index];
-        return _buildVendorCard(vendor);
+        final vendors = snapshot.data ?? [];
+        
+        if (vendors.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.store,
+            title: 'No Favorite Vendors',
+            subtitle: 'Vendors you favorite will appear here.\nStart exploring markets to find vendors you love!',
+          );
+        }
+
+        return RefreshIndicator(
+          color: HiPopColors.primaryDeepSage,
+          onRefresh: () async {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is Authenticated) {
+              context.read<FavoritesBloc>().add(
+                LoadFavorites(userId: authState.user.uid),
+              );
+            }
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: vendors.length,
+            itemBuilder: (context, index) {
+              final vendor = vendors[index];
+              return _buildVendorCard(vendor);
+            },
+          ),
+        );
       },
     );
   }
 
-  Widget _buildFavoriteMarketsList() {
-    if (_isLoadingMarkets) {
+  Widget _buildFavoriteMarketsList(FavoritesState favoritesState) {
+    // Show loading only for initial load
+    if (favoritesState.status == FavoritesStatus.loading && 
+        favoritesState.favoriteMarketIds.isEmpty) {
       return const LoadingWidget(message: 'Loading favorite markets...');
     }
 
-    if (_favoriteMarkets.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.location_on,
-        title: 'No Favorite Markets',
-        subtitle: 'Markets you favorite will appear here.\nExplore nearby markets and save the ones you love!',
-      );
-    }
+    // Real-time update using FutureBuilder with the current favorite IDs
+    return FutureBuilder<List<Market>>(
+      future: _loadFavoriteMarkets(favoritesState.favoriteMarketIds),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && 
+            !snapshot.hasData) {
+          return const LoadingWidget(message: 'Loading favorite markets...');
+        }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _favoriteMarkets.length,
-      itemBuilder: (context, index) {
-        final market = _favoriteMarkets[index];
-        return _buildMarketCard(market);
+        final markets = snapshot.data ?? [];
+        
+        if (markets.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.location_on,
+            title: 'No Favorite Markets',
+            subtitle: 'Markets you favorite will appear here.\nExplore nearby markets and save the ones you love!',
+          );
+        }
+
+        return RefreshIndicator(
+          color: HiPopColors.primaryDeepSage,
+          onRefresh: () async {
+            final authState = context.read<AuthBloc>().state;
+            if (authState is Authenticated) {
+              context.read<FavoritesBloc>().add(
+                LoadFavorites(userId: authState.user.uid),
+              );
+            }
+          },
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: markets.length,
+            itemBuilder: (context, index) {
+              final market = markets[index];
+              return _buildMarketCard(market);
+            },
+          ),
+        );
       },
     );
   }
 
   Widget _buildVendorCard(ManagedVendor vendor) {
+    final theme = Theme.of(context);
+    
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: HiPopColors.lightBorder.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      elevation: 0,
+      color: theme.cardColor,
       child: InkWell(
         onTap: () {
-          // For now, just show a message since there's no vendor detail screen yet
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${vendor.businessName} details'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
+          try {
+            // Navigate to vendor detail if available
+            context.pushNamed('vendorDetail', extra: vendor);
+          } catch (e) {
+            // Fallback if route doesn't exist
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${vendor.businessName} details'),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          }
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -299,14 +325,21 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          HiPopColors.vendorAccent.withValues(alpha: 0.15),
+                          HiPopColors.vendorAccentLight.withValues(alpha: 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.store,
-                      color: Colors.green,
+                      color: HiPopColors.vendorAccent,
                       size: 24,
                     ),
                   ),
@@ -327,16 +360,26 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                           vendor.categoriesDisplay,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: HiPopColors.lightTextSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => _removeFavoriteVendor(vendor.id),
-                    icon: const Icon(Icons.favorite, color: Colors.red),
-                    tooltip: 'Remove from favorites',
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _removeFavoriteVendor(vendor.id),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.favorite,
+                          color: HiPopColors.accentDustyRose,
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -353,7 +396,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   'Products: ${vendor.products.take(3).join(', ')}${vendor.products.length > 3 ? '...' : ''}',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.grey[600],
+                    color: HiPopColors.lightTextSecondary,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -365,7 +408,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                 Row(
                   children: [
                     if (vendor.phoneNumber != null) ...[
-                      Icon(Icons.phone, size: 14, color: Colors.grey[600]),
+                      Icon(Icons.phone, size: 14, color: HiPopColors.lightTextSecondary),
                       const SizedBox(width: 4),
                       InkWell(
                         onTap: () => _launchPhone(vendor.phoneNumber!),
@@ -376,7 +419,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                             vendor.phoneNumber!,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.blue[700],
+                              color: HiPopColors.primaryDeepSage,
                               decoration: TextDecoration.underline,
                             ),
                           ),
@@ -386,7 +429,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                     if (vendor.phoneNumber != null && vendor.email != null)
                       const SizedBox(width: 16),
                     if (vendor.email != null) ...[
-                      Icon(Icons.email, size: 14, color: Colors.grey[600]),
+                      Icon(Icons.email, size: 14, color: HiPopColors.lightTextSecondary),
                       const SizedBox(width: 4),
                       Expanded(
                         child: InkWell(
@@ -398,7 +441,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                               vendor.email!,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.blue[700],
+                                color: HiPopColors.primaryDeepSage,
                                 decoration: TextDecoration.underline,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -415,7 +458,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.camera_alt, size: 14, color: HiPopColors.lightTextSecondary),
                     const SizedBox(width: 4),
                     InkWell(
                       onTap: () => _launchInstagram(vendor.instagramHandle!),
@@ -426,7 +469,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                           '@${vendor.instagramHandle!}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.blue[700],
+                            color: HiPopColors.primaryDeepSage,
                             decoration: TextDecoration.underline,
                           ),
                         ),
@@ -443,14 +486,24 @@ class _FavoritesScreenState extends State<FavoritesScreen>
   }
 
   Widget _buildMarketCard(Market market) {
+    final theme = Theme.of(context);
+    
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: HiPopColors.lightBorder.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      elevation: 0,
+      color: theme.cardColor,
       child: InkWell(
         onTap: () {
           context.pushNamed('marketDetail', extra: market);
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -459,14 +512,21 @@ class _FavoritesScreenState extends State<FavoritesScreen>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          HiPopColors.primaryDeepSage.withValues(alpha: 0.15),
+                          HiPopColors.secondarySoftSage.withValues(alpha: 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.location_on,
-                      color: Colors.orange,
+                      color: HiPopColors.primaryDeepSage,
                       size: 24,
                     ),
                   ),
@@ -487,16 +547,26 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                           '${market.city}, ${market.state}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: HiPopColors.lightTextSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => _removeFavoriteMarket(market.id),
-                    icon: const Icon(Icons.favorite, color: Colors.red),
-                    tooltip: 'Remove from favorites',
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _removeFavoriteMarket(market.id),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          Icons.favorite,
+                          color: HiPopColors.accentDustyRose,
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -506,7 +576,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                   Icon(
                     Icons.access_time,
                     size: 16,
-                    color: Colors.grey[500],
+                    color: HiPopColors.lightTextTertiary,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -514,7 +584,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                       market.eventDisplayInfo,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey[600],
+                        color: HiPopColors.lightTextSecondary,
                       ),
                     ),
                   ),
@@ -534,7 +604,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.camera_alt, size: 14, color: Colors.grey[600]),
+                    Icon(Icons.camera_alt, size: 14, color: HiPopColors.lightTextSecondary),
                     const SizedBox(width: 4),
                     InkWell(
                       onTap: () => _launchInstagram(market.instagramHandle!),
@@ -545,7 +615,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
                           '@${market.instagramHandle!}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.blue[700],
+                            color: HiPopColors.primaryDeepSage,
                             decoration: TextDecoration.underline,
                           ),
                         ),
@@ -575,13 +645,13 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             Icon(
               icon,
               size: 64,
-              color: Colors.grey[400],
+              color: HiPopColors.lightTextTertiary,
             ),
             const SizedBox(height: 16),
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: Colors.grey[600],
+                color: HiPopColors.lightTextSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -589,21 +659,30 @@ class _FavoritesScreenState extends State<FavoritesScreen>
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[500],
+                color: HiPopColors.lightTextTertiary,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
+            FilledButton(
               onPressed: () {
                 // Navigate back to markets discovery
                 context.pop();
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
+              style: FilledButton.styleFrom(
+                backgroundColor: HiPopColors.primaryDeepSage,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Explore Markets'),
+              child: const Text(
+                'Explore Markets',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),
@@ -613,25 +692,55 @@ class _FavoritesScreenState extends State<FavoritesScreen>
 
 
   void _removeFavoriteVendor(String vendorId) {
-    context.read<FavoritesBloc>().add(ToggleVendorFavorite(vendorId: vendorId));
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.user.uid : null;
+    
+    context.read<FavoritesBloc>().add(
+      ToggleVendorFavorite(vendorId: vendorId, userId: userId),
+    );
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Vendor removed from favorites'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('Vendor removed from favorites'),
+        backgroundColor: HiPopColors.primaryDeepSageDark,
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'UNDO',
+          textColor: HiPopColors.premiumGold,
+          onPressed: () {
+            // Toggle back to re-add
+            context.read<FavoritesBloc>().add(
+              ToggleVendorFavorite(vendorId: vendorId, userId: userId),
+            );
+          },
+        ),
       ),
     );
   }
 
   void _removeFavoriteMarket(String marketId) {
-    context.read<FavoritesBloc>().add(ToggleMarketFavorite(marketId: marketId));
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.user.uid : null;
+    
+    context.read<FavoritesBloc>().add(
+      ToggleMarketFavorite(marketId: marketId, userId: userId),
+    );
     
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Market removed from favorites'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('Market removed from favorites'),
+        backgroundColor: HiPopColors.primaryDeepSageDark,
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'UNDO',
+          textColor: HiPopColors.premiumGold,
+          onPressed: () {
+            // Toggle back to re-add
+            context.read<FavoritesBloc>().add(
+              ToggleMarketFavorite(marketId: marketId, userId: userId),
+            );
+          },
+        ),
       ),
     );
   }
@@ -645,7 +754,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not open phone app: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -660,7 +769,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not open email app: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -675,7 +784,7 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not open Instagram: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }

@@ -221,10 +221,10 @@ class SubscriptionService {
     final userType = userProfile.data()?['userType'] ?? 'shopper';
     
     final targetTier = userType == 'vendor' 
-        ? SubscriptionTier.vendorPro
+        ? SubscriptionTier.vendorPremium
         : userType == 'market_organizer'
-        ? SubscriptionTier.marketOrganizerPro
-        : SubscriptionTier.vendorPro;
+        ? SubscriptionTier.marketOrganizerPremium
+        : SubscriptionTier.vendorPremium;
     
     return upgradeToTier(
       userId,

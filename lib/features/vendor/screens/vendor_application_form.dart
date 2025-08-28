@@ -900,7 +900,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Starting at \$29/month. Cancel anytime. 30-day money back guarantee.',
+                        'Starting at \$29/month. Cancel anytime. Secure Payment.',
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontSize: 12,
@@ -1026,7 +1026,7 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Starting at \$29/month. Cancel anytime. 30-day money back guarantee.',
+                        'Starting at \$29/month. Cancel anytime. Secure Payment.',
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontSize: 12,

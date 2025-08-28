@@ -100,7 +100,7 @@ class CEOMetricsService {
       
       int vendorBasic = 0;
       int vendorGrowth = 0;
-      int vendorPro = 0;
+      int vendorPremium = 0;
       int organizerBasic = 0;
       int organizerPro = 0;
       int shopperPremium = 0;
@@ -115,7 +115,7 @@ class CEOMetricsService {
             vendorGrowth++;
             break;
           case 'vendor_pro':
-            vendorPro++;
+            vendorPremium++;
             break;
           case 'organizer_basic':
             organizerBasic++;
@@ -151,7 +151,7 @@ class CEOMetricsService {
         'subscriptions': {
           'vendorBasic': vendorBasic,
           'vendorGrowth': vendorGrowth,
-          'vendorPro': vendorPro,
+          'vendorPremium': vendorPremium,
           'organizerBasic': organizerBasic,
           'organizerPro': organizerPro,
           'shopperPremium': shopperPremium,

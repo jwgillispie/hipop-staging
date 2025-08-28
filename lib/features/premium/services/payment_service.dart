@@ -439,6 +439,19 @@ class PaymentService {
 
   /// Get subscription pricing for user type
   static SubscriptionPricing getPricingForUserType(String userType) {
+    debugPrint('\n🎯 === getPricingForUserType DEBUG ===');
+    debugPrint('👤 User type: $userType');
+    debugPrint('🔍 Checking dotenv status...');
+    debugPrint('📦 dotenv.env null? ${dotenv.env == null}');
+    
+    try {
+      debugPrint('🔑 STRIPE_PRICE_VENDOR_PREMIUM = ${dotenv.env['STRIPE_PRICE_VENDOR_PREMIUM']}');
+      debugPrint('🔑 STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM = ${dotenv.env['STRIPE_PRICE_MARKET_ORGANIZER_PREMIUM']}');
+    } catch (e) {
+      debugPrint('❌ Error reading dotenv: $e');
+    }
+    debugPrint('🎯 === END DEBUG ===\n');
+    
     switch (userType) {
       case 'vendor':
         return SubscriptionPricing(
@@ -494,11 +507,11 @@ class PaymentService {
   static SubscriptionTier getSubscriptionTierForUserType(String userType) {
     switch (userType) {
       case 'vendor':
-        return SubscriptionTier.vendorPro;
+        return SubscriptionTier.vendorPremium;
       case 'market_organizer':
-        return SubscriptionTier.marketOrganizerPro;
+        return SubscriptionTier.marketOrganizerPremium;
       case 'shopper':
-        return SubscriptionTier.shopperPro;
+        return SubscriptionTier.shopperPremium;
       default:
         throw ArgumentError('Unsupported user type: $userType');
     }

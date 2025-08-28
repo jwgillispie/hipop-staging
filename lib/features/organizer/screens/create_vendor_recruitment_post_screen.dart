@@ -62,7 +62,7 @@ class _CreateVendorRecruitmentPostScreenState extends State<CreateVendorRecruitm
       if (!hasAccess) {
         // Redirect to upgrade page if not premium
         if (mounted) {
-          context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+          context.go('/premium/upgrade?tier=marketOrganizerPremium&userId=${user.uid}');
         }
         return;
       }
@@ -73,7 +73,7 @@ class _CreateVendorRecruitmentPostScreenState extends State<CreateVendorRecruitm
     } catch (e) {
       debugPrint('Error checking premium access: $e');
       if (mounted) {
-        context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+        context.go('/premium/upgrade?tier=marketOrganizerPremium&userId=${user.uid}');
       }
     }
   }

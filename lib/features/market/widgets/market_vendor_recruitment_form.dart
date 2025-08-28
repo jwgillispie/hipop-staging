@@ -225,7 +225,7 @@ class _MarketVendorRecruitmentFormState extends State<MarketVendorRecruitmentFor
               Navigator.of(context).pop();
               final user = FirebaseAuth.instance.currentUser;
               if (user != null) {
-                context.go('/premium/upgrade?tier=marketOrganizerPro&userId=${user.uid}');
+                context.go('/premium/upgrade?tier=marketOrganizerPremium&userId=${user.uid}');
               }
             },
             icon: const Icon(Icons.diamond, size: 18),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
+import '../../../blocs/vendor/vendor_products_bloc.dart';
 import '../../../core/constants/constants.dart';
 import '../../shared/widgets/common/loading_widget.dart';
 import '../models/vendor_product.dart';
@@ -17,69 +18,89 @@ import '../../shared/services/user_feedback_service.dart';
 
 /// Unified screen for managing vendor's global product catalog and market assignments
 /// Replaces both the old Market Items screen and Products tab in Sales Tracker
-class VendorProductsManagementScreen extends StatefulWidget {
+class VendorProductsManagementScreen extends StatelessWidget {
   const VendorProductsManagementScreen({super.key});
 
   @override
-  State<VendorProductsManagementScreen> createState() => _VendorProductsManagementScreenState();
+  Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! Authenticated) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Please log in to access this page'),
+        ),
+      );
+    }
+
+    return BlocProvider(
+      create: (context) => VendorProductsBloc()..add(LoadProducts(authState.user.uid)),
+      child: _VendorProductsManagementScreenContent(),
+    );
+  }
 }
 
-class _VendorProductsManagementScreenState extends State<VendorProductsManagementScreen> 
+class _VendorProductsManagementScreenContent extends StatefulWidget {
+  @override
+  State<_VendorProductsManagementScreenContent> createState() => _VendorProductsManagementScreenContentState();
+}
+
+class _VendorProductsManagementScreenContentState extends State<_VendorProductsManagementScreenContent> 
     with TickerProviderStateMixin {
   late TabController _tabController;
+  final ScrollController _productsScrollController = ScrollController();
   
-  List<VendorProduct> _products = [];
-  List<VendorProductList> _productLists = [];
   List<Market> _approvedMarkets = [];
-  bool _isLoading = true;
   String _currentUserId = '';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadInitialData();
+    _loadApprovedMarkets();
+    
+    _productsScrollController.addListener(() {
+      if (_productsScrollController.position.extentAfter < 500) {
+        final bloc = context.read<VendorProductsBloc>();
+        final state = bloc.state;
+        if (state is ProductsLoaded && !state.hasReachedEnd && !state.isLoadingMore) {
+          bloc.add(LoadMoreProducts(state.vendorId));
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _productsScrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadInitialData() async {
+  Future<void> _loadApprovedMarkets() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! Authenticated) return;
 
-    setState(() {
-      _currentUserId = authState.user.uid;
-      _isLoading = true;
-    });
+    _currentUserId = authState.user.uid;
 
     try {
-      // Load products and product lists
-      final futures = await Future.wait([
-        VendorProductService.getVendorProducts(_currentUserId),
-        VendorProductService.getProductLists(_currentUserId),
-      ]);
-
       // Load approved markets separately since we need to convert IDs to Market objects
       final approvedMarketIds = await VendorMarketRelationshipService.getApprovedMarketsForVendor(_currentUserId);
       final approvedMarkets = await _getMarketsByIds(approvedMarketIds);
 
       if (mounted) {
         setState(() {
-          _products = futures[0] as List<VendorProduct>;
-          _productLists = futures[1] as List<VendorProductList>;
           _approvedMarkets = approvedMarkets;
-          _isLoading = false;
         });
       }
     } catch (e) {
-      debugPrint('Error loading vendor products data: $e');
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      debugPrint('Error loading vendor approved markets: $e');
+    }
+  }
+  
+  void _refreshProducts() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is Authenticated) {
+      context.read<VendorProductsBloc>().add(RefreshProducts(authState.user.uid));
     }
   }
 
@@ -115,43 +136,76 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           ],
         ),
       ),
-      body: _isLoading
-          ? const LoadingWidget(message: 'Loading your products...')
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildMyProductsTab(),
-                _buildProductListsTab(),
-                _buildSettingsTab(),
-              ],
-            ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildMyProductsTab(),
+          _buildProductListsTab(),
+          _buildSettingsTab(),
+        ],
+      ),
     );
   }
 
   Widget _buildMyProductsTab() {
-    return Column(
-      children: [
-        // Header with stats and add button
-        Container(
-          padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6F9686), // Soft Sage (same as AppBar)
-                Color(0xFF946C7E), // Mauve (same as AppBar)
+    return BlocBuilder<VendorProductsBloc, VendorProductsState>(
+      builder: (context, state) {
+        if (state is ProductsLoading) {
+          return const LoadingWidget(message: 'Loading your products...');
+        }
+        
+        if (state is ProductsError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Error: ${state.message}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    final authState = context.read<AuthBloc>().state;
+                    if (authState is Authenticated) {
+                      context.read<VendorProductsBloc>().add(RefreshProducts(authState.user.uid));
+                    }
+                  },
+                  child: const Text('Retry'),
+                ),
               ],
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_products.length} Products',
+          );
+        }
+        
+        if (state is! ProductsLoaded) {
+          return const SizedBox.shrink();
+        }
+        
+        final products = state.products;
+        
+        return Column(
+          children: [
+            // Header with stats and add button
+            Container(
+              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF6F9686), // Soft Sage (same as AppBar)
+                    Color(0xFF946C7E), // Mauve (same as AppBar)
+                  ],
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${products.length} Products',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.white, // White text to match AppBar
@@ -187,7 +241,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         
         // Products list
         Expanded(
-          child: _products.isEmpty
+          child: products.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -217,14 +271,16 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-                  itemCount: _products.length,
+                  itemCount: products.length,
                   itemBuilder: (context, index) {
-                    final product = _products[index];
+                    final product = products[index];
                     return _buildProductCard(product);
                   },
                 ),
         ),
       ],
+    );
+      },
     );
   }
 
@@ -409,45 +465,49 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
   }
 
   Widget _buildProductListsTab() {
-    return Column(
-      children: [
-        // Header with add list button
-        Container(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Product Lists',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+    return BlocBuilder<VendorProductsBloc, VendorProductsState>(
+      builder: (context, state) {
+        final productLists = state is ProductsLoaded ? state.productLists : <VendorProductList>[];
+        
+        return Column(
+          children: [
+            // Header with add list button
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Product Lists',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Create custom product lists',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Create custom product lists',
-                      style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _createProductList(),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create List'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              ElevatedButton.icon(
-                onPressed: () => _createProductList(),
-                icon: const Icon(Icons.add),
-                label: const Text('Create List'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Product lists grid
-        Expanded(
-          child: _productLists.isEmpty
+            ),
+            // Product lists grid
+            Expanded(
+              child: productLists.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -500,16 +560,16 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
-                        height: 200, // Fixed height for horizontal scrolling
+                        height: 160, // Fixed height for horizontal scrolling - matches card height
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
-                          itemCount: _productLists.length,
+                          itemCount: productLists.length,
                           itemBuilder: (context, index) {
-                            final list = _productLists[index];
+                            final list = productLists[index];
                             return Container(
                               width: 280, // Fixed width for each card
                               margin: EdgeInsets.only(
-                                right: index < _productLists.length - 1 ? 16 : 0,
+                                right: index < productLists.length - 1 ? 16 : 0,
                               ),
                               child: _buildProductListCard(list),
                             );
@@ -522,6 +582,8 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         ),
       ],
     );
+      },
+    );
   }
 
   Widget _buildProductListCard(VendorProductList list) {
@@ -530,7 +592,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         : Theme.of(context).primaryColor;
 
     return Container(
-      height: 200, // Fixed height for horizontal cards
+      height: 160, // Reduced height to prevent overflow
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A), // Clean dark background matching products
         borderRadius: BorderRadius.circular(16),
@@ -552,16 +614,16 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
           onTap: () => _viewProductList(list),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12), // Reduced padding
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header row with color indicator and menu
+                // Header row with color indicator, title and menu
                 Row(
                   children: [
                     Container(
-                      width: 16,
-                      height: 16,
+                      width: 12,
+                      height: 12,
                       decoration: BoxDecoration(
                         color: color,
                         shape: BoxShape.circle,
@@ -574,13 +636,13 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         list.name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                          fontSize: 16, // Slightly smaller font
                           color: Colors.white,
                         ),
                         maxLines: 1,
@@ -591,7 +653,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                       icon: Icon(
                         Icons.more_vert,
                         color: Colors.white.withValues(alpha: 0.7),
-                        size: 20,
+                        size: 18, // Smaller icon
                       ),
                       onSelected: (value) {
                         switch (value) {
@@ -635,84 +697,100 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 
-                // Description
+                // Description (if exists)
                 if (list.description?.isNotEmpty == true) ...[
                   Text(
                     list.description!,
                     style: TextStyle(
                       color: Colors.grey[400],
-                      fontSize: 14,
-                      height: 1.3,
+                      fontSize: 12, // Smaller font
+                      height: 1.2,
                     ),
-                    maxLines: 3,
+                    maxLines: 2, // Reduced max lines
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                 ],
                 
                 const Spacer(),
                 
-                // Footer with product count and action buttons
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: color.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.inventory,
-                            size: 16,
-                            color: color,
+                // Footer row with product count and view details button - fixed overflow
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Product count section - now flexible
+                    Flexible(
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 100,
+                          maxWidth: 140,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.2),
+                            width: 1,
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${list.productCount} products',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.inventory,
+                              size: 12,
+                              color: color,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                ),
-                              ),
+                            const SizedBox(width: 4),
+                            Flexible(
                               child: Text(
-                                'View Details',
-                                textAlign: TextAlign.center,
+                                '${list.productCount} products',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w500,
                                 ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 6),
+                    // View Details button - now flexible
+                    Flexible(
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 80,
+                          maxWidth: 100,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Text(
+                          'View Details',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -743,13 +821,17 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
   }
 
   Widget _buildProductListViewDialog(VendorProductList list) {
+    // Get products from BLoC state
+    final state = context.read<VendorProductsBloc>().state;
+    final products = state is ProductsLoaded ? state.products : <VendorProduct>[];
+    
     // Get products in this list
-    final listProducts = _products.where((product) => 
+    final listProducts = products.where((product) => 
       list.productIds.contains(product.id)
     ).toList();
     
     // Get products NOT in this list
-    final availableProducts = _products.where((product) => 
+    final availableProducts = products.where((product) => 
       !list.productIds.contains(product.id)
     ).toList();
 
@@ -1052,7 +1134,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             backgroundColor: HiPopColors.successGreen,
           ),
         );
-        _loadInitialData(); // Refresh data
+        _refreshProducts(); // Refresh data
       }
     } catch (e) {
       if (mounted) {
@@ -1100,7 +1182,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             backgroundColor: HiPopColors.successGreen,
           ),
         );
-        _loadInitialData(); // Refresh data
+        _refreshProducts(); // Refresh data
       }
     } catch (e) {
       if (mounted) {
@@ -1225,7 +1307,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             backgroundColor: HiPopColors.successGreen,
           ),
         );
-        _loadInitialData(); // Refresh data
+        _refreshProducts(); // Refresh data
       }
     } catch (e) {
       if (mounted) {
@@ -1524,12 +1606,19 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         );
 
         // Refresh the data to update the UI
-        await _loadInitialData();
+        final authState = context.read<AuthBloc>().state;
+        if (authState is Authenticated) {
+          context.read<VendorProductsBloc>().add(RefreshProducts(authState.user.uid));
+        }
         
         // Close and reopen the dialog to show updated data
         if (mounted) {
           Navigator.pop(context);
-          _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+          final state = context.read<VendorProductsBloc>().state;
+          if (state is ProductsLoaded) {
+            final updatedList = state.productLists.firstWhere((l) => l.id == list.id);
+            _viewProductList(updatedList);
+          }
         }
       }
     } catch (e) {
@@ -1568,12 +1657,19 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
         );
 
         // Refresh the data to update the UI
-        await _loadInitialData();
+        final authState = context.read<AuthBloc>().state;
+        if (authState is Authenticated) {
+          context.read<VendorProductsBloc>().add(RefreshProducts(authState.user.uid));
+        }
         
         // Close and reopen the dialog to show updated data
         if (mounted) {
           Navigator.pop(context);
-          _viewProductList(_productLists.firstWhere((l) => l.id == list.id));
+          final state = context.read<VendorProductsBloc>().state;
+          if (state is ProductsLoaded) {
+            final updatedList = state.productLists.firstWhere((l) => l.id == list.id);
+            _viewProductList(updatedList);
+          }
         }
       }
     } catch (e) {
@@ -1938,7 +2034,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             backgroundColor: HiPopColors.successGreen,
           ),
         );
-        _loadInitialData(); // Refresh data
+        _refreshProducts(); // Refresh data
       }
     } catch (e) {
       if (mounted) {
@@ -1978,7 +2074,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             backgroundColor: HiPopColors.successGreen,
           ),
         );
-        _loadInitialData(); // Refresh data
+        _refreshProducts(); // Refresh data
       }
     } catch (e) {
       if (mounted) {
@@ -2004,7 +2100,7 @@ class _VendorProductsManagementScreenState extends State<VendorProductsManagemen
             backgroundColor: HiPopColors.successGreen,
           ),
         );
-        _loadInitialData(); // Refresh data
+        _refreshProducts(); // Refresh data
       }
     } catch (e) {
       if (mounted) {

@@ -47,6 +47,92 @@ class SignUpEvent extends AuthEvent {
 
 class LogoutEvent extends AuthEvent {}
 
+// Phone Authentication Events
+class PhoneSignInRequestedEvent extends AuthEvent {
+  final String phoneNumber;
+  final String? userType;
+  final String? displayName;
+  
+  const PhoneSignInRequestedEvent({
+    required this.phoneNumber,
+    this.userType,
+    this.displayName,
+  });
+  
+  @override
+  List<Object?> get props => [phoneNumber, userType, displayName];
+}
+
+class PhoneCodeSentEvent extends AuthEvent {
+  final String verificationId;
+  final int? resendToken;
+  
+  const PhoneCodeSentEvent({
+    required this.verificationId,
+    this.resendToken,
+  });
+  
+  @override
+  List<Object?> get props => [verificationId, resendToken];
+}
+
+class PhoneVerificationCompletedEvent extends AuthEvent {
+  final dynamic credential;
+  
+  const PhoneVerificationCompletedEvent({required this.credential});
+  
+  @override
+  List<Object?> get props => [credential];
+}
+
+class PhoneVerificationFailedEvent extends AuthEvent {
+  final String error;
+  
+  const PhoneVerificationFailedEvent({required this.error});
+  
+  @override
+  List<Object?> get props => [error];
+}
+
+class VerifyPhoneCodeEvent extends AuthEvent {
+  final String verificationId;
+  final String smsCode;
+  final String? userType;
+  final String? displayName;
+  
+  const VerifyPhoneCodeEvent({
+    required this.verificationId,
+    required this.smsCode,
+    this.userType,
+    this.displayName,
+  });
+  
+  @override
+  List<Object?> get props => [verificationId, smsCode, userType, displayName];
+}
+
+class ResendPhoneCodeEvent extends AuthEvent {
+  final String phoneNumber;
+  final int? resendToken;
+  
+  const ResendPhoneCodeEvent({
+    required this.phoneNumber,
+    this.resendToken,
+  });
+  
+  @override
+  List<Object?> get props => [phoneNumber, resendToken];
+}
+
+class LinkPhoneNumberEvent extends AuthEvent {
+  final String phoneNumber;
+  
+  const LinkPhoneNumberEvent({required this.phoneNumber});
+  
+  @override
+  List<Object?> get props => [phoneNumber];
+}
+
 class ForgotPasswordEvent extends AuthEvent {
   final String email;
   

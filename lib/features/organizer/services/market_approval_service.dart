@@ -11,9 +11,13 @@ class MarketApprovalService {
   static const String _trackingCollection = 'vendor_monthly_tracking';
 
   /// Get pending approvals for market organizer
-  /// NOTE: Market posts are now auto-approved, so this returns empty
+  /// NOTE: HiPop Trust-Based System - All vendor posts are automatically approved
+  /// This method returns empty as there are no pending approvals in the trust-based system
   static Stream<List<ApprovalRequest>> getPendingApprovals(String organizerId) {
-    // Market posts are auto-approved - no pending requests exist
+    // HiPop operates on a trust-based system:
+    // - All vendor posts are automatically approved
+    // - Markets activate immediately upon creation
+    // - No approval workflows needed - fostering rapid community growth
     return Stream.value(<ApprovalRequest>[]);
   }
 
@@ -276,7 +280,8 @@ class MarketApprovalService {
     }
   }
 
-  /// Get approved vendors for a market on a specific date
+  /// Get auto-approved vendors for a market on a specific date
+  /// NOTE: In the HiPop trust-based system, all active vendor posts are automatically approved
   static Stream<List<Map<String, dynamic>>> getApprovedVendorsForMarket(
     String marketId, 
     DateTime date,
@@ -287,7 +292,7 @@ class MarketApprovalService {
     return _firestore
         .collection(_postsCollection)
         .where('associatedMarketId', isEqualTo: marketId)
-        .where('isActive', isEqualTo: true) // Changed: All active posts are auto-approved
+        .where('isActive', isEqualTo: true) // Trust-Based System: All active posts are auto-approved
         .where('popUpStartDateTime', isGreaterThanOrEqualTo: startOfDay)
         .where('popUpStartDateTime', isLessThan: endOfDay)
         .snapshots()
@@ -295,6 +300,9 @@ class MarketApprovalService {
             .map((doc) => {
               'id': doc.id,
               ...doc.data(),
+              // Add auto-approved flag for UI clarity
+              'autoApproved': true,
+              'trustBasedApproval': true,
             })
             .toList());
   }

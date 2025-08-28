@@ -517,7 +517,7 @@ class OrganizerBulkMessagingService {
       if (subscriptionQuery.docs.isNotEmpty) {
         final subscription = subscriptionQuery.docs.first.data();
         final tier = subscription['tier'] as String?;
-        return tier == 'marketOrganizerPro' || tier == 'enterprise';
+        return tier == 'marketOrganizerPremium' || tier == 'enterprise';
       }
       
       return false;

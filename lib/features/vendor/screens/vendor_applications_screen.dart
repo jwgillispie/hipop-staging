@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
+import 'package:hipop/blocs/vendor/vendor_applications_bloc.dart';
 import 'package:hipop/features/vendor/models/vendor_application.dart';
 import 'package:hipop/features/vendor/services/vendor_application_service.dart';
 import 'package:hipop/features/market/services/market_service.dart';
@@ -27,6 +29,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
   List<String> _validMarketIds = []; // Only markets that actually exist
   bool _loadingMarketNames = true;
   bool _showCalendarView = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -39,6 +42,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -70,9 +74,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
       final Map<String, String> marketNames = {};
       final List<String> validMarketIds = [];
       
-      if (kDebugMode) {
-        print('DEBUG: Checking ${managedMarketIds.length} managed markets: $managedMarketIds');
-      }
       
       for (String marketId in managedMarketIds) {
         try {
@@ -81,18 +82,9 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
             // Market exists and is active - include it
             marketNames[marketId] = market.name;
             validMarketIds.add(marketId);
-            if (kDebugMode) {
-              print('DEBUG: Found valid market: ${market.name} ($marketId)');
-            }
           } else {
-            if (kDebugMode) {
-              print('DEBUG: Market $marketId not found or inactive - excluding from list');
-            }
           }
         } catch (e) {
-          if (kDebugMode) {
-            print('DEBUG: Error loading market $marketId: $e - excluding from list');
-          }
         }
       }
       
@@ -105,9 +97,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           // If current selected market is not valid, switch to first valid one
           if (_selectedMarketId != null && !validMarketIds.contains(_selectedMarketId)) {
             _selectedMarketId = validMarketIds.isNotEmpty ? validMarketIds.first : null;
-            if (kDebugMode) {
-              print('DEBUG: Switched to valid market: $_selectedMarketId');
-            }
           }
         });
         
@@ -116,15 +105,8 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           _autoRejectExpiredApplications(_selectedMarketId!);
         }
         
-        if (kDebugMode) {
-          print('DEBUG: Valid markets: $_marketNames');
-          print('DEBUG: Selected market: $_selectedMarketId');
-        }
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('DEBUG: Error loading market names: $e');
-      }
       if (mounted) {
         setState(() {
           _loadingMarketNames = false;
@@ -140,15 +122,12 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('⚠️ Auto-rejected $rejectedCount applications with past dates'),
-            backgroundColor: Colors.orange,
+            backgroundColor: HiPopColors.warningAmber,
             duration: const Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('DEBUG: Error auto-rejecting expired applications: $e');
-      }
     }
   }
 
@@ -287,7 +266,11 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
       stream: VendorApplicationService.getApplicationsForMarket(marketId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+            ),
+          );
         }
 
         if (snapshot.hasError) {
@@ -392,111 +375,133 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     );
   }
 
-  // New method to show vendor posts as applications
+  // New method to show vendor posts as applications with pagination
   Widget _buildPostApplicationsList(String? filterStatus) {
     final marketId = _getCurrentMarketId();
-    
-    if (kDebugMode) {
-      print('DEBUG: Selected market ID: $marketId');
-      print('DEBUG: Filter status: $filterStatus');
-    }
     
     if (marketId == null) {
       return const Center(child: Text('No market selected'));
     }
     
-    final repository = VendorPostsRepository();
+    // Convert filter status to ApplicationStatus enum
+    ApplicationStatus? applicationStatus;
+    if (filterStatus == 'approved') {
+      applicationStatus = ApplicationStatus.approved;
+    } else if (filterStatus == 'denied') {
+      applicationStatus = ApplicationStatus.rejected;
+    }
     
-    // Get pending posts for this market
-    return StreamBuilder<List<VendorPost>>(
-      stream: repository.getPendingMarketPosts(marketId),
-      builder: (context, snapshot) {
-        if (kDebugMode) {
-          print('DEBUG: Post Applications StreamBuilder - Connection state: ${snapshot.connectionState}');
-          print('DEBUG: Post Applications StreamBuilder - Has error: ${snapshot.hasError}');
-          if (snapshot.hasError) {
-            print('DEBUG: Post Applications StreamBuilder - Error: ${snapshot.error}');
+    return BlocProvider(
+      create: (context) => VendorApplicationsBloc()..add(
+        LoadApplications(
+          marketId: marketId,
+          filterStatus: applicationStatus,
+        ),
+      ),
+      child: BlocBuilder<VendorApplicationsBloc, VendorApplicationsState>(
+        builder: (context, state) {
+          if (state is ApplicationsLoading) {
+            return Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+              ),
+            );
           }
-          print('DEBUG: Post Applications StreamBuilder - Has data: ${snapshot.hasData}');
-          if (snapshot.hasData) {
-            print('DEBUG: Post Applications StreamBuilder - Data count: ${snapshot.data!.length}');
-          }
-        }
-        
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text('Error: ${snapshot.error}'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => setState(() {}),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final posts = snapshot.data ?? [];
-        
-        // Filter posts based on the selected status
-        final filteredPosts = filterStatus == null 
-            ? posts 
-            : posts.where((post) {
-                if (filterStatus == 'approved') return post.approvalStatus?.value == 'approved';
-                if (filterStatus == 'denied') return post.approvalStatus?.value == 'denied';
-                return false;
-              }).toList();
-        
-        if (kDebugMode) {
-          print('DEBUG: Received ${posts.length} total posts, filtered to ${filteredPosts.length}');
-        }
-
-        if (filteredPosts.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.assignment,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No ${filterStatus ?? ""} applications',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
+          if (state is ApplicationsError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error: ${state.message}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<VendorApplicationsBloc>().add(
+                        RefreshApplications(
+                          marketId: marketId,
+                          filterStatus: applicationStatus,
+                        ),
+                      );
+                    },
+                    child: const Text('Retry'),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Market post applications will appear here',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
+                ],
+              ),
+            );
+          }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: filteredPosts.length,
-          itemBuilder: (context, index) {
-            final post = filteredPosts[index];
-            return _buildPostApplicationCard(post);
-          },
-        );
-      },
+          if (state is ApplicationsLoaded) {
+            final applications = state.applications;
+            
+            if (applications.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.assignment,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No ${filterStatus ?? ""} applications',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Vendor connections will appear here',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollEndNotification &&
+                    _scrollController.position.extentAfter < 500 &&
+                    !state.hasReachedEnd &&
+                    !state.isLoadingMore) {
+                  context.read<VendorApplicationsBloc>().add(
+                    LoadMoreApplications(
+                      marketId: marketId,
+                      filterStatus: applicationStatus,
+                    ),
+                  );
+                }
+                return false;
+              },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: applications.length + (state.isLoadingMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == applications.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+                  final application = applications[index];
+                  return _buildApplicationCard(application);
+                },
+              ),
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
     );
   }
   
@@ -733,20 +738,11 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
   Widget _buildLegacyApplicationsList(ApplicationStatus? filterStatus) {
     final marketId = _getCurrentMarketId();
     
-    if (kDebugMode) {
-      print('DEBUG: Selected market ID: $marketId');
-      print('DEBUG: Valid markets: $_validMarketIds');
-      print('DEBUG: Filter status: $filterStatus');
-    }
     
     if (marketId == null) {
       return const Center(child: Text('No market selected'));
     }
     
-    if (kDebugMode) {
-      print('DEBUG: Building applications list for market: $marketId');
-      print('DEBUG: Filter status: $filterStatus');
-    }
     
     final stream = filterStatus == null
         ? VendorApplicationService.getApplicationsForMarket(marketId)
@@ -755,20 +751,13 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     return StreamBuilder<List<VendorApplication>>(
       stream: stream,
       builder: (context, snapshot) {
-        if (kDebugMode) {
-          print('DEBUG: StreamBuilder - Connection state: ${snapshot.connectionState}');
-          print('DEBUG: StreamBuilder - Has error: ${snapshot.hasError}');
-          if (snapshot.hasError) {
-            print('DEBUG: StreamBuilder - Error: ${snapshot.error}');
-          }
-          print('DEBUG: StreamBuilder - Has data: ${snapshot.hasData}');
-          if (snapshot.hasData) {
-            print('DEBUG: StreamBuilder - Data count: ${snapshot.data?.length}');
-          }
-        }
         
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+            ),
+          );
         }
 
         if (snapshot.hasError) {
@@ -791,12 +780,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
 
         final applications = snapshot.data ?? [];
         
-        if (kDebugMode) {
-          print('DEBUG: Received ${applications.length} applications');
-          for (var app in applications) {
-            print('DEBUG: Application ID: ${app.id}, Vendor: ${app.vendorBusinessName}, Market: ${app.marketId}');
-          }
-        }
 
         if (applications.isEmpty) {
           return Center(
@@ -919,13 +902,13 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                           margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
+                            color: HiPopColors.warningAmber.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange.shade200),
+                            border: Border.all(color: HiPopColors.warningAmber.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.storefront, size: 16, color: Colors.orange.shade700),
+                              Icon(Icons.storefront, size: 16, color: HiPopColors.warningAmberDark),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -933,7 +916,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.orange.shade700,
+                                    color: HiPopColors.warningAmberDark,
                                   ),
                                 ),
                               ),
@@ -1006,7 +989,7 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
     Color color;
     switch (status) {
       case ApplicationStatus.pending:
-        color = Colors.orange;
+        color = HiPopColors.warningAmber;
         break;
       case ApplicationStatus.approved:
         color = Colors.green;
@@ -1246,29 +1229,21 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
           .collection('vendor_applications')
           .get();
       
-      print('DEBUG: Found ${snapshot.docs.length} total applications in Firestore');
-      
       final currentMarketId = _getCurrentMarketId();
       int matchingMarketCount = 0;
       
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        print('DEBUG: App ${doc.id}: Market=${data['marketId']}, Vendor=${data['vendorId']}, Status=${data['status']}');
         
         if (data['marketId'] == currentMarketId) {
           matchingMarketCount++;
-          print('  ✅ MATCHES current market!');
         }
       }
       
       // Show market organizer info
       final authState = context.read<AuthBloc>().state;
       if (authState is Authenticated) {
-        print('DEBUG: Current user: ${authState.userProfile?.email}');
-        print('DEBUG: Current user type: ${authState.userType}');
-        print('DEBUG: Managed markets: ${authState.userProfile?.managedMarketIds}');
-        print('DEBUG: Currently viewing market: $currentMarketId');
-        print('DEBUG: Applications for this market: $matchingMarketCount');
+        // Debug info for current user and market
       }
       
       if (mounted) {
@@ -1280,7 +1255,6 @@ class _VendorApplicationsScreenState extends State<VendorApplicationsScreen>
         );
       }
     } catch (e) {
-      print('DEBUG: Error getting all applications: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

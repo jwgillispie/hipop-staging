@@ -14,6 +14,7 @@ import '../../shared/services/places_service.dart';
 import '../../shared/services/real_time_analytics_service.dart';
 import '../../shared/services/location_data_service.dart';
 import '../../shared/services/photo_service.dart';
+import '../../shared/services/user_profile_service.dart';
 import '../../vendor/services/vendor_application_service.dart';
 import '../../vendor/services/managed_vendor_service.dart';
 import '../../shared/widgets/common/simple_places_widget.dart';
@@ -36,6 +37,10 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _eventWebsiteController = TextEditingController();
+  final _instagramController = TextEditingController();
+  final _facebookController = TextEditingController();
+  final _ticketUrlController = TextEditingController();
 
   // Address search using Google Places
   PlaceDetails? _selectedPlace;
@@ -79,6 +84,12 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       _existingFlyerUrls = List.from(market.flyerUrls);
       _selectedEventDate = market.eventDate;
       _isLookingForVendors = market.isLookingForVendors;
+      
+      // Populate event link fields
+      _eventWebsiteController.text = market.eventWebsite ?? '';
+      _instagramController.text = market.instagramHandle ?? '';
+      _facebookController.text = market.facebookUrl ?? '';
+      _ticketUrlController.text = market.ticketUrl ?? '';
       _recruitmentData = {
         'isLookingForVendors': market.isLookingForVendors,
         'applicationUrl': market.applicationUrl,
@@ -185,6 +196,10 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _eventWebsiteController.dispose();
+    _instagramController.dispose();
+    _facebookController.dispose();
+    _ticketUrlController.dispose();
     super.dispose();
   }
 
@@ -321,6 +336,25 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       locationName: _selectedPlace!.name,
     );
     
+    // Get auth state and fetch user profile to auto-populate Instagram handle
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.userProfile?.userId : null;
+    String? instagramHandle;
+    
+    if (userId != null) {
+      try {
+        final userProfileService = UserProfileService();
+        final userProfile = await userProfileService.getUserProfile(userId);
+        instagramHandle = userProfile?.instagramHandle;
+        if (instagramHandle != null && instagramHandle.isNotEmpty) {
+          debugPrint('Auto-populating Instagram handle from user profile: $instagramHandle');
+        }
+      } catch (e) {
+        debugPrint('Error fetching user profile for Instagram handle: $e');
+        // Continue without Instagram handle if there's an error
+      }
+    }
+    
     // Create the market with simple date/time
     final market = Market(
       id: '',
@@ -339,6 +373,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       flyerUrls: flyerUrls,
       associatedVendorIds: _selectedVendorIds,
       createdAt: DateTime.now(),
+      instagramHandle: _instagramController.text.trim().isNotEmpty 
+          ? _instagramController.text.replaceAll('@', '').trim() 
+          : null,
       // Vendor Recruitment Fields
       isLookingForVendors: _recruitmentData['isLookingForVendors'] ?? false,
       applicationUrl: _recruitmentData['applicationUrl'],
@@ -351,10 +388,6 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       // Optimized Location Data
       locationData: locationData,
     );
-
-    // Get auth state before async gap
-    final authState = context.read<AuthBloc>().state;
-    final userId = authState is Authenticated ? authState.userProfile?.userId : null;
     
     final createdMarketId = await MarketService.createMarket(market);
     
@@ -385,6 +418,26 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       locationName: _selectedPlace!.name,
     );
     
+    // Get auth state and fetch user profile to potentially update Instagram handle
+    final authState = context.read<AuthBloc>().state;
+    final userId = authState is Authenticated ? authState.userProfile?.userId : null;
+    String? instagramHandle = market.instagramHandle; // Keep existing handle by default
+    
+    // Only update Instagram handle if the market doesn't have one or if user's profile has changed
+    if ((market.instagramHandle == null || market.instagramHandle!.isEmpty) && userId != null) {
+      try {
+        final userProfileService = UserProfileService();
+        final userProfile = await userProfileService.getUserProfile(userId);
+        if (userProfile?.instagramHandle != null && userProfile!.instagramHandle!.isNotEmpty) {
+          instagramHandle = userProfile.instagramHandle;
+          debugPrint('Auto-populating Instagram handle from user profile during update: $instagramHandle');
+        }
+      } catch (e) {
+        debugPrint('Error fetching user profile for Instagram handle during update: $e');
+        // Continue without Instagram handle if there's an error
+      }
+    }
+    
     // Update market with simple date/time
     final updatedMarket = market.copyWith(
       name: _nameController.text.trim(),
@@ -401,6 +454,9 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
           : null,
       flyerUrls: flyerUrls,
       associatedVendorIds: _selectedVendorIds,
+      instagramHandle: _instagramController.text.trim().isNotEmpty 
+          ? _instagramController.text.replaceAll('@', '').trim() 
+          : market.instagramHandle,
       // Vendor Recruitment Fields
       isLookingForVendors: _recruitmentData['isLookingForVendors'] ?? false,
       applicationUrl: _recruitmentData['applicationUrl'],
@@ -1090,6 +1146,16 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                         _isEditing ? 'Edit Market' : 'Create New Market',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: HiPopColors.darkTextPrimary),
                       ),
+                      // Add trust-based system message for new markets
+                      if (!_isEditing)
+                        Text(
+                          'Your market will be immediately visible to all vendors and shoppers!',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: HiPopColors.successGreen,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       // Show remaining markets for free tier users when creating
                       if (!_isEditing)
                         FutureBuilder<int>(
@@ -1131,6 +1197,52 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Trust-Based System Info Card (only for new markets)
+                      if (!_isEditing) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: HiPopColors.successGreen.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: HiPopColors.successGreen.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.verified_user,
+                                color: HiPopColors.successGreen,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Trust-Based System Active',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: HiPopColors.successGreen,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Your market will be active immediately. All vendor posts are auto-approved to foster trust and community growth.',
+                                      style: TextStyle(
+                                        color: HiPopColors.darkTextSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       TextFormField(
                         controller: _nameController,
                         style: TextStyle(color: HiPopColors.darkTextPrimary),
@@ -1239,6 +1351,70 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
                         ),
                         maxLines: 3,
                         textCapitalization: TextCapitalization.sentences,
+                      ),
+                      const SizedBox(height: 16),
+                      // Instagram Handle
+                      TextFormField(
+                        controller: _instagramController,
+                        style: TextStyle(color: HiPopColors.darkTextPrimary),
+                        decoration: InputDecoration(
+                          labelText: 'Instagram Handle (Optional)',
+                          labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+                          prefixIcon: Container(
+                            padding: const EdgeInsets.all(12),
+                            child: Image.asset(
+                              'assets/icons/instagram.png',
+                              width: 24,
+                              height: 24,
+                              color: HiPopColors.darkTextSecondary,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.camera_alt, color: HiPopColors.darkTextSecondary, size: 24);
+                              },
+                            ),
+                          ),
+                          prefixText: '@',
+                          prefixStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+                          hintText: 'yourmarket',
+                          hintStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.darkBorder),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.darkBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: HiPopColors.primaryDeepSage),
+                          ),
+                          filled: true,
+                          fillColor: HiPopColors.darkSurface,
+                          helperText: 'Your market\'s Instagram username',
+                          helperStyle: TextStyle(color: HiPopColors.darkTextTertiary),
+                        ),
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty) {
+                            // Remove @ if user included it
+                            value = value.replaceAll('@', '');
+                            if (value.contains(' ')) {
+                              return 'Instagram handle cannot contain spaces';
+                            }
+                            if (!RegExp(r'^[a-zA-Z0-9._]+$').hasMatch(value)) {
+                              return 'Invalid Instagram handle format';
+                            }
+                          }
+                          return null;
+                        },
+                        onChanged: (value) {
+                          // Remove @ symbol if user types it
+                          if (value.startsWith('@')) {
+                            _instagramController.text = value.substring(1);
+                            _instagramController.selection = TextSelection.fromPosition(
+                              TextPosition(offset: _instagramController.text.length),
+                            );
+                          }
+                        },
                       ),
                       const SizedBox(height: 24),
                       // Flyer Upload Section

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 import '../../models/vendor_post.dart';
 
 class VendorCalendarWidget extends StatefulWidget {
@@ -161,7 +162,7 @@ class _VendorCalendarWidgetState extends State<VendorCalendarWidget> {
                     if (hasLive) {
                       eventColor = Colors.green;
                     } else if (hasUpcoming) {
-                      eventColor = Colors.orange;
+                      eventColor = HiPopColors.warningAmber;
                     } else {
                       eventColor = Colors.grey;
                     }
@@ -182,15 +183,15 @@ class _VendorCalendarWidgetState extends State<VendorCalendarWidget> {
                         margin: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Colors.orange
+                              ? HiPopColors.warningAmber
                               : isToday
-                                  ? Colors.orange.shade100
+                                  ? HiPopColors.warningAmber.withValues(alpha: 0.2)
                                   : hasEvents
                                       ? eventColor?.withValues(alpha: 0.1)
                                       : null,
                           borderRadius: BorderRadius.circular(8),
                           border: isToday && !isSelected
-                              ? Border.all(color: Colors.orange, width: 2)
+                              ? Border.all(color: HiPopColors.warningAmber, width: 2)
                               : hasEvents && !isSelected
                                   ? Border.all(color: eventColor!, width: 1)
                                   : null,
@@ -334,7 +335,7 @@ class _VendorCalendarWidgetState extends State<VendorCalendarWidget> {
                   color: post.isHappening
                       ? Colors.green.shade100
                       : post.isUpcoming
-                          ? Colors.orange.shade100
+                          ? HiPopColors.warningAmber.withValues(alpha: 0.2)
                           : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -350,7 +351,7 @@ class _VendorCalendarWidgetState extends State<VendorCalendarWidget> {
                     color: post.isHappening
                         ? Colors.green.shade700
                         : post.isUpcoming
-                            ? Colors.orange.shade700
+                            ? HiPopColors.warningAmberDark
                             : Colors.grey.shade600,
                   ),
                 ),

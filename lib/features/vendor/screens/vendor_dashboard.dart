@@ -4,13 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hipop/blocs/auth/auth_bloc.dart';
 import 'package:hipop/blocs/auth/auth_event.dart';
 import 'package:hipop/blocs/auth/auth_state.dart';
-import 'package:hipop/features/vendor/models/vendor_post.dart';
-import 'package:hipop/repositories/vendor_posts_repository.dart';
+import 'package:hipop/blocs/vendor/vendor_dashboard_bloc.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_calendar_widget.dart';
 import 'package:hipop/features/shared/widgets/common/loading_widget.dart';
 import 'package:hipop/features/shared/widgets/common/error_widget.dart';
 import 'package:hipop/features/shared/widgets/debug_account_switcher.dart';
-import 'package:hipop/features/shared/services/user_profile_service.dart';
 import 'package:hipop/features/shared/services/welcome_notification_service.dart';
 import 'package:hipop/features/shared/widgets/welcome_notification_dialog.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
@@ -25,16 +23,12 @@ class VendorDashboard extends StatefulWidget {
 class _VendorDashboardState extends State<VendorDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final VendorPostsRepository _vendorPostsRepository = VendorPostsRepository();
   final WelcomeNotificationService _welcomeService = WelcomeNotificationService();
-  bool _hasPremiumAccess = false;
-  bool _isCheckingPremium = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _checkPremiumAccess();
     _checkWelcomeNotification();
   }
   
@@ -66,78 +60,6 @@ class _VendorDashboardState extends State<VendorDashboard>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Re-check premium access when dependencies change (e.g., after hot restart)
-    _checkPremiumAccess();
-  }
-
-  Future<void> _checkPremiumAccess() async {
-    if (!mounted) return;
-    
-    final authState = context.read<AuthBloc>().state;
-    debugPrint('Checking premium access - Auth state: ${authState.runtimeType}');
-    
-    if (authState is Authenticated) {
-      try {
-        setState(() {
-          _isCheckingPremium = true;
-        });
-
-        // Check user profile directly for premium status
-        final userProfileService = UserProfileService();
-        final userProfile = await userProfileService.getUserProfile(authState.user.uid);
-        
-        final hasAccess = userProfile?.isPremium == true && 
-                         (userProfile?.subscriptionStatus == 'active' || 
-                          userProfile?.stripeSubscriptionId?.isNotEmpty == true);
-        
-        debugPrint('');
-        debugPrint('========= PREMIUM ACCESS CHECK =========');
-        debugPrint('User ID: ${authState.user.uid}');
-        debugPrint('User Email: ${authState.user.email}');
-        debugPrint('Has Premium Access: $hasAccess');
-        debugPrint('Profile isPremium: ${userProfile?.isPremium}');
-        debugPrint('Subscription Status: ${userProfile?.subscriptionStatus}');
-        debugPrint('Stripe Sub ID: ${userProfile?.stripeSubscriptionId}');
-        debugPrint('Stripe Customer ID: ${userProfile?.stripeCustomerId}');
-        debugPrint('Timestamp: ${DateTime.now()}');
-        debugPrint('===================================');
-        debugPrint('');
-        
-        if (mounted) {
-          setState(() {
-            _hasPremiumAccess = hasAccess;
-            _isCheckingPremium = false;
-          });
-        }
-      } catch (e) {
-        debugPrint('');
-        debugPrint('========= PREMIUM ACCESS ERROR =========');
-        debugPrint('Error: $e');
-        debugPrint('Stack trace: ${StackTrace.current}');
-        debugPrint('===================================');
-        debugPrint('');
-        
-        if (mounted) {
-          setState(() {
-            _hasPremiumAccess = false;
-            _isCheckingPremium = false;
-          });
-        }
-      }
-    } else {
-      debugPrint('WARNING: User not authenticated - resetting premium access');
-      if (mounted) {
-        setState(() {
-          _hasPremiumAccess = false;
-          _isCheckingPremium = false;
-        });
-      }
-    }
-  }
-
-  @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
@@ -145,91 +67,117 @@ class _VendorDashboardState extends State<VendorDashboard>
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AuthBloc, AuthState>(
-      listener: (context, state) {
-        // Re-check premium access when auth state changes (e.g., after hot restart)
-        if (state is Authenticated) {
-          _checkPremiumAccess();
+    return BlocProvider(
+      create: (context) {
+        final authState = context.read<AuthBloc>().state;
+        if (authState is Authenticated) {
+          return VendorDashboardBloc()..add(LoadVendorDashboard(authState.user.uid));
         }
+        return VendorDashboardBloc();
       },
-      builder: (context, state) {
-        if (state is! Authenticated) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+      child: BlocConsumer<AuthBloc, AuthState>(
+        listener: (context, authState) {
+          // Re-check premium access when auth state changes
+          if (authState is Authenticated) {
+            context.read<VendorDashboardBloc>().add(CheckPremiumAccess(authState.user.uid));
+          }
+        },
+        builder: (context, authState) {
+          if (authState is! Authenticated) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Vendor Dashboard'),
-            flexibleSpace: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    HiPopColors.secondarySoftSage,
-                    HiPopColors.accentMauve,
+          return BlocBuilder<VendorDashboardBloc, VendorDashboardState>(
+            builder: (context, vendorState) {
+              return Scaffold(
+                appBar: _buildAppBar(context, authState, vendorState),
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildDashboardTab(context, authState, vendorState),
+                    _buildCalendarTab(context, authState, vendorState),
                   ],
                 ),
-              ),
-            ),
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            actions: [
-              if (_isCheckingPremium) ...[
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                ),
-              ] else if (_hasPremiumAccess) ...[
-                IconButton(
-                  icon: const Icon(Icons.diamond),
-                  tooltip: 'Premium Dashboard',
-                  onPressed: () {
-                    final authState = context.read<AuthBloc>().state;
-                    if (authState is Authenticated) {
-                      context.go('/vendor/premium-dashboard');
-                    }
-                  },
-                ),
-              ],
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: () => _showLogoutDialog(context),
-              ),
-            ],
-            bottom: TabBar(
-              controller: _tabController,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              tabs: const [
-                Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
-                Tab(text: 'Calendar', icon: Icon(Icons.calendar_today)),
-              ],
-            ),
-          ),
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildDashboardTab(context, state),
-              _buildCalendarTab(context, state),
-            ],
-          ),
-        );
-      },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildDashboardTab(BuildContext context, Authenticated state) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    Authenticated authState,
+    VendorDashboardState vendorState,
+  ) {
+    final bool isCheckingPremium = vendorState is VendorDashboardLoaded && vendorState.isCheckingPremium;
+    final bool hasPremiumAccess = vendorState is VendorDashboardLoaded && vendorState.hasPremiumAccess;
+
+    return AppBar(
+      title: const Text('Vendor Dashboard'),
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              HiPopColors.secondarySoftSage,
+              HiPopColors.accentMauve,
+            ],
+          ),
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        if (isCheckingPremium) ...[
+          const Padding(
+            padding: EdgeInsets.all(12.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+          ),
+        ] else if (hasPremiumAccess) ...[
+          IconButton(
+            icon: const Icon(Icons.diamond),
+            tooltip: 'Premium Dashboard',
+            onPressed: () => context.go('/vendor/premium-dashboard'),
+          ),
+        ],
+        IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () => _showLogoutDialog(context),
+        ),
+      ],
+      bottom: TabBar(
+        controller: _tabController,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white70,
+        tabs: const [
+          Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
+          Tab(text: 'Calendar', icon: Icon(Icons.calendar_today)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardTab(
+    BuildContext context,
+    Authenticated authState,
+    VendorDashboardState vendorState,
+  ) {
+    final bool isCheckingPremium = vendorState is VendorDashboardLoaded && vendorState.isCheckingPremium;
+    final bool hasPremiumAccess = vendorState is VendorDashboardLoaded && vendorState.hasPremiumAccess;
+
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
@@ -246,16 +194,16 @@ class _VendorDashboardState extends State<VendorDashboard>
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _isCheckingPremium 
+                    color: isCheckingPremium 
                       ? HiPopColors.infoBlueGrayLight.withValues(alpha: 0.1)
-                      : _hasPremiumAccess 
+                      : hasPremiumAccess 
                         ? HiPopColors.successGreenLight.withValues(alpha: 0.1) 
                         : HiPopColors.surfacePalePink,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: _isCheckingPremium 
+                      color: isCheckingPremium 
                         ? HiPopColors.infoBlueGray
-                        : _hasPremiumAccess 
+                        : hasPremiumAccess 
                           ? HiPopColors.successGreen 
                           : HiPopColors.lightBorder,
                       width: 1.5,
@@ -263,7 +211,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                   ),
                   child: Row(
                     children: [
-                      if (_isCheckingPremium) ...[
+                      if (isCheckingPremium) ...[
                         const SizedBox(
                           width: 16,
                           height: 16,
@@ -279,23 +227,86 @@ class _VendorDashboardState extends State<VendorDashboard>
                         ),
                       ] else ...[
                         Icon(
-                          _hasPremiumAccess ? Icons.diamond : Icons.info_outline,
-                          color: _hasPremiumAccess ? HiPopColors.successGreen : HiPopColors.lightTextSecondary,
+                          hasPremiumAccess ? Icons.diamond : Icons.info_outline,
+                          color: hasPremiumAccess ? HiPopColors.successGreen : HiPopColors.lightTextSecondary,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _hasPremiumAccess 
+                          hasPremiumAccess 
                             ? 'Premium Access: ACTIVE' 
                             : 'Premium Access: NOT ACTIVE',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: _hasPremiumAccess ? HiPopColors.successGreenDark : HiPopColors.lightTextSecondary,
+                            color: hasPremiumAccess ? HiPopColors.successGreenDark : HiPopColors.lightTextSecondary,
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
+                // Premium Dashboard Button (shown only when premium is active)
+                if (hasPremiumAccess) ...[
+                  GestureDetector(
+                    onTap: () => context.go('/vendor/premium-dashboard'),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            HiPopColors.premiumGold,
+                            HiPopColors.premiumGold.withValues(alpha: 0.8),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: HiPopColors.premiumGold.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.diamond,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Premium Dashboard',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Access exclusive tools & insights',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -317,7 +328,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                                   style: Theme.of(context).textTheme.titleMedium,
                                 ),
                                 Text(
-                                  state.user.displayName ?? state.user.email ?? 'Vendor',
+                                  authState.user.displayName ?? authState.user.email ?? 'Vendor',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Colors.grey[600],
                                   ),
@@ -419,76 +430,81 @@ class _VendorDashboardState extends State<VendorDashboard>
     );
   }
 
-  Widget _buildCalendarTab(BuildContext context, Authenticated state) {
-    return StreamBuilder<List<VendorPost>>(
-      stream: _vendorPostsRepository.getVendorPosts(state.user.uid),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return ErrorDisplayWidget(
-            title: 'Error Loading Events',
-            message: 'Failed to load your events: ${snapshot.error}',
-            onRetry: () => setState(() {}),
-          );
-        }
+  Widget _buildCalendarTab(
+    BuildContext context,
+    Authenticated authState,
+    VendorDashboardState vendorState,
+  ) {
+    if (vendorState is VendorDashboardLoading) {
+      return const LoadingWidget(message: 'Loading your events...');
+    }
 
-        if (!snapshot.hasData) {
-          return const LoadingWidget(message: 'Loading your events...');
-        }
+    if (vendorState is VendorDashboardError) {
+      return ErrorDisplayWidget(
+        title: 'Error Loading Events',
+        message: 'Failed to load your events: ${vendorState.message}',
+        onRetry: () {
+          context.read<VendorDashboardBloc>().add(LoadVendorDashboard(authState.user.uid));
+        },
+      );
+    }
 
-        final posts = snapshot.data!;
+    if (vendorState is VendorDashboardLoaded) {
+      final posts = vendorState.vendorPosts;
 
-        if (posts.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.calendar_today,
-                    size: 80,
-                    color: Colors.grey[400],
+      if (posts.isEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  size: 80,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No events yet',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.grey[600],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No events yet',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create your first pop-up event to see it in the calendar.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[500],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Create your first pop-up event to see it in the calendar.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[500],
-                    ),
-                    textAlign: TextAlign.center,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.go('/vendor/create-popup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: HiPopColors.primaryDeepSage,
+                    foregroundColor: Colors.white,
                   ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => context.go('/vendor/create-popup'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: HiPopColors.primaryDeepSage,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Create Pop-up'),
-                  ),
-                ],
-              ),
+                  child: const Text('Create Pop-up'),
+                ),
+              ],
             ),
-          );
-        }
-
-        return SingleChildScrollView(
-          child: VendorCalendarWidget(
-            posts: posts,
-            onDateSelected: (date, postsForDay) {
-              // Optional: Add functionality for date selection
-            },
           ),
         );
-      },
-    );
+      }
+
+      return SingleChildScrollView(
+        child: VendorCalendarWidget(
+          posts: posts,
+          onDateSelected: (date, postsForDay) {
+            // Optional: Add functionality for date selection
+          },
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildCreatePopupButton(BuildContext context) {
@@ -676,10 +692,6 @@ class _VendorDashboardState extends State<VendorDashboard>
       ),
     );
   }
-
-
-
-
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(

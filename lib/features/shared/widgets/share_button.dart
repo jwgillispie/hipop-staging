@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:hipop/features/shared/services/share_service.dart';
+import 'package:hipop/core/theme/hipop_colors.dart';
 
 /// A reusable share button widget with consistent UI and functionality
 class ShareButton extends StatefulWidget {
@@ -143,11 +144,15 @@ class _ShareButtonState extends State<ShareButton> {
         ? SizedBox(
             width: _getIconSize(),
             height: _getIconSize(),
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.darkTextPrimary),
+            ),
           )
         : Icon(
             widget.customIcon ?? Icons.share,
             size: _getIconSize(),
+            color: HiPopColors.darkTextPrimary,
           ),
       tooltip: 'Share',
       splashRadius: _getSplashRadius(),
