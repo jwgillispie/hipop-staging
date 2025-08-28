@@ -625,8 +625,8 @@ class _VendorPostDetailScreenState extends State<VendorPostDetailScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white,
-              HiPopColors.surfaceSoftPink.withValues(alpha: 0.05),
+              HiPopColors.darkSurface,
+              HiPopColors.darkSurfaceVariant,
             ],
           ),
         ),

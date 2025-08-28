@@ -474,22 +474,6 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
               'Priority customer support',
             ],
           },
-          {
-            'tier': SubscriptionTier.enterprise,
-            'title': 'Enterprise',
-            'price': '\$199.99',
-            'description': 'For large vendor operations and multi-market presence',
-            'features': [
-              'Everything in Vendor Premium',
-              'Enterprise analytics dashboard',
-              'Custom API access and integrations',
-              'Advanced reporting capabilities',
-              'Dedicated account manager',
-              'Multi-location management tools',
-              'Custom branding options',
-              'Enterprise-grade SLA',
-            ],
-          },
         ];
       case 'market_organizer':
         return [
@@ -508,22 +492,6 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
               'Post performance tracking',
               'Vendor application insights',
               'Priority customer support',
-            ],
-          },
-          {
-            'tier': SubscriptionTier.enterprise,
-            'title': 'Enterprise',
-            'price': '\$199.99',
-            'description': 'For market management companies and large operations',
-            'features': [
-              'Everything in Market Organizer Premium',
-              'Enterprise analytics platform',
-              'Custom API access and integrations',
-              'Advanced reporting capabilities',
-              'Dedicated account manager',
-              'Multi-market management tools',
-              'Custom branding options',
-              'Enterprise-grade SLA',
             ],
           },
         ];
@@ -631,8 +599,12 @@ class _PremiumOnboardingScreenState extends State<PremiumOnboardingScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
+              color: HiPopColors.darkSurfaceVariant,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: HiPopColors.accentMauve.withOpacity(0.3),
+                width: 1,
+              ),
             ),
             child: Row(
               children: [

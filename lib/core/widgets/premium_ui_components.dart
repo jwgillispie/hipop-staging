@@ -221,7 +221,7 @@ class PremiumUIComponents {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundColor ?? HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
+        color: backgroundColor ?? HiPopColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: HiPopColors.accentMauve.withValues(alpha: 0.2),

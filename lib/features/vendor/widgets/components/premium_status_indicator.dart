@@ -89,13 +89,13 @@ class PremiumStatusIndicator extends StatelessWidget {
       decoration: BoxDecoration(
         color: hasPremiumAccess 
           ? HiPopColors.successGreenLight.withValues(alpha: 0.1) 
-          : HiPopColors.surfacePalePink,
+          : HiPopColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: hasPremiumAccess 
             ? HiPopColors.successGreen 
-            : HiPopColors.lightBorder,
-          width: 1.5,
+            : HiPopColors.darkBorder,
+          width: 1,
         ),
       ),
       child: Row(

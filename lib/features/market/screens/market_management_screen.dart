@@ -105,26 +105,11 @@ class _MarketManagementScreenState extends State<MarketManagementScreen> {
       return;
     }
 
-    final result = await showDialog<Market>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const MarketFormDialog(),
-    );
-
-    if (result != null) {
-      await _associateMarketWithUser(result.id);
-      // Wait a bit for the AuthBloc to update, then reload markets
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        _loadMarkets();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${result.name} created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    }
+    // Navigate to the new create market screen
+    await context.push('/organizer/create-market');
+    
+    // Reload markets when returning from the create screen
+    _loadMarkets();
   }
 
   Future<void> _associateMarketWithUser(String marketId) async {

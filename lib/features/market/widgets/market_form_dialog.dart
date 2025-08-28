@@ -85,11 +85,8 @@ class _MarketFormDialogState extends State<MarketFormDialog> {
       _selectedEventDate = market.eventDate;
       _isLookingForVendors = market.isLookingForVendors;
       
-      // Populate event link fields
-      _eventWebsiteController.text = market.eventWebsite ?? '';
+      // Populate Instagram handle
       _instagramController.text = market.instagramHandle ?? '';
-      _facebookController.text = market.facebookUrl ?? '';
-      _ticketUrlController.text = market.ticketUrl ?? '';
       _recruitmentData = {
         'isLookingForVendors': market.isLookingForVendors,
         'applicationUrl': market.applicationUrl,

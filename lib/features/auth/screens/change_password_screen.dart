@@ -148,7 +148,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                HiPopColors.shopperAccent,
+                HiPopColors.accentMauve,  // Using mauve instead of shopperAccent
                 HiPopColors.primaryDeepSage,
               ],
             ),
@@ -175,7 +175,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         children: [
                           Icon(
                             Icons.info_outline,
-                            color: HiPopColors.shopperAccent,
+                            color: HiPopColors.accentMauve,  // Using mauve
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -329,7 +329,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 child: ElevatedButton(
                   onPressed: _isChangingPassword ? null : _handleChangePassword,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: HiPopColors.shopperAccent,
+                    backgroundColor: HiPopColors.accentMauve,  // Using mauve
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),

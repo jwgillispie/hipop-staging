@@ -85,8 +85,10 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> with SingleTickerProv
         return HiPopColors.vendorAccent;
       case 'market_organizer':
         return HiPopColors.organizerAccent;
+      case 'shopper':
+        return HiPopColors.accentMauve;  // Using mauve for shoppers
       default:
-        return HiPopColors.shopperAccent;
+        return HiPopColors.accentMauve;
     }
   }
 
@@ -95,17 +97,22 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> with SingleTickerProv
       case 'vendor':
         return [
           HiPopColors.vendorAccent,
-          HiPopColors.vendorAccent.withOpacity(0.7),
+          HiPopColors.vendorAccent.withValues(alpha: 0.7),
         ];
       case 'market_organizer':
         return [
           HiPopColors.organizerAccent,
-          HiPopColors.organizerAccent.withOpacity(0.7),
+          HiPopColors.organizerAccent.withValues(alpha: 0.7),
+        ];
+      case 'shopper':
+        return [
+          HiPopColors.accentMauve,  // Using mauve for shoppers
+          HiPopColors.accentMauve.withValues(alpha: 0.7),
         ];
       default:
         return [
-          HiPopColors.shopperAccent,
-          HiPopColors.shopperAccent.withOpacity(0.7),
+          HiPopColors.accentMauve,
+          HiPopColors.accentMauve.withValues(alpha: 0.7),
         ];
     }
   }
@@ -225,7 +232,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> with SingleTickerProv
             ),
             boxShadow: [
               BoxShadow(
-                color: _getUserTypeColor().withOpacity(0.3),
+                color: _getUserTypeColor().withValues(alpha: 0.3),
                 blurRadius: 20,
                 spreadRadius: 5,
               ),
@@ -404,7 +411,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> with SingleTickerProv
             fieldWidth: 45,
             activeFillColor: HiPopColors.darkBackground,
             inactiveFillColor: HiPopColors.darkSurface,
-            selectedFillColor: _getUserTypeColor().withOpacity(0.1),
+            selectedFillColor: _getUserTypeColor().withValues(alpha: 0.1),
             activeColor: _getUserTypeColor(),
             inactiveColor: HiPopColors.darkBorder,
             selectedColor: _getUserTypeColor(),

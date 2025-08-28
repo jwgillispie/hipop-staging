@@ -83,12 +83,18 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkTheme = widget.userType == 'shopper' || widget.userType == 'market_organizer';
+    
     return Scaffold(
+      backgroundColor: isDarkTheme ? HiPopColors.darkBackground : null,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(
+            Icons.arrow_back, 
+            color: isDarkTheme ? HiPopColors.darkTextPrimary : Colors.white,
+          ),
           onPressed: () => context.go('/auth'),
         ),
       ),
@@ -101,20 +107,30 @@ class _AuthScreenState extends State<AuthScreen> {
         },
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: _getGradientColors(),
-            ),
+            gradient: isDarkTheme 
+              ? null
+              : LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: _getGradientColors(),
+                ),
+            color: isDarkTheme ? HiPopColors.darkBackground : null,
           ),
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
                 child: Card(
-                  elevation: 8,
+                  elevation: isDarkTheme ? 0 : 8,
+                  color: isDarkTheme ? HiPopColors.darkSurface : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
+                    side: isDarkTheme 
+                      ? BorderSide(
+                          color: HiPopColors.accentMauve.withValues(alpha: 0.3),
+                          width: 1,
+                        )
+                      : BorderSide.none,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
@@ -149,6 +165,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildHeader() {
+    final bool isDarkTheme = widget.userType == 'shopper' || widget.userType == 'market_organizer';
+    
     return Column(
       children: [
         Icon(
@@ -163,9 +181,10 @@ class _AuthScreenState extends State<AuthScreen> {
         const SizedBox(height: 16),
         Text(
           '${widget.userType == 'vendor' ? 'Vendor' : widget.userType == 'market_organizer' ? 'Market Organizer' : 'Shopper'} ${_isLogin ? 'Login' : 'Sign Up'}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
+            color: isDarkTheme ? HiPopColors.darkTextPrimary : null,
           ),
         ),
         const SizedBox(height: 8),
@@ -175,7 +194,9 @@ class _AuthScreenState extends State<AuthScreen> {
               : 'Create your account to get started',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey[600],
+            color: isDarkTheme 
+              ? HiPopColors.darkTextSecondary 
+              : Colors.grey[600],
           ),
           textAlign: TextAlign.center,
         ),
@@ -184,15 +205,53 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildForm() {
+    final bool isDarkTheme = widget.userType == 'shopper' || widget.userType == 'market_organizer';
+    final Color accentColor = _getUserTypeColor();
+    
+    final InputDecoration baseDecoration = InputDecoration(
+      filled: true,
+      fillColor: isDarkTheme ? HiPopColors.darkSurfaceVariant : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: isDarkTheme 
+          ? BorderSide(color: HiPopColors.darkBorder)
+          : const BorderSide(),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: isDarkTheme 
+          ? BorderSide(color: HiPopColors.darkBorder.withValues(alpha: 0.5))
+          : const BorderSide(),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: accentColor,
+          width: 2,
+        ),
+      ),
+      labelStyle: TextStyle(
+        color: isDarkTheme ? HiPopColors.darkTextSecondary : null,
+      ),
+      hintStyle: TextStyle(
+        color: isDarkTheme 
+          ? HiPopColors.darkTextSecondary.withValues(alpha: 0.5)
+          : null,
+      ),
+      prefixIconColor: isDarkTheme ? HiPopColors.darkTextSecondary : null,
+    );
+    
     return Column(
       children: [
         if (!_isLogin) ...[
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
+            style: TextStyle(
+              color: isDarkTheme ? HiPopColors.darkTextPrimary : null,
+            ),
+            decoration: baseDecoration.copyWith(
               labelText: 'Full Name',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.person_outline),
             ),
             textCapitalization: TextCapitalization.words,
             validator: (value) {
@@ -209,10 +268,12 @@ class _AuthScreenState extends State<AuthScreen> {
         ],
         TextFormField(
           controller: _emailController,
-          decoration: const InputDecoration(
+          style: TextStyle(
+            color: isDarkTheme ? HiPopColors.darkTextPrimary : null,
+          ),
+          decoration: baseDecoration.copyWith(
             labelText: 'Email',
-            prefixIcon: Icon(Icons.email_outlined),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.email_outlined),
           ),
           keyboardType: TextInputType.emailAddress,
           validator: (value) {
@@ -228,10 +289,12 @@ class _AuthScreenState extends State<AuthScreen> {
         const SizedBox(height: 16),
         TextFormField(
           controller: _passwordController,
-          decoration: const InputDecoration(
+          style: TextStyle(
+            color: isDarkTheme ? HiPopColors.darkTextPrimary : null,
+          ),
+          decoration: baseDecoration.copyWith(
             labelText: 'Password',
-            prefixIcon: Icon(Icons.lock_outline),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.lock_outline),
           ),
           obscureText: true,
           validator: (value) {
@@ -248,10 +311,12 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(height: 16),
           TextFormField(
             controller: _confirmPasswordController,
-            decoration: const InputDecoration(
+            style: TextStyle(
+              color: isDarkTheme ? HiPopColors.darkTextPrimary : null,
+            ),
+            decoration: baseDecoration.copyWith(
               labelText: 'Confirm Password',
-              prefixIcon: Icon(Icons.lock_outline),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.lock_outline),
             ),
             obscureText: true,
             validator: (value) {
@@ -306,6 +371,8 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Widget _buildToggleButton() {
+    final bool isDarkTheme = widget.userType == 'shopper' || widget.userType == 'market_organizer';
+    
     return TextButton(
       onPressed: () {
         if (_isLogin) {
@@ -316,7 +383,11 @@ class _AuthScreenState extends State<AuthScreen> {
       },
       child: RichText(
         text: TextSpan(
-          style: TextStyle(color: Colors.grey[600]),
+          style: TextStyle(
+            color: isDarkTheme 
+              ? HiPopColors.darkTextSecondary
+              : Colors.grey[600],
+          ),
           children: [
             TextSpan(
               text: _isLogin 
@@ -342,8 +413,11 @@ class _AuthScreenState extends State<AuthScreen> {
         return HiPopColors.vendorAccent;
       case 'market_organizer':
         return HiPopColors.organizerAccent;
+      case 'shopper':
+        // Use mauve for shopper instead of soft sage
+        return HiPopColors.accentMauve;
       default:
-        return HiPopColors.shopperAccent;
+        return HiPopColors.accentMauve;
     }
   }
 
@@ -353,18 +427,29 @@ class _AuthScreenState extends State<AuthScreen> {
         return [HiPopColors.vendorAccent, HiPopColors.vendorAccentDark];
       case 'market_organizer':
         return [HiPopColors.organizerAccent, HiPopColors.organizerAccentDark];
+      case 'shopper':
+        // Use mauve gradient for shoppers
+        return [HiPopColors.accentMauve, HiPopColors.accentMauveDark];
       default:
-        return [HiPopColors.shopperAccent, HiPopColors.shopperAccentDark];
+        return [HiPopColors.accentMauve, HiPopColors.accentMauveDark];
     }
   }
 
   Widget _buildTermsAcceptance() {
+    final bool isDarkTheme = widget.userType == 'shopper' || widget.userType == 'market_organizer';
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: isDarkTheme 
+          ? HiPopColors.darkSurfaceVariant 
+          : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isDarkTheme 
+            ? HiPopColors.darkBorder.withValues(alpha: 0.5)
+            : Colors.grey.shade200,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,6 +462,9 @@ class _AuthScreenState extends State<AuthScreen> {
               });
             },
             activeColor: _getUserTypeColor(),
+            side: isDarkTheme 
+              ? BorderSide(color: HiPopColors.darkTextSecondary)
+              : null,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -385,9 +473,14 @@ class _AuthScreenState extends State<AuthScreen> {
               children: [
                 Wrap(
                   children: [
-                    const Text(
+                    Text(
                       'I agree to the ',
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkTheme 
+                          ? HiPopColors.darkTextPrimary
+                          : null,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/legal'),
@@ -400,9 +493,14 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                     ),
-                    const Text(
+                    Text(
                       ' and ',
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkTheme 
+                          ? HiPopColors.darkTextPrimary
+                          : null,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => context.go('/legal'),
@@ -422,7 +520,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   'This includes consent for payment processing through Stripe, analytics data collection, and our three-sided marketplace platform terms.',
                   style: TextStyle(
                     fontSize: 10,
-                    color: Colors.grey.shade600,
+                    color: isDarkTheme 
+                      ? HiPopColors.darkTextSecondary
+                      : Colors.grey.shade600,
                   ),
                 ),
               ],

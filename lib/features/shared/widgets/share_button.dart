@@ -117,6 +117,7 @@ class ShareButton extends StatefulWidget {
 
 class _ShareButtonState extends State<ShareButton> {
   bool _isSharing = false;
+  final GlobalKey _buttonKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +140,7 @@ class _ShareButtonState extends State<ShareButton> {
 
   Widget _buildIconButton(ThemeData theme) {
     return IconButton(
+      key: _buttonKey,
       onPressed: widget.enabled && !_isSharing ? _handleShare : null,
       icon: _isSharing 
         ? SizedBox(
@@ -161,6 +163,7 @@ class _ShareButtonState extends State<ShareButton> {
 
   Widget _buildTextButton(ThemeData theme) {
     return TextButton.icon(
+      key: _buttonKey,
       onPressed: widget.enabled && !_isSharing ? _handleShare : null,
       icon: _isSharing 
         ? SizedBox(
@@ -178,6 +181,7 @@ class _ShareButtonState extends State<ShareButton> {
 
   Widget _buildElevatedButton(ThemeData theme, ColorScheme colorScheme) {
     return ElevatedButton.icon(
+      key: _buttonKey,
       onPressed: widget.enabled && !_isSharing ? _handleShare : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: colorScheme.primary,
@@ -203,6 +207,7 @@ class _ShareButtonState extends State<ShareButton> {
 
   Widget _buildOutlinedButton(ThemeData theme, ColorScheme colorScheme) {
     return OutlinedButton.icon(
+      key: _buttonKey,
       onPressed: widget.enabled && !_isSharing ? _handleShare : null,
       style: OutlinedButton.styleFrom(
         foregroundColor: colorScheme.primary,
@@ -228,6 +233,7 @@ class _ShareButtonState extends State<ShareButton> {
 
   Widget _buildFabButton(ColorScheme colorScheme) {
     return FloatingActionButton(
+      key: _buttonKey,
       onPressed: widget.enabled && !_isSharing ? _handleShare : null,
       backgroundColor: colorScheme.secondary,
       foregroundColor: colorScheme.onSecondary,
@@ -291,10 +297,27 @@ class _ShareButtonState extends State<ShareButton> {
       // Get the content to share
       final content = await widget.onGetShareContent();
       
-      // Perform the share action
+      // Get button position for iPad popover
+      Rect? sharePositionOrigin;
+      if (_buttonKey.currentContext != null) {
+        final RenderBox? renderBox = _buttonKey.currentContext!.findRenderObject() as RenderBox?;
+        if (renderBox != null) {
+          final position = renderBox.localToGlobal(Offset.zero);
+          final size = renderBox.size;
+          sharePositionOrigin = Rect.fromLTWH(
+            position.dx,
+            position.dy,
+            size.width,
+            size.height,
+          );
+        }
+      }
+      
+      // Perform the share action with position for iPad
       final result = await Share.share(
         content,
         subject: widget.subject,
+        sharePositionOrigin: sharePositionOrigin,
       );
 
       // Handle the result

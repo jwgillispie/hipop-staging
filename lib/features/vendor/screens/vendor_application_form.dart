@@ -763,11 +763,15 @@ class _VendorApplicationFormState extends State<VendorApplicationForm> {
                 child: ElevatedButton(
                   onPressed: () => _navigateToUpgrade(),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: HiPopColors.surfacePalePink,
+                    backgroundColor: HiPopColors.darkSurface,
                     foregroundColor: HiPopColors.accentMauve,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(
+                        color: HiPopColors.accentMauve.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                   ),
                   child: const Text(

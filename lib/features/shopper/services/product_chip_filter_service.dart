@@ -19,14 +19,12 @@ class ProductChipFilterService {
   /// If [city] is empty, returns chips from all vendor profiles
   Future<List<String>> getAvailableProductChips({String city = ''}) async {
     try {
-      debugPrint('🔍 Getting available product chips for location: ${city.isEmpty ? "All locations" : city}');
       
       Set<String> uniqueChips = {};
 
       if (city.isEmpty) {
         // Get all vendor profiles and extract their categories
         final allVendors = await _userProfileService.getProfilesByUserType('vendor');
-        debugPrint('📊 Found ${allVendors.length} total vendors');
         
         for (final vendor in allVendors) {
           uniqueChips.addAll(vendor.categories);
@@ -34,11 +32,9 @@ class ProductChipFilterService {
       } else {
         // Get vendor posts in the specified location to identify active vendors
         final vendorPosts = await _getVendorPostsByLocation(city);
-        debugPrint('📊 Found ${vendorPosts.length} vendor posts in $city');
         
         // Get unique vendor IDs from posts
         final vendorIds = vendorPosts.map((post) => post.vendorId).toSet();
-        debugPrint('👥 Found ${vendorIds.length} unique vendors in $city');
         
         // Get vendor profiles for these vendors
         for (final vendorId in vendorIds) {
@@ -50,11 +46,9 @@ class ProductChipFilterService {
       }
 
       final chipsList = uniqueChips.toList()..sort();
-      debugPrint('✅ Found ${chipsList.length} unique product chips: $chipsList');
       
       return chipsList;
     } catch (e) {
-      debugPrint('❌ Error getting available product chips: $e');
       return [];
     }
   }
@@ -84,7 +78,6 @@ class ProductChipFilterService {
       
       return filteredPosts;
     } catch (e) {
-      debugPrint('❌ Error getting vendor posts by location: $e');
       return [];
     }
   }
@@ -99,7 +92,6 @@ class ProductChipFilterService {
     }
 
     try {
-      debugPrint('🔍 Filtering ${posts.length} posts by chips: $selectedChips');
       
       final filteredPosts = <VendorPost>[];
       
@@ -118,10 +110,8 @@ class ProductChipFilterService {
         }
       }
       
-      debugPrint('✅ Filtered to ${filteredPosts.length} posts with matching chips');
       return filteredPosts;
     } catch (e) {
-      debugPrint('❌ Error filtering vendor posts by chips: $e');
       return posts; // Return original posts if filtering fails
     }
   }
@@ -132,7 +122,6 @@ class ProductChipFilterService {
     String city = '',
   }) async {
     try {
-      debugPrint('🔍 Getting vendors by chips: $selectedChips and location: ${city.isEmpty ? "All" : city}');
       
       if (selectedChips.isEmpty) {
         return [];
@@ -163,11 +152,9 @@ class ProductChipFilterService {
       }
 
       final result = matchingVendors.toList();
-      debugPrint('✅ Found ${result.length} vendors matching criteria');
       
       return result;
     } catch (e) {
-      debugPrint('❌ Error getting vendors by chips and location: $e');
       return [];
     }
   }
@@ -185,7 +172,6 @@ class ProductChipFilterService {
       final availableChips = await getAvailableProductChips();
       return chips.where((chip) => availableChips.contains(chip)).toList();
     } catch (e) {
-      debugPrint('❌ Error validating chips: $e');
       return [];
     }
   }
@@ -193,7 +179,6 @@ class ProductChipFilterService {
   /// Get popular product chips (most common across vendors)
   Future<List<String>> getPopularProductChips({int limit = 10}) async {
     try {
-      debugPrint('🔍 Getting popular product chips (limit: $limit)');
       
       final allVendors = await _userProfileService.getProfilesByUserType('vendor');
       
@@ -214,10 +199,8 @@ class ProductChipFilterService {
           .map((entry) => entry.key)
           .toList();
       
-      debugPrint('✅ Popular chips: $popularChips');
       return popularChips;
     } catch (e) {
-      debugPrint('❌ Error getting popular product chips: $e');
       return [];
     }
   }

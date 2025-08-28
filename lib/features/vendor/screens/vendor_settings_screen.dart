@@ -4,12 +4,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import '../../shared/services/user_feedback_service.dart';
 import '../../shared/models/user_feedback.dart';
 import '../../../blocs/auth/auth_bloc.dart';
 import '../../../blocs/auth/auth_state.dart';
+import '../../../core/widgets/hipop_app_bar.dart';
+import '../../../core/theme/hipop_colors.dart';
 
 class VendorSettingsScreen extends StatefulWidget {
   const VendorSettingsScreen({super.key});
@@ -20,15 +21,54 @@ class VendorSettingsScreen extends StatefulWidget {
 
 class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isInitializing = true;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Defer UI heavy operations using post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Show lightweight loading state during initialization
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: HiPopAppBar(
+          title: 'Settings',
+          userRole: 'vendor',
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Loading settings...',
+                style: TextStyle(color: HiPopColors.darkTextSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final user = FirebaseAuth.instance.currentUser;
     
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: const Color(0xFF2E7D32),
+      appBar: HiPopAppBar(
+        title: 'Settings',
+        userRole: 'vendor',
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -39,13 +79,13 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
             icon: Icons.person_outline,
             title: 'Profile',
             subtitle: 'Edit your profile information',
-            onTap: () => context.go('/vendor/profile'),
+            onTap: () => context.push('/vendor/profile'),
           ),
           _buildSettingsTile(
             icon: Icons.lock_outline,
             title: 'Change Password',
             subtitle: 'Update your account password',
-            onTap: () => context.go('/vendor/change-password'),
+            onTap: () => context.push('/vendor/change-password'),
           ),
           
           const SizedBox(height: 24),
@@ -72,22 +112,26 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
                   if (!mounted) return; // Prevent navigation if widget is disposed
                   
                   if (hasPremiumAccess) {
-                    context.go('/subscription-management/${user?.uid}');
+                    context.push('/subscription-management/${user?.uid}');
                   } else {
-                    context.go('/premium/onboarding?userId=${user?.uid}&userType=vendor');
+                    context.push('/premium/onboarding?userId=${user?.uid}&userType=vendor');
                   }
                 },
                 trailing: hasPremiumAccess 
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2E7D32),
+                          color: HiPopColors.premiumGold.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: HiPopColors.premiumGold.withValues(alpha: 0.4),
+                            width: 1,
+                          ),
                         ),
-                        child: const Text(
+                        child: Text(
                           'PREMIUM',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: HiPopColors.premiumGoldLight,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -162,7 +206,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: isDanger ? Colors.red : Colors.grey[600],
+          color: isDanger ? HiPopColors.errorPlum : HiPopColors.darkTextSecondary,
         ),
       ),
     );
@@ -177,23 +221,37 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
     bool isDanger = false,
   }) {
     return Card(
+      color: HiPopColors.darkSurface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: HiPopColors.darkBorder.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(
           icon,
-          color: isDanger ? Colors.red : const Color(0xFF2E7D32),
+          color: isDanger ? HiPopColors.errorPlum : HiPopColors.secondarySoftSage,
         ),
         title: Text(
           title,
           style: TextStyle(
             fontWeight: FontWeight.w500,
-            color: isDanger ? Colors.red : null,
+            color: isDanger ? HiPopColors.errorPlum : HiPopColors.darkTextPrimary,
           ),
         ),
-        subtitle: Text(subtitle),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: isDanger ? HiPopColors.errorPlumLight : HiPopColors.darkTextSecondary,
+          ),
+        ),
         trailing: trailing ?? Icon(
           Icons.chevron_right,
-          color: Colors.grey[400],
+          color: HiPopColors.darkTextTertiary,
         ),
         onTap: onTap,
       ),
@@ -279,7 +337,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Please fill in all fields'),
-                    backgroundColor: Colors.orange,
+                    backgroundColor: HiPopColors.warningAmber,
                   ),
                 );
                 return;
@@ -345,7 +403,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Feedback submitted successfully!'),
-            backgroundColor: Colors.green,
+            backgroundColor: HiPopColors.successGreen,
           ),
         );
       }
@@ -354,7 +412,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to submit feedback: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }
@@ -403,7 +461,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
                 context.go('/');
               }
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
             child: const Text('Sign Out'),
           ),
         ],
@@ -429,7 +487,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
               Navigator.of(context).pop();
               _deleteAccount();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: HiPopColors.errorPlum),
             child: const Text('Delete'),
           ),
         ],
@@ -461,7 +519,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to delete account: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: HiPopColors.errorPlum,
           ),
         );
       }

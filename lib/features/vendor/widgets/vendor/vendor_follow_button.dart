@@ -222,6 +222,11 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
 
   @override
   Widget build(BuildContext context) {
+    // Temporarily hide notification button since shopper premium is not available
+    return const SizedBox.shrink();
+    
+    // Original button code below (disabled for now)
+    /*
     if (_isLoading) {
       return widget.isCompact
           ? const SizedBox(
@@ -290,5 +295,6 @@ class _VendorNotificationButtonState extends State<VendorNotificationButton> {
         ),
       ),
     );
+    */
   }
 }

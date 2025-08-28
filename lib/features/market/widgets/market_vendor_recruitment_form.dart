@@ -404,68 +404,44 @@ class _MarketVendorRecruitmentFormState extends State<MarketVendorRecruitmentFor
             ),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Title Section
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _isLookingForVendors
-                          ? HiPopColors.primaryDeepSage
-                          : HiPopColors.lightTextDisabled,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.storefront,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Looking for Vendors',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: HiPopColors.darkTextPrimary,
-                              ),
+                        Flexible(
+                          child: Text(
+                            'Looking for Vendors',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: HiPopColors.darkTextPrimary,
                             ),
-                            if (!_hasPremiumAccess) ...[
-                              const SizedBox(width: 8),
-                              IconButton(
-                                onPressed: _showPremiumDialog,
-                                icon: Icon(
-                                  Icons.diamond,
-                                  color: HiPopColors.premiumGold,
-                                  size: 20,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: 'Premium Feature',
-                              ),
-                            ],
-                          ],
-                        ),
-                        Text(
-                          _hasPremiumAccess 
-                            ? 'Enable vendor recruitment for this market'
-                            : 'Premium feature - Upgrade to enable',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _hasPremiumAccess 
-                              ? HiPopColors.darkTextSecondary
-                              : HiPopColors.warningAmber,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (!_hasPremiumAccess) ...[
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: _showPremiumDialog,
+                            icon: Icon(
+                              Icons.diamond,
+                              color: HiPopColors.premiumGold,
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Premium Feature',
+                          ),
+                        ],
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Switch(
                     value: _isLookingForVendors,
                     onChanged: _hasPremiumAccess ? _toggleRecruitment : (value) => _showPremiumDialog(),
@@ -474,6 +450,20 @@ class _MarketVendorRecruitmentFormState extends State<MarketVendorRecruitmentFor
                     inactiveTrackColor: _hasPremiumAccess ? null : HiPopColors.darkBorder,
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              // Description Text
+              Text(
+                _hasPremiumAccess 
+                  ? 'Enable vendor recruitment to appear in vendor discovery feeds and receive applications'
+                  : 'Premium feature - Upgrade to enable vendor recruitment for your market',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: _hasPremiumAccess 
+                    ? HiPopColors.darkTextSecondary
+                    : HiPopColors.warningAmber,
+                  height: 1.4,
+                ),
               ),
               
               // Animated Info Banner

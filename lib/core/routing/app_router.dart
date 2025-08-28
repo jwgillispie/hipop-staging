@@ -44,6 +44,7 @@ import '../../features/vendor/screens/select_market_screen.dart';
 import '../../features/organizer/screens/organizer_dashboard.dart';
 import '../../features/organizer/screens/organizer_analytics_screen.dart';
 import '../../features/organizer/screens/organizer_profile_screen.dart';
+import '../../features/organizer/screens/organizer_edit_profile_screen.dart';
 import '../../features/organizer/screens/organizer_calendar_screen.dart';
 import '../../features/organizer/screens/organizer_onboarding_screen.dart';
 import '../../features/organizer/screens/organizer_event_management_screen.dart';
@@ -54,6 +55,7 @@ import '../../features/organizer/screens/organizer_bulk_messaging_screen.dart';
 import '../../features/organizer/screens/create_vendor_recruitment_post_screen.dart';
 import '../../features/organizer/screens/organizer_vendor_posts_screen.dart';
 import '../../features/organizer/screens/vendor_post_responses_screen.dart';
+import '../../features/organizer/screens/create_market_screen.dart';
 // Shared screens
 import '../../features/shared/screens/create_popup_screen.dart';
 import '../../features/shared/screens/custom_items_screen.dart';
@@ -346,6 +348,11 @@ class AppRouter {
               builder: (context, state) => const MarketManagementScreen(),
             ),
             GoRoute(
+              path: 'create-market',
+              name: 'createMarket',
+              builder: (context, state) => const CreateMarketScreen(),
+            ),
+            GoRoute(
               path: 'vendor-management',
               name: 'vendorManagement',
               builder: (context, state) => const VendorManagementScreen(),
@@ -374,6 +381,11 @@ class AppRouter {
               path: 'profile',
               name: 'organizerProfile',
               builder: (context, state) => const OrganizerProfileScreen(),
+            ),
+            GoRoute(
+              path: 'edit-profile',
+              name: 'organizerEditProfile',
+              builder: (context, state) => const OrganizerEditProfileScreen(),
             ),
             GoRoute(
               path: 'change-password',

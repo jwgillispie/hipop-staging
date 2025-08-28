@@ -72,6 +72,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
   // Premium access state
   bool _hasPremiumAccess = false;
   bool _isCheckingPremium = true;
+  bool _isInitializing = true;
   
   // Quick entry mode for busy vendors
   bool _quickEntryMode = false;
@@ -95,11 +96,21 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     _selectedDate = widget.selectedDate ?? DateTime.now();
     _selectedMarketId = widget.marketId;
     _commissionRateController.text = '5.0'; // Default 5% commission
-    _checkPremiumAccess();
-    _loadApprovedMarkets();
-    _loadExistingSalesData();
-    _loadSalesHistory();
-    _loadSalesAnalytics();
+    
+    // Defer heavy operations using post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeHeavyOperations();
+      }
+    });
+  }
+
+  Future<void> _initializeHeavyOperations() async {
+    await _checkPremiumAccess();
+    await _loadApprovedMarkets();
+    await _loadExistingSalesData();
+    await _loadSalesHistory();
+    await _loadSalesAnalytics();
     
     // Track screen view
     RealTimeAnalyticsService.trackPageView(
@@ -110,6 +121,12 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
         'date': _selectedDate.toIso8601String(),
       },
     );
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+    }
   }
   
   @override
@@ -169,6 +186,32 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Show lightweight loading state during initialization
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: HiPopAppBar(
+          title: 'Sales Tracker',
+          userRole: 'vendor',
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Loading sales tracker...',
+                style: TextStyle(color: HiPopColors.darkTextSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     return Scaffold(
       appBar: HiPopAppBar(
         title: 'Sales Tracker',
@@ -349,36 +392,16 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          // Premium upgrade card with gradient and professional styling
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  HiPopColors.surfaceSoftPink.withValues(alpha: isDarkMode ? 0.2 : 1.0),
-                  HiPopColors.surfacePalePink.withValues(alpha: isDarkMode ? 0.15 : 1.0),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
+          // Premium upgrade card with dark card design
+          Card(
+            color: HiPopColors.darkSurface,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
                 color: HiPopColors.premiumGold.withValues(alpha: 0.3),
-                width: 1.5,
+                width: 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: HiPopColors.premiumGold.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-                BoxShadow(
-                  color: isDarkMode 
-                      ? Colors.black.withValues(alpha: 0.3)
-                      : HiPopColors.lightShadow,
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Stack(
               children: [
@@ -613,7 +636,7 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Join hundreds of vendors using HiPop Premium to grow their business and increase revenue by an average of 35%.',
+                    'Premium allows you to find more customers at every pop up.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: isDarkMode
                           ? HiPopColors.darkTextSecondary
@@ -2216,28 +2239,15 @@ class _VendorSalesTrackerScreenState extends State<VendorSalesTrackerScreen>
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
     
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HiPopColors.surfaceSoftPink.withValues(alpha: isDarkMode ? 0.2 : 1.0),
-            HiPopColors.surfacePalePink.withValues(alpha: isDarkMode ? 0.15 : 1.0),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
+    return Card(
+      color: HiPopColors.darkSurface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
           color: HiPopColors.premiumGold.withValues(alpha: 0.3),
-          width: 1.5,
+          width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: HiPopColors.premiumGold.withValues(alpha: 0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),

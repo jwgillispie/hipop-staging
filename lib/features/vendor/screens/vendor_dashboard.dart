@@ -150,7 +150,7 @@ class _VendorDashboardState extends State<VendorDashboard>
           IconButton(
             icon: const Icon(Icons.diamond),
             tooltip: 'Premium Dashboard',
-            onPressed: () => context.go('/vendor/premium-dashboard'),
+            onPressed: () => context.push('/vendor/premium-dashboard'),
           ),
         ],
         IconButton(
@@ -189,65 +189,10 @@ class _VendorDashboardState extends State<VendorDashboard>
                 // Debug Account Switcher
                 const DebugAccountSwitcher(),
                 
-                // Premium Access Debug Info
-                Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isCheckingPremium 
-                      ? HiPopColors.infoBlueGrayLight.withValues(alpha: 0.1)
-                      : hasPremiumAccess 
-                        ? HiPopColors.successGreenLight.withValues(alpha: 0.1) 
-                        : HiPopColors.surfacePalePink,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: isCheckingPremium 
-                        ? HiPopColors.infoBlueGray
-                        : hasPremiumAccess 
-                          ? HiPopColors.successGreen 
-                          : HiPopColors.lightBorder,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      if (isCheckingPremium) ...[
-                        const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Checking Premium Access...',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: HiPopColors.infoBlueGray,
-                          ),
-                        ),
-                      ] else ...[
-                        Icon(
-                          hasPremiumAccess ? Icons.diamond : Icons.info_outline,
-                          color: hasPremiumAccess ? HiPopColors.successGreen : HiPopColors.lightTextSecondary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          hasPremiumAccess 
-                            ? 'Premium Access: ACTIVE' 
-                            : 'Premium Access: NOT ACTIVE',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: hasPremiumAccess ? HiPopColors.successGreenDark : HiPopColors.lightTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
                 // Premium Dashboard Button (shown only when premium is active)
                 if (hasPremiumAccess) ...[
                   GestureDetector(
-                    onTap: () => context.go('/vendor/premium-dashboard'),
+                    onTap: () => context.push('/vendor/premium-dashboard'),
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -262,7 +207,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                         boxShadow: [
                           BoxShadow(
                             color: HiPopColors.premiumGold.withValues(alpha: 0.3),
-                            blurRadius: 8,
+                            blurRadius: 4,
                             offset: const Offset(0, 4),
                           ),
                         ],
@@ -307,35 +252,57 @@ class _VendorDashboardState extends State<VendorDashboard>
                   ),
                   const SizedBox(height: 16),
                 ],
+                // Welcome Back Card with dark design
                 Card(
+                  color: HiPopColors.darkSurface,
+                  margin: EdgeInsets.zero,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: HiPopColors.vendorAccent.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: HiPopColors.vendorAccent,
-                              child: const Icon(Icons.store, color: Colors.white),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome back!',
-                                  style: Theme.of(context).textTheme.titleMedium,
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: HiPopColors.vendorAccent.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.store,
+                            color: HiPopColors.vendorAccent,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back!',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: HiPopColors.darkTextPrimary,
                                 ),
-                                Text(
-                                  authState.user.displayName ?? authState.user.email ?? 'Vendor',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                authState.user.displayName ?? authState.user.email ?? 'Vendor',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: HiPopColors.darkTextSecondary,
                                 ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -346,6 +313,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                   'Dashboard',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -366,7 +334,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'View and manage your pop-ups',
                 Icons.event_available,
                 HiPopColors.primaryDeepSage,
-                () => context.go('/vendor/my-popups'),
+                () => context.push('/vendor/my-popups'),
               ),
               const SizedBox(height: 12),
               _buildDashboardOption(
@@ -375,7 +343,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'View performance insights',
                 Icons.analytics,
                 HiPopColors.accentMauveDark,
-                () => context.go('/vendor/analytics'),
+                () => context.push('/vendor/analytics'),
                 isPremium: true,
               ),
               const SizedBox(height: 12),
@@ -385,7 +353,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Manage your products and market assignments',
                 Icons.inventory_2,
                 HiPopColors.accentDustyPlum,
-                () => context.go('/vendor/products-management'),
+                () => context.push('/vendor/products-management'),
               ),
               const SizedBox(height: 12),
               _buildDashboardOption(
@@ -394,7 +362,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Find markets seeking vendors',
                 Icons.search,
                 HiPopColors.premiumGold,
-                () => context.go('/vendor/market-discovery'),
+                () => context.push('/vendor/market-discovery'),
               ),
               const SizedBox(height: 12),
               _buildDashboardOption(
@@ -403,7 +371,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Track daily sales & revenue',
                 Icons.attach_money,
                 HiPopColors.successGreen,
-                () => context.go('/vendor/sales-tracker'),
+                () => context.push('/vendor/sales-tracker'),
               ),
               const SizedBox(height: 12),
               _buildDashboardOption(
@@ -412,7 +380,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Manage your account and preferences',
                 Icons.settings,
                 HiPopColors.infoBlueGray,
-                () => context.go('/vendor/settings'),
+                () => context.push('/vendor/settings'),
               ),
               const SizedBox(height: 12),
               _buildDashboardOption(
@@ -421,7 +389,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 'Edit your vendor profile',
                 Icons.person,
                 HiPopColors.accentMauve,
-                () => context.go('/vendor/profile'),
+                () => context.push('/vendor/profile'),
               ),
             ]),
           ),
@@ -481,7 +449,7 @@ class _VendorDashboardState extends State<VendorDashboard>
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: () => context.go('/vendor/create-popup'),
+                  onPressed: () => context.push('/vendor/create-popup'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: HiPopColors.primaryDeepSage,
                     foregroundColor: Colors.white,
@@ -522,7 +490,7 @@ class _VendorDashboardState extends State<VendorDashboard>
         boxShadow: [
           BoxShadow(
             color: HiPopColors.vendorAccent.withValues(alpha: 0.3),
-            blurRadius: 12,
+            blurRadius: 6,
             offset: const Offset(0, 6),
           ),
         ],
@@ -530,7 +498,7 @@ class _VendorDashboardState extends State<VendorDashboard>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => context.go('/vendor/popup-creation'),
+          onTap: () => context.push('/vendor/popup-creation'),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -607,7 +575,7 @@ class _VendorDashboardState extends State<VendorDashboard>
         boxShadow: [
           BoxShadow(
             color: HiPopColors.lightShadow.withValues(alpha: 0.1),
-            blurRadius: 8,
+            blurRadius: 4,
             offset: const Offset(0, 4),
           ),
         ],

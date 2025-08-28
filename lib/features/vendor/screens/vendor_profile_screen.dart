@@ -33,6 +33,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   final UserDataDeletionService _deletionService = UserDataDeletionService();
   UserProfile? _currentProfile;
   bool _isLoading = true;
+  bool _isInitializing = true;
   bool _isEditing = false;
   bool _isSaving = false;
   bool _isDeleting = false;
@@ -74,7 +75,23 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    
+    // Defer heavy operations using post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeHeavyOperations();
+      }
+    });
+  }
+
+  Future<void> _initializeHeavyOperations() async {
+    await _loadUserData();
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+    }
   }
 
   @override
@@ -402,12 +419,29 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
                   TextField(
                     controller: passwordController,
                     obscureText: obscurePassword,
+                    style: TextStyle(color: HiPopColors.darkTextPrimary),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      border: const OutlineInputBorder(),
+                      labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+                      hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                      filled: true,
+                      fillColor: HiPopColors.darkSurfaceVariant,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: HiPopColors.darkBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: HiPopColors.darkBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          color: HiPopColors.darkTextSecondary,
                         ),
                         onPressed: () {
                           setDialogState(() {
@@ -488,6 +522,31 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         if (state is! Authenticated) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Show lightweight loading state during initialization
+        if (_isInitializing) {
+          return Scaffold(
+            appBar: HiPopAppBar(
+              title: 'Vendor Profile',
+              userRole: 'vendor',
+            ),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.vendorAccent),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading your profile...',
+                    style: TextStyle(color: HiPopColors.darkTextSecondary),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
@@ -643,10 +702,31 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         TextField(
           controller: _displayNameController,
           enabled: _isEditing,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Display Name',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
             helperText: 'This name will be shown on your pop-up events',
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
         ),
 
@@ -656,10 +736,31 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         TextField(
           controller: _businessNameController,
           enabled: _isEditing,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Business Name (Optional)',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
             helperText: 'Your official business name',
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
         ),
 
@@ -670,10 +771,31 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           controller: _bioController,
           enabled: _isEditing,
           maxLines: 3,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Bio (Optional)',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
             helperText: 'Tell shoppers about your business',
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
         ),
 
@@ -683,11 +805,32 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         TextField(
           controller: _instagramController,
           enabled: _isEditing,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Instagram Handle (Optional)',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
             helperText: 'Your Instagram username (without @)',
-            prefixIcon: Icon(Icons.camera_alt),
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            prefixIcon: Icon(Icons.camera_alt, color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
         ),
 
@@ -697,11 +840,32 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         TextField(
           controller: _websiteController,
           enabled: _isEditing,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Website (Optional)',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
             helperText: 'Your business website URL',
-            prefixIcon: Icon(Icons.web),
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            prefixIcon: Icon(Icons.web, color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
         ),
 
@@ -711,11 +875,32 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
         TextField(
           controller: _phoneNumberController,
           enabled: _isEditing,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Phone Number',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.phone),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+            prefixIcon: Icon(Icons.phone, color: HiPopColors.darkTextSecondary),
             helperText: 'Your business contact number',
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
           keyboardType: TextInputType.phone,
         ),
@@ -736,10 +921,31 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           controller: _specificProductsController,
           enabled: _isEditing,
           maxLines: 3,
-          decoration: const InputDecoration(
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+          decoration: InputDecoration(
             labelText: 'Additional Product Details',
-            border: OutlineInputBorder(),
+            labelStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
             helperText: 'Add any specific details about your products not covered above',
+            helperStyle: TextStyle(color: HiPopColors.darkTextSecondary),
+            filled: true,
+            fillColor: HiPopColors.darkSurfaceVariant,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: HiPopColors.darkBorder.withOpacity(0.5)),
+            ),
           ),
         ),
 
@@ -872,7 +1078,11 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
             const Expanded(
               child: Text(
                 'Additional Contacts',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: HiPopColors.darkTextPrimary,
+                ),
               ),
             ),
             TextButton.icon(
@@ -947,9 +1157,24 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           title: const Text('Add Contact Email'),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(
+            style: TextStyle(color: HiPopColors.darkTextPrimary),
+            decoration: InputDecoration(
               hintText: 'Enter email address',
-              border: OutlineInputBorder(),
+              hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+              filled: true,
+              fillColor: HiPopColors.darkSurfaceVariant,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: HiPopColors.darkBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: HiPopColors.darkBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+              ),
             ),
             keyboardType: TextInputType.emailAddress,
             autofocus: true,
@@ -1068,7 +1293,8 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
           runSpacing: 8,
           children: _selectedProductCategories.map((category) => Chip(
             label: Text(category),
-            backgroundColor: HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
+            backgroundColor: HiPopColors.accentMauve.withOpacity(0.1),
+            side: BorderSide(color: HiPopColors.accentMauve.withOpacity(0.3)),
           )).toList(),
         ),
       ],

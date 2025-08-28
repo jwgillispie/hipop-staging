@@ -539,27 +539,6 @@ class _VendorMarketDiscoveryOptimizedState extends State<VendorMarketDiscoveryOp
               showDismiss: false,
             ),
             
-            const SizedBox(height: 24),
-            
-            // Secondary action - continue browsing markets without discovery features
-            TextButton.icon(
-              onPressed: () {
-                // Navigate to regular markets (public markets)
-                context.go('/markets');
-              },
-              icon: Icon(
-                Icons.explore,
-                color: HiPopColors.darkTextSecondary,
-              ),
-              label: Text(
-                'Browse Public Markets Instead',
-                style: TextStyle(
-                  color: HiPopColors.darkTextSecondary,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            
             const SizedBox(height: 32),
           ],
         ),

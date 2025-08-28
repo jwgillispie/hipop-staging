@@ -170,7 +170,12 @@ class EventDetailView extends StatelessWidget {
                 // Tags
                 if (event.tags.isNotEmpty)
                   _buildTagsSection(context, event.tags),
-                if (event.tags.isNotEmpty) const SizedBox(height: 24),
+                if (event.tags.isNotEmpty) const SizedBox(height: 16),
+
+                // Event Links Section
+                if (_hasEventLinks(event))
+                  _buildEventLinksSection(context, event),
+                if (_hasEventLinks(event)) const SizedBox(height: 24),
 
                 // Action Buttons
                 _buildActionButtons(context, event),
@@ -380,6 +385,188 @@ class EventDetailView extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  bool _hasEventLinks(Event event) {
+    return (event.eventWebsite != null && event.eventWebsite!.isNotEmpty) ||
+           (event.instagramUrl != null && event.instagramUrl!.isNotEmpty) ||
+           (event.facebookUrl != null && event.facebookUrl!.isNotEmpty) ||
+           (event.ticketUrl != null && event.ticketUrl!.isNotEmpty) ||
+           event.links.isNotEmpty;
+  }
+
+  Widget _buildEventLinksSection(BuildContext context, Event event) {
+    return Card(
+      elevation: 2,
+      color: HiPopColors.darkSurface,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: HiPopColors.shopperAccent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.link,
+                    color: HiPopColors.shopperAccent,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  'Event Links',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: HiPopColors.darkTextPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Event Website
+            if (event.eventWebsite != null && event.eventWebsite!.isNotEmpty)
+              _buildLinkTile(
+                context,
+                icon: Icons.language,
+                label: 'Event Website',
+                url: event.eventWebsite!,
+              ),
+            
+            // Instagram
+            if (event.instagramUrl != null && event.instagramUrl!.isNotEmpty)
+              _buildLinkTile(
+                context,
+                icon: Icons.camera_alt,
+                label: 'Instagram',
+                url: event.instagramUrl!,
+                isInstagram: true,
+              ),
+            
+            // Facebook
+            if (event.facebookUrl != null && event.facebookUrl!.isNotEmpty)
+              _buildLinkTile(
+                context,
+                icon: Icons.facebook,
+                label: 'Facebook Event',
+                url: event.facebookUrl!,
+              ),
+            
+            // Ticket/Registration
+            if (event.ticketUrl != null && event.ticketUrl!.isNotEmpty)
+              _buildLinkTile(
+                context,
+                icon: Icons.confirmation_number,
+                label: 'Get Tickets',
+                url: event.ticketUrl!,
+                isPrimary: true,
+              ),
+            
+            // Legacy event links (if any)
+            ...event.links.map((link) => _buildLinkTile(
+              context,
+              icon: _getIconForLinkType(link.type),
+              label: link.label,
+              url: link.url,
+            )),
+            
+            // Additional links (if any)
+            if (event.additionalLinks != null)
+              ...event.additionalLinks!.entries.map((entry) => _buildLinkTile(
+                context,
+                icon: Icons.link,
+                label: entry.key,
+                url: entry.value,
+              )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkTile(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String url,
+    bool isPrimary = false,
+    bool isInstagram = false,
+  }) {
+    final backgroundColor = isPrimary 
+        ? HiPopColors.shopperAccent.withValues(alpha: 0.1)
+        : HiPopColors.darkSurfaceVariant;
+    final iconColor = isPrimary 
+        ? HiPopColors.shopperAccent 
+        : HiPopColors.darkTextSecondary;
+    final textColor = isPrimary
+        ? HiPopColors.shopperAccent
+        : HiPopColors.darkTextPrimary;
+
+    // For Instagram, extract username from URL if it's a full URL
+    String displayText = label;
+    if (isInstagram && url.contains('instagram.com')) {
+      final username = url.split('/').last;
+      displayText = '@$username';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: () => UrlLauncherService.launchWebsite(url),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: iconColor),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    displayText,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: isPrimary ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.open_in_new,
+                  size: 16,
+                  color: HiPopColors.darkTextTertiary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getIconForLinkType(EventLinkType type) {
+    switch (type) {
+      case EventLinkType.tickets:
+        return Icons.confirmation_number;
+      case EventLinkType.registration:
+        return Icons.how_to_reg;
+      case EventLinkType.website:
+        return Icons.language;
+      case EventLinkType.facebook:
+        return Icons.facebook;
+      case EventLinkType.instagram:
+        return Icons.camera_alt;
+      case EventLinkType.other:
+      default:
+        return Icons.link;
+    }
   }
 
   Widget _buildActionButtons(BuildContext context, Event event) {

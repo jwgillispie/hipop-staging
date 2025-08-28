@@ -284,10 +284,10 @@ class VendorPremiumDashboardComponents {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [HiPopColors.surfaceSoftPink.withValues(alpha: 0.5), HiPopColors.surfacePalePink],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          color: HiPopColors.darkSurface,
+          border: Border.all(
+            color: HiPopColors.accentMauve.withOpacity(0.3),
+            width: 1,
           ),
         ),
         child: Padding(
@@ -295,66 +295,71 @@ class VendorPremiumDashboardComponents {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Title at the top spanning full width
+              const Center(
+                child: Text(
+                  'Unlock Vendor Premium Features',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: HiPopColors.accentMauve,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Diamond and price in a row below
               Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: HiPopColors.accentMauve.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
                       Icons.diamond,
                       color: HiPopColors.accentMauve,
-                      size: 28,
+                      size: 36,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Text(
-                      'Unlock Vendor Premium Features',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: HiPopColors.accentMauve,
-                      ),
-                    ),
-                  ),
+                  const SizedBox(width: 20),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
                       color: HiPopColors.primaryDeepSage,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(24),
                     ),
                     child: const Text(
                       '\$29/month',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 18,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               if (customMessage != null) ...[
                 Text(
                   customMessage,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: HiPopColors.lightTextPrimary,
+                    color: HiPopColors.darkTextPrimary,
                   ),
                 ),
                 const SizedBox(height: 16),
               ],
-              const Text(
+              Text(
                 'Transform your vendor business with professional-grade tools:',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: HiPopColors.darkTextPrimary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -380,9 +385,9 @@ class VendorPremiumDashboardComponents {
                     Expanded(
                       child: Text(
                         feature,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: HiPopColors.lightTextPrimary,
+                          color: HiPopColors.darkTextSecondary,
                           height: 1.4,
                         ),
                       ),
@@ -396,7 +401,7 @@ class VendorPremiumDashboardComponents {
                   '+ ${defaultFeatures.length - 6} more premium features',
                   style: TextStyle(
                     fontSize: 14,
-                    color: HiPopColors.lightTextTertiary,
+                    color: HiPopColors.darkTextTertiary,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -434,7 +439,7 @@ class VendorPremiumDashboardComponents {
                   'Cancel anytime • Secure Payment',
                   style: TextStyle(
                     fontSize: 12,
-                    color: HiPopColors.lightTextSecondary,
+                    color: HiPopColors.darkTextTertiary,
                   ),
                 ),
               ),

@@ -31,197 +31,186 @@ class PremiumUpgradeCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    return Container(
+    return Card(
+      color: HiPopColors.darkSurface,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HiPopColors.surfaceSoftPink.withValues(alpha: isDarkMode ? 0.2 : 1.0),
-            HiPopColors.surfacePalePink.withValues(alpha: isDarkMode ? 0.15 : 1.0),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
           color: HiPopColors.premiumGold.withValues(alpha: 0.3),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: HiPopColors.premiumGold.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
-      child: Stack(
-        children: [
-          // Premium pattern overlay
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Icon(
-              Icons.auto_awesome,
-              size: 100,
-              color: HiPopColors.premiumGold.withValues(alpha: 0.1),
-            ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Row(
               children: [
-                // Header with title above icon
-                Column(
-                  children: [
-                    // Title with Premium badge
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? HiPopColors.darkTextPrimary
-                                : HiPopColors.lightTextPrimary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: HiPopColors.premiumGold,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            'Premium',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (showDismiss)
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: isDarkMode
-                                  ? HiPopColors.darkTextTertiary
-                                  : HiPopColors.lightTextTertiary,
-                            ),
-                            onPressed: onDismiss,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Icon
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: HiPopColors.premiumGold.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: HiPopColors.premiumGold,
-                        size: 48,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Subtitle
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: isDarkMode
-                            ? HiPopColors.darkTextSecondary
-                            : HiPopColors.lightTextSecondary,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-                if (customMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    customMessage!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isDarkMode
-                          ? HiPopColors.darkTextSecondary
-                          : HiPopColors.lightTextSecondary,
-                      height: 1.4,
-                    ),
+                // Icon container
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: HiPopColors.premiumGold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
-                if (features != null && features!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  ...features!.map(
+                  child: Icon(
+                    icon,
+                    color: HiPopColors.premiumGold,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: HiPopColors.darkTextPrimary,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: HiPopColors.premiumGold.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'Premium',
+                              style: TextStyle(
+                                color: HiPopColors.premiumGold,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: HiPopColors.darkTextSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (showDismiss)
+                  IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      color: HiPopColors.darkTextTertiary,
+                      size: 20,
+                    ),
+                    onPressed: onDismiss,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            ),
+            if (customMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                customMessage!,
+                style: TextStyle(
+                  color: HiPopColors.darkTextSecondary,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ],
+            if (features != null && features!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: HiPopColors.darkSurfaceElevated,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: HiPopColors.darkBorder,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  children: features!.map(
                     (feature) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Icon(
                             Icons.check_circle,
-                            color: HiPopColors.primaryDeepSage,
-                            size: 20,
+                            color: HiPopColors.successGreen,
+                            size: 16,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               feature,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: isDarkMode
-                                    ? HiPopColors.darkTextPrimary
-                                    : HiPopColors.lightTextPrimary,
+                              style: const TextStyle(
+                                color: HiPopColors.darkTextPrimary,
+                                fontSize: 13,
+                                height: 1.3,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                // CTA Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onUpgrade,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: HiPopColors.primaryDeepSage,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.rocket_launch, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Upgrade Now',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ).toList(),
                 ),
-              ],
+              ),
+            ],
+            const SizedBox(height: 16),
+            // CTA Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onUpgrade,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: HiPopColors.premiumGold,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.rocket_launch, size: 18),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Upgrade Now',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

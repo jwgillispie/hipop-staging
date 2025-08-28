@@ -122,7 +122,6 @@ class EnhancedSearchService {
 
       return resultsList;
     } catch (e) {
-      debugPrint('❌ Error searching vendors by categories: $e');
       return _getDemoVendorData(categories);
     }
   }
@@ -251,7 +250,6 @@ class EnhancedSearchService {
 
       return results.take(limit).toList();
     } catch (e) {
-      debugPrint('❌ Error searching by product: $e');
       return _getDemoProductResults(productQuery);
     }
   }
@@ -341,7 +339,6 @@ class EnhancedSearchService {
 
       return sortedCategories.take(10).map((e) => e.key).toList();
     } catch (e) {
-      debugPrint('❌ Error getting trending categories: $e');
       return [];
     }
   }
@@ -400,7 +397,6 @@ class EnhancedSearchService {
 
       return results;
     } catch (e) {
-      debugPrint('❌ Error searching markets with vendor types: $e');
       return [];
     }
   }
@@ -423,7 +419,6 @@ class EnhancedSearchService {
       // In production, this would analyze user behavior and preferences
       return _getTrendingVendors(location: location, limit: limit);
     } catch (e) {
-      debugPrint('❌ Error getting personalized recommendations: $e');
       return _getDemoRecommendations();
     }
   }
@@ -492,7 +487,6 @@ class EnhancedSearchService {
         };
       }).toList();
     } catch (e) {
-      debugPrint('❌ Error getting trending vendors: $e');
       return [];
     }
   }
@@ -512,7 +506,6 @@ class EnhancedSearchService {
       // User is premium if either check returns true
       return hasFeatureAccess || hasProfilePremium;
     } catch (e) {
-      debugPrint('Error checking premium access: $e');
       return false;
     }
   }
@@ -523,7 +516,6 @@ class EnhancedSearchService {
       final userProfileService = UserProfileService();
       return await userProfileService.hasPremiumAccess(userId);
     } catch (e) {
-      debugPrint('Error checking user profile premium status: $e');
       return false;
     }
   }
@@ -655,7 +647,6 @@ class EnhancedSearchService {
 
       return results;
     } catch (e) {
-      debugPrint('❌ Error in advanced search: $e');
       rethrow;
     }
   }
@@ -772,7 +763,6 @@ class EnhancedSearchService {
           throw Exception('Unknown search type: $searchType');
       }
     } catch (e) {
-      debugPrint('❌ Error executing saved search: $e');
       throw Exception('Failed to execute saved search: $e');
     }
   }

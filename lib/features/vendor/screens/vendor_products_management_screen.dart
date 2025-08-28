@@ -51,12 +51,12 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
   
   List<Market> _approvedMarkets = [];
   String _currentUserId = '';
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadApprovedMarkets();
+    _tabController = TabController(length: 2, vsync: this);
     
     _productsScrollController.addListener(() {
       if (_productsScrollController.position.extentAfter < 500) {
@@ -67,6 +67,23 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
         }
       }
     });
+    
+    // Defer heavy operations using post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeHeavyOperations();
+      }
+    });
+  }
+
+  Future<void> _initializeHeavyOperations() async {
+    await _loadApprovedMarkets();
+    
+    if (mounted) {
+      setState(() {
+        _isInitializing = false;
+      });
+    }
   }
 
   @override
@@ -107,32 +124,55 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Products & Market Items'),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6F9686), // Soft Sage
-                Color(0xFF946C7E), // Mauve
-              ],
-            ),
+    // Show lightweight loading state during initialization
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Products & Market Items',
+            style: TextStyle(color: HiPopColors.darkTextPrimary),
+          ),
+          backgroundColor: HiPopColors.darkSurface,
+          foregroundColor: HiPopColors.darkTextPrimary,
+          iconTheme: IconThemeData(color: HiPopColors.darkTextPrimary),
+          elevation: 2,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.secondarySoftSage),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Loading your products...',
+                style: TextStyle(color: HiPopColors.darkTextSecondary),
+              ),
+            ],
           ),
         ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+      );
+    }
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Products & Market Items',
+          style: TextStyle(color: HiPopColors.darkTextPrimary),
+        ),
+        backgroundColor: HiPopColors.darkSurface,
+        foregroundColor: HiPopColors.darkTextPrimary,
+        iconTheme: IconThemeData(color: HiPopColors.darkTextPrimary),
+        elevation: 2,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: HiPopColors.darkTextPrimary,
+          unselectedLabelColor: HiPopColors.darkTextSecondary,
+          indicatorColor: HiPopColors.secondarySoftSage,
           tabs: const [
             Tab(icon: Icon(Icons.inventory), text: 'My Products'),
             Tab(icon: Icon(Icons.list_alt), text: 'Product Lists'),
-            Tab(icon: Icon(Icons.settings), text: 'Settings'),
           ],
         ),
       ),
@@ -141,7 +181,6 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
         children: [
           _buildMyProductsTab(),
           _buildProductListsTab(),
-          _buildSettingsTab(),
         ],
       ),
     );
@@ -188,14 +227,13 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
             // Header with stats and add button
             Container(
               padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF6F9686), // Soft Sage (same as AppBar)
-                    Color(0xFF946C7E), // Mauve (same as AppBar)
-                  ],
+              decoration: BoxDecoration(
+                color: HiPopColors.darkSurface,
+                border: Border(
+                  bottom: BorderSide(
+                    color: HiPopColors.darkBorder.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
               ),
               child: Row(
@@ -206,38 +244,36 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
                       children: [
                         Text(
                           '${products.length} Products',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white, // White text to match AppBar
-                      ),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: HiPopColors.darkTextPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Your global product catalog',
+                          style: TextStyle(
+                            color: HiPopColors.darkTextSecondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Your global product catalog',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9), // Slightly transparent white
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: _showAddProductDialog,
-                icon: const Icon(Icons.add),
-                label: const Text('Add Product'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.2), // Semi-transparent white
-                  foregroundColor: Colors.white,
-                  side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    width: 1,
                   ),
-                ),
+                  ElevatedButton.icon(
+                    onPressed: _showAddProductDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Product'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: HiPopColors.secondarySoftSage,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
         
         // Products list
         Expanded(
@@ -288,7 +324,7 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
     return Container(
       margin: const EdgeInsets.only(bottom: AppConstants.mediumSpacing),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A), // Clean dark background
+        color: HiPopColors.darkSurface, // Clean dark background
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.08), // Subtle border
@@ -307,7 +343,7 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2A2A2A), // Darker background for image container
+                    color: HiPopColors.darkSurfaceVariant, // Darker background for image container
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: Colors.white.withValues(alpha: 0.05),
@@ -594,7 +630,7 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
     return Container(
       height: 160, // Reduced height to prevent overflow
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A), // Clean dark background matching products
+        color: HiPopColors.darkSurface, // Clean dark background matching products
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.08), // Subtle border
@@ -965,6 +1001,15 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
       itemBuilder: (context, index) {
         final product = listProducts[index];
         return Card(
+          color: HiPopColors.darkSurface,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: HiPopColors.darkBorder.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
@@ -1033,6 +1078,15 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
       itemBuilder: (context, index) {
         final product = availableProducts[index];
         return Card(
+          color: HiPopColors.darkSurface,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: HiPopColors.darkBorder.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             leading: CircleAvatar(
@@ -1203,79 +1257,128 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(existingList != null ? 'Edit Product List' : 'Create Product List'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'List Name',
-                  hintText: 'e.g., Grant Park List, Summer Items',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (Optional)',
-                  hintText: 'What products are in this list?',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              const Text('Color (Optional):'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: VendorProductList.suggestedColors.map((colorHex) {
-                  final color = Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
-                  return GestureDetector(
-                    onTap: () {
-                      selectedColor = selectedColor == colorHex ? null : colorHex;
-                      (context as Element).markNeedsBuild();
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: selectedColor == colorHex
-                            ? Border.all(color: Colors.black, width: 3)
-                            : null,
-                      ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: HiPopColors.darkSurface,
+          surfaceTintColor: Colors.transparent,
+          title: Text(
+            existingList != null ? 'Edit Product List' : 'Create Product List',
+            style: const TextStyle(
+              color: HiPopColors.darkTextPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'List Name',
+                    hintText: 'e.g., Grant Park List, Summer Items',
+                    labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                    hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                    filled: true,
+                    fillColor: HiPopColors.darkSurfaceVariant,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: HiPopColors.darkBorder),
                     ),
-                  );
-                }).toList(),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                  decoration: InputDecoration(
+                    labelText: 'Description (Optional)',
+                    hintText: 'What products are in this list?',
+                    labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                    hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                    filled: true,
+                    fillColor: HiPopColors.darkSurfaceVariant,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                    ),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Color (Optional):',
+                  style: TextStyle(color: HiPopColors.darkTextSecondary),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: VendorProductList.suggestedColors.map((colorHex) {
+                    final color = Color(int.parse(colorHex.substring(1), radix: 16) + 0xFF000000);
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          selectedColor = selectedColor == colorHex ? null : colorHex;
+                        });
+                      },
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: selectedColor == colorHex
+                              ? Border.all(color: HiPopColors.primaryDeepSage, width: 3)
+                              : Border.all(color: HiPopColors.darkBorder, width: 1),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: HiPopColors.darkTextSecondary,
               ),
-            ],
-          ),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a list name')),
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                _saveProductList(existingList, name, descriptionController.text.trim(), selectedColor);
+              },
+              child: Text(existingList != null ? 'Update' : 'Create'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a list name')),
-                );
-                return;
-              }
-              Navigator.pop(context);
-              _saveProductList(existingList, name, descriptionController.text.trim(), selectedColor);
-            },
-            child: Text(existingList != null ? 'Update' : 'Create'),
-          ),
-        ],
       ),
     );
   }
@@ -1703,67 +1806,6 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
     return markets;
   }
 
-  /// Build the Settings tab
-  Widget _buildSettingsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Product Settings',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: AppConstants.mediumSpacing),
-          
-          // Feedback section
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.feedback, color: HiPopColors.infoBlueGray),
-              title: const Text('Send Feedback'),
-              subtitle: const Text('Help us improve the product management experience'),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: _showFeedbackDialog,
-            ),
-          ),
-          
-          const SizedBox(height: AppConstants.mediumSpacing),
-          
-          // Product limits info
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppConstants.mediumSpacing),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.info, color: HiPopColors.infoBlueGray),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Product Limits',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Free Plan: Unlimited products, 1 product list\n'
-                    'Vendor Premium: Unlimited products & lists',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// Show dialog to add a new product
   void _showAddProductDialog() {
@@ -1776,56 +1818,145 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add New Product'),
+        backgroundColor: HiPopColors.darkSurface,
+        surfaceTintColor: Colors.transparent,
+        title: const Text(
+          'Add New Product',
+          style: TextStyle(
+            color: HiPopColors.darkTextPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                decoration: InputDecoration(
                   labelText: 'Product Name *',
                   hintText: 'e.g., Handmade Soap',
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                  hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: HiPopColors.darkSurfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: categoryController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                decoration: InputDecoration(
                   labelText: 'Category *',
                   hintText: 'e.g., Bath & Body, Food, Art',
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                  hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: HiPopColors.darkSurfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: descriptionController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                decoration: InputDecoration(
                   labelText: 'Description',
                   hintText: 'Brief description of your product',
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                  hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: HiPopColors.darkSurfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                  ),
                 ),
                 maxLines: 3,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: basePriceController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                decoration: InputDecoration(
                   labelText: 'Base Price',
                   hintText: '0.00',
                   prefixText: '\$',
-                  border: OutlineInputBorder(),
+                  prefixStyle: const TextStyle(color: HiPopColors.darkTextPrimary),
+                  labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                  hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: HiPopColors.darkSurfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                  ),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: tagsController,
-                decoration: const InputDecoration(
+                style: const TextStyle(color: HiPopColors.darkTextPrimary),
+                decoration: InputDecoration(
                   labelText: 'Tags (optional)',
                   hintText: 'organic, handmade, local (comma separated)',
-                  border: OutlineInputBorder(),
+                  labelStyle: const TextStyle(color: HiPopColors.darkTextSecondary),
+                  hintStyle: TextStyle(color: HiPopColors.darkTextSecondary.withOpacity(0.5)),
+                  filled: true,
+                  fillColor: HiPopColors.darkSurfaceVariant,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.darkBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: HiPopColors.primaryDeepSage, width: 2),
+                  ),
                 ),
               ),
             ],
@@ -1834,6 +1965,9 @@ class _VendorProductsManagementScreenContentState extends State<_VendorProductsM
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: HiPopColors.darkTextSecondary,
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(

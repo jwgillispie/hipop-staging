@@ -145,7 +145,7 @@ class _WelcomeNotificationDialogState extends State<WelcomeNotificationDialog>
                               ]
                             : [
                                 Colors.white,
-                                HiPopColors.surfacePalePink,
+                                HiPopColors.accentMauve.withOpacity(0.1),
                               ],
                         ),
                         borderRadius: BorderRadius.circular(24),
@@ -350,7 +350,7 @@ class _WelcomeNotificationDialogState extends State<WelcomeNotificationDialog>
                                     decoration: BoxDecoration(
                                       color: isDarkMode
                                         ? HiPopColors.darkSurfaceElevated.withValues(alpha: 0.5)
-                                        : HiPopColors.surfacePalePink.withValues(alpha: 0.5),
+                                        : HiPopColors.accentMauve.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
                                         color: _accentColor.withValues(alpha: 0.2),

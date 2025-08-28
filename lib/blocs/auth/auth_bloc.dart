@@ -56,14 +56,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onAuthUserChanged(AuthUserChanged event, Emitter<AuthState> emit) async {
     final user = event.user as User?;
-    print('🔐 DEBUG: AuthUserChanged - user is ${user != null ? "not null" : "null"}');
     
     if (user != null) {
       try {
         // Check email verification status
-        print('DEBUG: Email verified: ${user.emailVerified}');
         if (!user.emailVerified) {
-          print('DEBUG: User email not verified - proceeding anyway for staging environment');
           // For staging, we'll proceed even with unverified email
           // In production, you should require verification:
           // emit(EmailVerificationRequired(user: user));
@@ -74,7 +71,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         try {
           await user.getIdToken(true);
         } catch (e) {
-          print('DEBUG: Error refreshing token: $e');
+          // Error refreshing token
         }
         
         // FIRST: Try to load user profile from user_profiles collection (new system)
@@ -98,10 +95,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             return; // Exit early if we have a user profile
           }
         } catch (e) {
-          print('DEBUG: Failed to load user profile: $e');
           // If user profile doesn't exist, create a new one with default type
           try {
-            print('DEBUG: Creating missing user profile for user: ${user.uid}');
             // Default to 'shopper' for new users without profiles
             const defaultUserType = 'shopper';
             userProfile = await _userProfileService.createUserProfile(
@@ -116,7 +111,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               return;
             }
           } catch (createError) {
-            print('DEBUG: Failed to create missing user profile: $createError');
             // If profile creation fails, emit authenticated with default type
             emit(Authenticated(user: user, userType: 'shopper', userProfile: null));
             return;
@@ -126,7 +120,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(Authenticated(user: user, userType: 'shopper', userProfile: null));
       }
     } else {
-      print('🔐 DEBUG: Emitting Unauthenticated state');
       emit(Unauthenticated());
     }
   }
@@ -151,7 +144,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.password.trim(),
       );
       
-      // Manually trigger auth state update immediately after login
       if (userCredential.user != null) {
         add(AuthUserChanged(userCredential.user));
       }
@@ -230,16 +222,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogoutEvent(LogoutEvent event, Emitter<AuthState> emit) async {
-    print('🔐 DEBUG: LogoutEvent triggered');
     emit(const AuthLoading(message: 'Signing out...'));
     
     try {
-      print('🔐 DEBUG: Calling _authRepository.signOut()');
       await _authRepository.signOut();
-      print('🔐 DEBUG: Sign out completed, waiting for AuthUserChanged event');
       // State will be updated via AuthUserChanged event
     } catch (e) {
-      print('🔐 DEBUG: Error during logout: $e');
       emit(AuthError(message: e.toString()));
     }
   }

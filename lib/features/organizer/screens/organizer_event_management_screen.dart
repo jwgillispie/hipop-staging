@@ -190,13 +190,14 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: HiPopColors.darkBackground,
       appBar: HiPopAppBar(
         title: 'Event Management',
-        userRole: 'vendor',
+        userRole: 'organizer',
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: HiPopColors.darkTextPrimary),
             onPressed: _checkAndCreateEvent,
           ),
         ],
@@ -204,64 +205,33 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
           if (authState is! Authenticated) {
-            return const Center(
-              child: Text('Not authenticated'),
+            return Center(
+              child: Text(
+                'Not authenticated',
+                style: TextStyle(color: HiPopColors.darkTextSecondary),
+              ),
             );
           }
 
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Welcome Header
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: HiPopColors.warningAmber,
-                                child: const Icon(Icons.event, color: Colors.white),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Event Management',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Create and manage special events',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Event Usage Card
-                      _buildEventUsageCard(),
-                      const SizedBox(height: 16),
-                      
-                      // Create Event Button
-                      _buildCreateEventButton(context),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    // Welcome Header - Full width with consistent margins
+                    _buildEventManagementHeader(),
+                    const SizedBox(height: 12),
+                    
+                    // Event Usage Card - Full width with consistent margins
+                    _buildEventUsageCard(),
+                    const SizedBox(height: 12),
+                    
+                    // Create Event Button - Full width with consistent margins
+                    _buildCreateEventButton(context),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
               SliverPadding(
@@ -272,8 +242,18 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                     children: [
                       Text(
                         'My Events',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        style: TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: HiPopColors.darkTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Manage and monitor your active events',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: HiPopColors.darkTextSecondary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -292,8 +272,14 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                     return SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
                       sliver: SliverToBoxAdapter(
-                        child: const Center(
-                          child: CircularProgressIndicator(),
+                        child: Container(
+                          padding: const EdgeInsets.all(60),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.organizerAccent),
+                              strokeWidth: 2,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -303,21 +289,48 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                     return SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
                       sliver: SliverToBoxAdapter(
-                        child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(40),
+                          decoration: BoxDecoration(
+                            color: HiPopColors.darkSurface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: HiPopColors.errorPlum.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error, size: 64, color: Colors.grey[400]),
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: HiPopColors.errorPlum.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Icon(
+                                  Icons.error_outline_rounded,
+                                  size: 32,
+                                  color: HiPopColors.errorPlum,
+                                ),
+                              ),
                               const SizedBox(height: 16),
                               Text(
                                 'Error loading events',
-                                style: Theme.of(context).textTheme.titleMedium,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: HiPopColors.darkTextPrimary,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 snapshot.error.toString(),
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[600],
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: HiPopColors.darkTextSecondary,
                                 ),
                               ),
                             ],
@@ -333,26 +346,50 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                     return SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 24.0),
                       sliver: SliverToBoxAdapter(
-                        child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(40),
+                          decoration: BoxDecoration(
+                            color: HiPopColors.darkSurface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: HiPopColors.darkBorder.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.event_note, size: 64, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: HiPopColors.organizerAccent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Icon(
+                                  Icons.event_note_rounded,
+                                  size: 40,
+                                  color: HiPopColors.organizerAccent.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
                               Text(
                                 'No events yet',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.grey[600],
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: HiPopColors.darkTextPrimary,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 'Create your first event to get started',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey[500],
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: HiPopColors.darkTextSecondary,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 24),
                               ElevatedButton.icon(
                                 onPressed: () => _showCreateEventDialog(context),
                                 icon: const Icon(Icons.add),
@@ -360,6 +397,10 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: HiPopColors.organizerAccent,
                                   foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -393,15 +434,107 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
     );
   }
 
+  Widget _buildEventManagementHeader() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: HiPopColors.darkSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: HiPopColors.darkBorder.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    HiPopColors.organizerAccent.withValues(alpha: 0.2),
+                    HiPopColors.organizerAccentDark.withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: HiPopColors.organizerAccent.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.event_note_rounded,
+                color: HiPopColors.organizerAccent,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Event Management',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: HiPopColors.darkTextPrimary,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Create and manage special market events',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: HiPopColors.darkTextSecondary,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: HiPopColors.darkTextTertiary,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEventUsageCard() {
     if (_isLoadingUsage) {
-      return Card(
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: HiPopColors.darkSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: HiPopColors.darkBorder.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(24.0),
           child: Center(
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.primaryDeepSage),
+              valueColor: AlwaysStoppedAnimation<Color>(HiPopColors.organizerAccent),
             ),
           ),
         ),
@@ -414,38 +547,43 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
     final remainingEvents = _eventUsageSummary?['remaining_events'] ?? 1;
     final canCreateMore = _eventUsageSummary?['can_create_more'] ?? true;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: HiPopColors.darkSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
           color: isPremium 
-            ? HiPopColors.primaryDeepSage.withValues(alpha: 0.3)
-            : (canCreateMore ? HiPopColors.successGreen.withValues(alpha: 0.3) : HiPopColors.warningAmber.withValues(alpha: 0.3)),
-          width: 1,
+            ? HiPopColors.premiumGold.withValues(alpha: 0.5)
+            : HiPopColors.darkBorder.withValues(alpha: 0.3),
+          width: isPremium ? 1.5 : 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: isPremium 
+              ? HiPopColors.premiumGold.withValues(alpha: 0.15)
+              : Colors.black.withValues(alpha: 0.2),
+            blurRadius: isPremium ? 12 : 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isPremium
-              ? [
-                  HiPopColors.primaryDeepSage.withValues(alpha: 0.05),
-                  HiPopColors.primaryDeepSage.withValues(alpha: 0.02),
-                ]
-              : [
-                  canCreateMore 
-                    ? HiPopColors.successGreen.withValues(alpha: 0.05)
-                    : HiPopColors.warningAmber.withValues(alpha: 0.05),
-                  Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          gradient: isPremium
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  HiPopColors.premiumGold.withValues(alpha: 0.08),
+                  HiPopColors.premiumGoldDark.withValues(alpha: 0.03),
                 ],
-          ),
+              )
+            : null,
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -454,19 +592,45 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        isPremium ? Icons.star : Icons.calendar_month,
-                        color: isPremium 
-                          ? HiPopColors.primaryDeepSage
-                          : (canCreateMore ? HiPopColors.successGreen : HiPopColors.warningAmber),
-                        size: 20,
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isPremium
+                              ? [
+                                  HiPopColors.premiumGold.withValues(alpha: 0.2),
+                                  HiPopColors.premiumGoldDark.withValues(alpha: 0.1),
+                                ]
+                              : [
+                                  HiPopColors.organizerAccent.withValues(alpha: 0.2),
+                                  HiPopColors.organizerAccentDark.withValues(alpha: 0.1),
+                                ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isPremium
+                              ? HiPopColors.premiumGold.withValues(alpha: 0.3)
+                              : HiPopColors.organizerAccent.withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          isPremium ? Icons.workspace_premium : Icons.calendar_today_rounded,
+                          color: isPremium 
+                            ? HiPopColors.premiumGold
+                            : HiPopColors.organizerAccent,
+                          size: 20,
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Text(
                         'Monthly Event Usage',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 17,
                           color: HiPopColors.darkTextPrimary,
                         ),
                       ),
@@ -474,19 +638,42 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                   ),
                   if (isPremium)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: HiPopColors.primaryDeepSage,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'PREMIUM',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
+                        gradient: LinearGradient(
+                          colors: [
+                            HiPopColors.premiumGold,
+                            HiPopColors.premiumGoldDark,
+                          ],
                         ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: HiPopColors.premiumGold.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.star_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'PREMIUM',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -531,29 +718,55 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                             color: HiPopColors.darkTextPrimary,
                           ),
                         ),
-                        Text(
-                          remainingEvents == 0 ? 'Limit Reached' : '$remainingEvents Remaining',
-                          style: TextStyle(
-                            fontSize: 14,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
                             color: remainingEvents == 0 
-                              ? HiPopColors.warningAmber 
-                              : HiPopColors.darkTextSecondary,
-                            fontWeight: remainingEvents == 0 ? FontWeight.bold : FontWeight.normal,
+                              ? HiPopColors.warningAmber.withValues(alpha: 0.15)
+                              : HiPopColors.organizerAccent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: remainingEvents == 0 
+                                ? HiPopColors.warningAmber.withValues(alpha: 0.3)
+                                : HiPopColors.organizerAccent.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            remainingEvents == 0 ? 'Limit Reached' : '$remainingEvents Remaining',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: remainingEvents == 0 
+                                ? HiPopColors.warningAmber 
+                                : HiPopColors.organizerAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: eventsLimit > 0 ? eventsUsed / eventsLimit : 0,
-                        minHeight: 8,
-                        backgroundColor: Colors.grey[300],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          remainingEvents == 0 
-                            ? HiPopColors.warningAmber 
-                            : HiPopColors.successGreen,
+                    const SizedBox(height: 12),
+                    Container(
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: HiPopColors.darkBackground,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: HiPopColors.darkBorder.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: eventsLimit > 0 ? eventsUsed / eventsLimit : 0,
+                          minHeight: 10,
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            remainingEvents == 0 
+                              ? HiPopColors.warningAmber 
+                              : HiPopColors.organizerAccent,
+                          ),
                         ),
                       ),
                     ),
@@ -625,47 +838,52 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
 
   Widget _buildCreateEventButton(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            HiPopColors.warningAmber,
-            HiPopColors.warningAmberDark,
+            HiPopColors.organizerAccent,
+            HiPopColors.organizerAccentDark,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: HiPopColors.warningAmber.withValues(alpha: 0.3),
+            color: HiPopColors.organizerAccent.withValues(alpha: 0.3),
             blurRadius: 12,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showCreateEventDialog(context),
+          onTap: _checkAndCreateEvent,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(20.0),
             child: Row(
               children: [
                 Container(
-                  width: 56,
-                  height: 56,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
                   ),
                   child: const Icon(
-                    Icons.add_circle,
+                    Icons.add_circle_rounded,
                     color: Colors.white,
-                    size: 28,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,27 +891,36 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                       const Text(
                         'Create New Event',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
-                        'Start a new special event for your markets',
+                        'Start a special event for your markets',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.9),
-                          height: 1.3,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          height: 1.2,
                         ),
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white.withValues(alpha: 0.8),
-                  size: 20,
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    size: 18,
+                  ),
                 ),
               ],
             ),
@@ -711,43 +938,49 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
     Color statusColor;
     String statusText;
     IconData eventIcon;
-    Color iconColor = HiPopColors.warningAmber;
+    Color iconColor;
     
     if (event.isCurrentlyActive) {
       statusColor = HiPopColors.successGreen;
       statusText = 'Active';
-      eventIcon = Icons.event_available;
+      eventIcon = Icons.event_available_rounded;
       iconColor = HiPopColors.successGreen;
     } else if (event.isUpcoming) {
       statusColor = HiPopColors.infoBlueGray;
       statusText = 'Upcoming';
-      eventIcon = Icons.schedule;
+      eventIcon = Icons.schedule_rounded;
       iconColor = HiPopColors.infoBlueGray;
     } else {
-      statusColor = Colors.grey;
+      statusColor = HiPopColors.darkTextTertiary;
       statusText = 'Ended';
-      eventIcon = Icons.event_busy;
-      iconColor = Colors.grey;
+      eventIcon = Icons.event_busy_rounded;
+      iconColor = HiPopColors.darkTextTertiary;
     }
 
     String subtitle = '${dateFormat.format(event.startDateTime)} at ${timeFormat.format(event.startDateTime)}';
-    if (event.description.isNotEmpty) {
+    if (event.description.isNotEmpty && event.description.length > 50) {
+      subtitle = '${event.description.substring(0, 50)}...\n$subtitle';
+    } else if (event.description.isNotEmpty) {
       subtitle = '${event.description}\n$subtitle';
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: HiPopColors.lightBorder,
-          width: 1.5,
+          color: event.isCurrentlyActive 
+            ? statusColor.withValues(alpha: 0.3)
+            : HiPopColors.darkBorder.withValues(alpha: 0.3),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: HiPopColors.lightShadow.withValues(alpha: 0.1),
+            color: event.isCurrentlyActive 
+              ? statusColor.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -757,7 +990,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
           onTap: () => _showEventDetails(event),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
                 // Icon container on the left
@@ -765,8 +998,19 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.15),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        iconColor.withValues(alpha: 0.2),
+                        iconColor.withValues(alpha: 0.1),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Icon(
                     eventIcon,
@@ -774,7 +1018,7 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 // Title and description in the middle
                 Expanded(
                   child: Column(
@@ -785,10 +1029,11 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                           Expanded(
                             child: Text(
                               event.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: HiPopColors.lightTextPrimary,
+                                color: HiPopColors.darkTextPrimary,
+                                letterSpacing: -0.3,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -796,45 +1041,68 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                             decoration: BoxDecoration(
-                              color: statusColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: statusColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: statusColor.withValues(alpha: 0.3),
+                                color: statusColor.withValues(alpha: 0.4),
                                 width: 1,
                               ),
                             ),
-                            child: Text(
-                              statusText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: statusColor,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  statusText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: statusColor,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                          height: 1.3,
+                          fontSize: 13,
+                          color: HiPopColors.darkTextSecondary,
+                          height: 1.4,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (!event.isActive) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          'Inactive',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: HiPopColors.errorPlum,
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: HiPopColors.errorPlum.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'INACTIVE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: HiPopColors.errorPlum,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ],
@@ -845,9 +1113,9 @@ class _OrganizerEventManagementScreenState extends State<OrganizerEventManagemen
                 PopupMenuButton<String>(
                   onSelected: (value) => _handleEventAction(event, value),
                   icon: Icon(
-                    Icons.more_vert,
+                    Icons.more_vert_rounded,
                     size: 20,
-                    color: Colors.grey[400],
+                    color: HiPopColors.darkTextTertiary,
                   ),
                   itemBuilder: (context) => [
                     const PopupMenuItem(

@@ -336,13 +336,10 @@ class _FeatureGateWidgetState extends State<FeatureGateWidget>
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              HiPopColors.surfaceSoftPink.withValues(alpha: 0.5),
-              HiPopColors.surfacePalePink.withValues(alpha: 0.7),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          color: HiPopColors.darkSurface,
+          border: Border.all(
+            color: HiPopColors.accentMauve.withOpacity(0.3),
+            width: 1,
           ),
         ),
         child: Padding(

@@ -98,18 +98,15 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HiPopColors.surfacePalePink,
-            Colors.white,
-          ],
-        ),
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: HiPopColors.accentMauve.withOpacity(0.3),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: HiPopColors.lightShadow,
+            color: HiPopColors.darkShadow,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -144,7 +141,7 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
                       'Vendor Recruitment',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: HiPopColors.lightTextPrimary,
+                        color: HiPopColors.darkTextPrimary,
                       ),
                     ),
                     Text(
@@ -154,7 +151,7 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
                       style: TextStyle(
                         color: isRecruiting 
                             ? HiPopColors.successGreen 
-                            : HiPopColors.lightTextTertiary,
+                            : HiPopColors.darkTextTertiary,
                         fontSize: 14,
                       ),
                     ),
@@ -254,10 +251,11 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
+                  color: HiPopColors.darkSurfaceVariant,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: HiPopColors.accentDustyRose.withValues(alpha: 0.2),
+                    color: HiPopColors.accentMauve.withOpacity(0.3),
+                    width: 1,
                   ),
                 ),
                 child: Column(
@@ -275,7 +273,7 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
                           'Fee Structure',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: HiPopColors.lightTextPrimary,
+                            color: HiPopColors.darkTextPrimary,
                           ),
                         ),
                       ],
@@ -342,29 +340,33 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: HiPopColors.lightTextDisabled.withValues(alpha: 0.1),
+                color: HiPopColors.darkSurfaceVariant,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: HiPopColors.darkBorder,
+                  width: 1,
+                ),
               ),
               child: Column(
                 children: [
                   Icon(
                     Icons.pause_circle_outline,
                     size: 48,
-                    color: HiPopColors.lightTextTertiary,
+                    color: HiPopColors.darkTextTertiary,
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Vendor Recruitment Paused',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: HiPopColors.lightTextSecondary,
+                      color: HiPopColors.darkTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Enable recruitment to start accepting vendor applications',
                     style: TextStyle(
-                      color: HiPopColors.lightTextTertiary,
+                      color: HiPopColors.darkTextTertiary,
                       fontSize: 14,
                     ),
                     textAlign: TextAlign.center,
@@ -406,10 +408,10 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: HiPopColors.darkSurfaceVariant,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: HiPopColors.lightBorder,
+          color: HiPopColors.darkBorder,
           width: 1,
         ),
       ),
@@ -425,7 +427,7 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  color: HiPopColors.lightTextTertiary,
+                  color: HiPopColors.darkTextTertiary,
                 ),
               ),
             ],
@@ -444,7 +446,7 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
             subtitle,
             style: TextStyle(
               fontSize: 11,
-              color: HiPopColors.lightTextTertiary,
+              color: HiPopColors.darkTextTertiary,
             ),
           ),
           if (progress != null) ...[
@@ -470,14 +472,14 @@ class _VendorRecruitmentDashboardState extends State<VendorRecruitmentDashboard>
           Text(
             label,
             style: TextStyle(
-              color: HiPopColors.lightTextSecondary,
+              color: HiPopColors.darkTextSecondary,
               fontSize: 14,
             ),
           ),
           Text(
             value,
             style: TextStyle(
-              color: HiPopColors.lightTextPrimary,
+              color: HiPopColors.darkTextPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),

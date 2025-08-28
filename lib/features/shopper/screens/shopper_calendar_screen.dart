@@ -146,7 +146,6 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
           );
           favoriteMarkets.addAll(markets);
         } catch (e) {
-          debugPrint('Error loading favorite markets: $e');
         }
         
         // Load favorite vendors and their market relationships
@@ -170,12 +169,10 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
                 
                 vendorRelationships[vendorId] = relationships;
               } catch (e) {
-                debugPrint('Error loading vendor relationships: $e');
                 vendorRelationships[vendorId] = [];
               }
             }
           } catch (e) {
-            debugPrint('Error loading favorite vendor $vendorId: $e');
           }
         }
         
@@ -187,7 +184,6 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
               favoriteEventsList.add(event);
             }
           } catch (e) {
-            debugPrint('Error loading favorite event $eventId: $e');
           }
         }
       }
@@ -213,7 +209,6 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
           e.isActive && e.endDateTime.isAfter(DateTime.now())
         ).toList();
       } catch (e) {
-        debugPrint('Error loading nearby events: $e');
       }
       
       // Generate calendar events for the next 3 months
@@ -348,7 +343,6 @@ class _ShopperCalendarScreenState extends State<ShopperCalendarScreen>
               }
             }
           } catch (e) {
-            debugPrint('Error generating vendor events for ${vendor.userId}: $e');
           }
         }
       }

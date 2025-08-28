@@ -1043,7 +1043,6 @@ class _ShopperHomeState extends State<ShopperHome> with WidgetsBindingObserver {
       final vendorItems = await VendorMarketItemsService.getVendorMarketItems(vendorId, marketId);
       return vendorItems?.itemList ?? [];
     } catch (e) {
-      debugPrint('Error fetching vendor items: $e');
       return [];
     }
   }

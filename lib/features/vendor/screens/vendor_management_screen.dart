@@ -10,6 +10,7 @@ import 'package:hipop/features/market/services/market_service.dart';
 import 'package:hipop/features/market/services/market_batch_service.dart';
 import 'package:hipop/features/vendor/widgets/vendor/vendor_form_dialog.dart';
 import 'package:hipop/core/theme/hipop_colors.dart';
+import 'package:go_router/go_router.dart';
 
 
 class VendorManagementScreen extends StatefulWidget {
@@ -124,9 +125,13 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
           return Scaffold(
             backgroundColor: HiPopColors.darkBackground,
             appBar: AppBar(
-              title: const Text('Vendor Management'),
+              title: Text(
+                'Vendor Management',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: HiPopColors.darkSurface,
-              foregroundColor: HiPopColors.darkTextPrimary,
+              foregroundColor: Colors.white,
+              iconTheme: IconThemeData(color: Colors.white),
             ),
             body: _buildNoMarketsOnboarding(context),
           );
@@ -140,9 +145,13 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
           return Scaffold(
             backgroundColor: HiPopColors.darkBackground,
             appBar: AppBar(
-              title: const Text('Vendor Management'),
+              title: Text(
+                'Vendor Management',
+                style: TextStyle(color: Colors.white),
+              ),
               backgroundColor: HiPopColors.darkSurface,
-              foregroundColor: HiPopColors.darkTextPrimary,
+              foregroundColor: Colors.white,
+              iconTheme: IconThemeData(color: Colors.white),
             ),
             body: _buildNoAvailableMarketsState(context),
           );
@@ -830,27 +839,23 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
             ),
             const SizedBox(height: 48),
             
-            // Getting started card with gradient
+            // Getting started card with dark style
             Container(
               constraints: const BoxConstraints(maxWidth: 500),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
-                    HiPopColors.accentMauve.withValues(alpha: 0.1),
-                  ],
+              child: Card(
+                color: HiPopColors.darkSurface,
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: HiPopColors.primaryDeepSage.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: HiPopColors.primaryDeepSage.withValues(alpha: 0.2),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
                   Icon(
                     Icons.rocket_launch,
                     size: 48,
@@ -875,7 +880,9 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 32),
@@ -905,7 +912,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                   ),
                   child: ElevatedButton.icon(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/market-management');
+                      context.push('/organizer/create-market');
                     },
                     icon: const Icon(Icons.add_location_alt, size: 24),
                     label: const Text(
@@ -924,82 +931,7 @@ class _VendorManagementScreenState extends State<VendorManagementScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                
-                // Secondary CTAs in a row
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 300),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Opening vendor management guide...'),
-                                backgroundColor: HiPopColors.infoBlueGray,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.school_outlined, size: 20),
-                          label: const Text('Learn More'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: HiPopColors.primaryDeepSage,
-                            side: BorderSide(
-                              color: HiPopColors.primaryDeepSage.withValues(alpha: 0.5),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Contact us at support@hipopmarkets.com'),
-                                backgroundColor: HiPopColors.infoBlueGray,
-                                behavior: SnackBarBehavior.floating,
-                                action: SnackBarAction(
-                                  label: 'Copy',
-                                  textColor: Colors.white,
-                                  onPressed: () {
-                                    // TODO: Copy email to clipboard
-                                  },
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.help_outline,
-                            size: 20,
-                            color: HiPopColors.darkTextSecondary,
-                          ),
-                          label: Text(
-                            'Get Help',
-                            style: TextStyle(
-                              color: HiPopColors.darkTextSecondary,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // Removed Learn More and Get Help buttons
               ],
             ),
             const SizedBox(height: 40),

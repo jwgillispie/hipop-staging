@@ -259,11 +259,8 @@ class HiPopTheme {
         backgroundColor: HiPopColors.primaryDeepSage,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: CircleBorder(),
-        sizeConstraints: BoxConstraints.tightFor(
-          width: 56,
-          height: 56,
-        ),
+        // Removed CircleBorder() and size constraints to allow extended FABs
+        // Extended FABs will use their default pill shape
       ),
       
       // ======= Bottom Navigation Bar Theme =======

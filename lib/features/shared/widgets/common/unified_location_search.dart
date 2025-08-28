@@ -37,6 +37,9 @@ class UnifiedLocationSearch extends StatefulWidget {
   
   /// Whether to automatically focus the field
   final bool autoFocus;
+  
+  /// Text style for the input field
+  final TextStyle? textStyle;
 
   const UnifiedLocationSearch({
     super.key,
@@ -51,6 +54,7 @@ class UnifiedLocationSearch extends StatefulWidget {
     this.enablePlacesAPI = true,
     this.minSearchLength = 3,
     this.autoFocus = false,
+    this.textStyle,
   });
 
   @override
@@ -239,7 +243,7 @@ class _UnifiedLocationSearchState extends State<UnifiedLocationSearch> {
         TextFormField(
           controller: _controller,
           focusNode: _focusNode,
-          style: const TextStyle(
+          style: widget.textStyle ?? const TextStyle(
             color: Colors.black,
             fontSize: 16,
           ),

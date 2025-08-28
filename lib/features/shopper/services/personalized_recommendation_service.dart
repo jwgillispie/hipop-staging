@@ -53,9 +53,7 @@ class PersonalizedRecommendationService {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      debugPrint('✅ Recorded interaction: ${type.name} for $targetId');
     } catch (e) {
-      debugPrint('❌ Error recording interaction: $e');
     }
   }
 
@@ -105,7 +103,6 @@ class PersonalizedRecommendationService {
 
       return deduplicatedRecs.take(limit).toList();
     } catch (e) {
-      debugPrint('❌ Error generating recommendations: $e');
       return _getBasicRecommendations(location: location, limit: limit);
     }
   }
@@ -212,7 +209,6 @@ class PersonalizedRecommendationService {
         'lastUpdated': DateTime.now().toIso8601String(),
       };
     } catch (e) {
-      debugPrint('❌ Error building user profile: $e');
       return {
         'shopperId': shopperId,
         'categoryPreferences': <String, double>{},
@@ -302,7 +298,6 @@ class PersonalizedRecommendationService {
 
       return recommendations;
     } catch (e) {
-      debugPrint('❌ Error getting collaborative recommendations: $e');
       return [];
     }
   }
@@ -370,7 +365,6 @@ class PersonalizedRecommendationService {
 
       return recommendations.take(limit).toList();
     } catch (e) {
-      debugPrint('❌ Error getting content-based recommendations: $e');
       return [];
     }
   }
@@ -425,7 +419,6 @@ class PersonalizedRecommendationService {
 
       return recommendations;
     } catch (e) {
-      debugPrint('❌ Error getting trending recommendations: $e');
       return [];
     }
   }
@@ -459,7 +452,6 @@ class PersonalizedRecommendationService {
         };
       }).toList();
     } catch (e) {
-      debugPrint('❌ Error getting basic recommendations: $e');
       return [];
     }
   }
@@ -530,7 +522,6 @@ class PersonalizedRecommendationService {
         'generatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      debugPrint('❌ Error storing recommendations: $e');
     }
   }
 
@@ -608,7 +599,6 @@ class PersonalizedRecommendationService {
 
       return stats;
     } catch (e) {
-      debugPrint('❌ Error getting recommendation analytics: $e');
       return {
         'totalRecommendationsGenerated': 0,
         'averageRecommendationsPerUser': 0.0,

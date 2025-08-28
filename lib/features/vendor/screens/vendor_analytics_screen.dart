@@ -36,6 +36,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   Stream<CombinedAnalyticsData>? _combinedStream;
   bool _hasPremiumAccess = false;
   bool _isCheckingPremium = true;
+  bool _isInitializing = true;
   String? _currentUserId;
 
   @override
@@ -44,10 +45,28 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
       _currentUserId = authState.user.uid;
+    }
+    
+    // Defer heavy operations using post-frame callback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _currentUserId != null) {
+        _initializeHeavyOperations();
+      }
+    });
+  }
+
+  Future<void> _initializeHeavyOperations() async {
+    if (_currentUserId != null) {
       _postsStream = _getVendorPosts(_currentUserId!);
       _analyticsStream = _getAnalytics(_currentUserId!);
       _combinedStream = _createCombinedStream();
-      _checkPremiumAccessWithBloc(_currentUserId!);
+      await _checkPremiumAccessWithBloc(_currentUserId!);
+      
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
     }
   }
 
@@ -192,9 +211,14 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
   void _refreshStreams() {
     if (_currentUserId != null) {
       setState(() {
-        _analyticsStream = _getAnalytics(_currentUserId!);
-        _postsStream = _getVendorPosts(_currentUserId!);
-        _combinedStream = _createCombinedStream();
+        _isInitializing = true;
+      });
+      
+      // Use post-frame callback for smooth refresh
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (mounted) {
+          await _initializeHeavyOperations();
+        }
       });
     }
   }
@@ -209,6 +233,17 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
         if (authState is! Authenticated) {
           return const Scaffold(
             body: LoadingWidget(message: 'Loading analytics...'),
+          );
+        }
+
+        // Show lightweight loading state during initialization
+        if (_isInitializing) {
+          return Scaffold(
+            appBar: HiPopAppBar(
+              title: 'Analytics Dashboard',
+              userRole: 'vendor',
+            ),
+            body: const LoadingWidget(message: 'Loading your analytics...'),
           );
         }
 
@@ -652,6 +687,7 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
 
   Widget _buildPremiumOnlyMessage() {
     final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
     
     return Center(
       child: Padding(
@@ -682,9 +718,12 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Track your application performance with Vendor Premium (\$29/month).',
+              'Attract more customers with Vendor Premium (\$29/month)',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface,
+                color: isDarkMode 
+                    ? HiPopColors.darkTextSecondary 
+                    : HiPopColors.lightTextSecondary,
+                fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
             ),
@@ -692,7 +731,9 @@ class _VendorAnalyticsScreenState extends State<VendorAnalyticsScreen> {
             Text(
               'Get analytics on market applications, post views, and engagement tracking.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: isDarkMode
+                    ? HiPopColors.darkTextTertiary
+                    : HiPopColors.lightTextTertiary,
               ),
               textAlign: TextAlign.center,
             ),

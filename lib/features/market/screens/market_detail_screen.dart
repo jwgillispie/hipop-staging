@@ -395,10 +395,9 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
   }
   
   bool _hasEventLinks() {
-    return widget.market.eventWebsite != null ||
-           widget.market.instagramHandle != null ||
-           widget.market.facebookUrl != null ||
-           widget.market.ticketUrl != null;
+    // Event links are now on individual events, not markets
+    // Only check for market-level Instagram handle
+    return widget.market.instagramHandle != null;
   }
   
   Widget _buildEventLinksSection() {
@@ -409,15 +408,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.market.eventWebsite != null) ...[
-              _buildLinkTile(
-                icon: Icons.language,
-                label: 'Event Website',
-                url: widget.market.eventWebsite!,
-                color: HiPopColors.primaryDeepSage,
-              ),
-              if (_hasMoreLinks()) const Divider(height: 24),
-            ],
             if (widget.market.instagramHandle != null) ...[
               _buildLinkTile(
                 icon: Icons.camera_alt,
@@ -426,24 +416,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
                 color: HiPopColors.vendorAccent,
                 displayText: '@${widget.market.instagramHandle}',
               ),
-              if (_hasMoreLinksAfterInstagram()) const Divider(height: 24),
-            ],
-            if (widget.market.facebookUrl != null) ...[
-              _buildLinkTile(
-                icon: Icons.facebook,
-                label: 'Facebook',
-                url: widget.market.facebookUrl!,
-                color: const Color(0xFF1877F2),
-              ),
-              if (widget.market.ticketUrl != null) const Divider(height: 24),
-            ],
-            if (widget.market.ticketUrl != null) ...[
-              _buildLinkTile(
-                icon: Icons.confirmation_number,
-                label: 'Registration/Tickets',
-                url: widget.market.ticketUrl!,
-                color: HiPopColors.warningAmber,
-              ),
             ],
           ],
         ),
@@ -451,16 +423,6 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
     );
   }
   
-  bool _hasMoreLinks() {
-    return widget.market.instagramHandle != null ||
-           widget.market.facebookUrl != null ||
-           widget.market.ticketUrl != null;
-  }
-  
-  bool _hasMoreLinksAfterInstagram() {
-    return widget.market.facebookUrl != null ||
-           widget.market.ticketUrl != null;
-  }
   
   Widget _buildLinkTile({
     required IconData icon,
@@ -527,7 +489,7 @@ class _MarketDetailScreenState extends State<MarketDetailScreen>
   
   Future<void> _launchURL(String url) async {
     try {
-      await UrlLauncherService.launchURL(url);
+      await UrlLauncherService.launchWebsite(url);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

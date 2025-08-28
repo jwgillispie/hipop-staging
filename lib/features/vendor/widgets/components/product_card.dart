@@ -583,7 +583,7 @@ class ProductCard extends StatelessWidget {
         imageUrl: imageUrl!,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
-          color: HiPopColors.surfacePalePink,
+          color: HiPopColors.darkSurfaceVariant,
           child: Center(
             child: CircularProgressIndicator(
               strokeWidth: 2,

@@ -25,7 +25,15 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
   Widget build(BuildContext context) {
 
     return Card(
-      elevation: 4,
+      color: HiPopColors.darkSurface,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: HiPopColors.darkBorder.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -120,17 +128,17 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isDark ? HiPopColors.darkSurface : HiPopColors.lightSurface,
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEnabled 
-              ? color.withValues(alpha: 0.4) 
-              : (isDark ? HiPopColors.darkBorder : HiPopColors.lightBorder),
-          width: 1.5,
+              ? color.withValues(alpha: 0.3) 
+              : HiPopColors.darkBorder.withOpacity(0.3),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? HiPopColors.darkShadow : HiPopColors.lightShadow,
+            color: HiPopColors.darkShadow.withOpacity(0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -149,8 +157,8 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: isEnabled 
-                        ? color.withValues(alpha: isDark ? 0.2 : 0.1) 
-                        : (isDark ? HiPopColors.darkSurfaceVariant : Colors.grey.shade100),
+                        ? color.withValues(alpha: 0.15) 
+                        : HiPopColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -158,7 +166,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                     size: 28,
                     color: isEnabled 
                         ? color 
-                        : (isDark ? HiPopColors.darkTextDisabled : Colors.grey.shade400),
+                        : HiPopColors.darkTextDisabled,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -172,8 +180,8 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: isEnabled 
-                              ? (isDark ? HiPopColors.darkTextPrimary : HiPopColors.lightTextPrimary)
-                              : (isDark ? HiPopColors.darkTextDisabled : HiPopColors.lightTextDisabled),
+                              ? HiPopColors.darkTextPrimary
+                              : HiPopColors.darkTextDisabled,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -182,8 +190,8 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                         style: TextStyle(
                           fontSize: 14,
                           color: isEnabled 
-                              ? (isDark ? HiPopColors.darkTextSecondary : HiPopColors.lightTextSecondary)
-                              : (isDark ? HiPopColors.darkTextDisabled : HiPopColors.lightTextDisabled),
+                              ? HiPopColors.darkTextSecondary
+                              : HiPopColors.darkTextDisabled,
                           height: 1.3,
                         ),
                       ),
@@ -194,7 +202,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   Icons.arrow_forward_ios,
                   size: 18,
                   color: isEnabled 
-                      ? (isDark ? HiPopColors.darkTextTertiary : HiPopColors.lightTextTertiary)
+                      ? HiPopColors.darkTextTertiary
                       : (isDark ? HiPopColors.darkTextDisabled : HiPopColors.lightTextDisabled),
                 ),
               ],
@@ -275,17 +283,17 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
     
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? HiPopColors.darkSurface : HiPopColors.lightSurface,
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isEnabled 
-              ? color.withValues(alpha: 0.4) 
-              : (isDark ? HiPopColors.darkBorder : HiPopColors.lightBorder),
-          width: 1.5,
+              ? color.withValues(alpha: 0.3) 
+              : HiPopColors.darkBorder.withOpacity(0.3),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? HiPopColors.darkShadow : HiPopColors.lightShadow,
+            color: HiPopColors.darkShadow.withOpacity(0.1),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -304,8 +312,8 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: isEnabled 
-                        ? color.withValues(alpha: isDark ? 0.2 : 0.1) 
-                        : (isDark ? HiPopColors.darkSurfaceVariant : Colors.grey.shade100),
+                        ? color.withValues(alpha: 0.15) 
+                        : HiPopColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -313,7 +321,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                     size: 32,
                     color: isEnabled 
                         ? color 
-                        : (isDark ? HiPopColors.darkTextDisabled : Colors.grey.shade400),
+                        : HiPopColors.darkTextDisabled,
                   ),
                 ),
                 const SizedBox(width: 18),
@@ -327,8 +335,8 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: isEnabled 
-                              ? (isDark ? HiPopColors.darkTextPrimary : HiPopColors.lightTextPrimary)
-                              : (isDark ? HiPopColors.darkTextDisabled : HiPopColors.lightTextDisabled),
+                              ? HiPopColors.darkTextPrimary
+                              : HiPopColors.darkTextDisabled,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -337,8 +345,8 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                         style: TextStyle(
                           fontSize: 14,
                           color: isEnabled 
-                              ? (isDark ? HiPopColors.darkTextSecondary : HiPopColors.lightTextSecondary)
-                              : (isDark ? HiPopColors.darkTextDisabled : HiPopColors.lightTextDisabled),
+                              ? HiPopColors.darkTextSecondary
+                              : HiPopColors.darkTextDisabled,
                           height: 1.3,
                         ),
                       ),
@@ -349,7 +357,7 @@ class _CentralPopupCreationWidgetState extends State<CentralPopupCreationWidget>
                   Icons.arrow_forward_ios,
                   size: 18,
                   color: isEnabled 
-                      ? (isDark ? HiPopColors.darkTextTertiary : HiPopColors.lightTextTertiary)
+                      ? HiPopColors.darkTextTertiary
                       : (isDark ? HiPopColors.darkTextDisabled : HiPopColors.lightTextDisabled),
                 ),
               ],

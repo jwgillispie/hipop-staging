@@ -822,9 +822,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
+        border: Border.all(color: HiPopColors.accentMauve.withOpacity(0.3), width: 1),
         borderRadius: BorderRadius.circular(8),
-        color: HiPopColors.surfacePalePink,
+        color: HiPopColors.darkSurface,
       ),
       child: Row(
         children: [
@@ -1049,9 +1049,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
   Widget _buildProductListSelectionWidget() {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
+        border: Border.all(color: HiPopColors.accentMauve.withOpacity(0.3), width: 1),
         borderRadius: BorderRadius.circular(12),
-        color: HiPopColors.surfacePalePink,
+        color: HiPopColors.darkSurface,
         boxShadow: [
           BoxShadow(
             color: HiPopColors.lightShadow.withValues(alpha: 0.1),
@@ -1245,9 +1245,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
+              border: Border.all(color: HiPopColors.accentMauve.withOpacity(0.3), width: 1),
               borderRadius: BorderRadius.circular(12),
-              color: HiPopColors.surfacePalePink,
+              color: HiPopColors.darkSurface,
               boxShadow: [
                 BoxShadow(
                   color: HiPopColors.lightShadow.withValues(alpha: 0.1),
@@ -1304,9 +1304,9 @@ class _CreatePopUpScreenState extends State<CreatePopUpScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              border: Border.all(color: HiPopColors.lightBorder, width: 1.5),
+              border: Border.all(color: HiPopColors.accentMauve.withOpacity(0.3), width: 1),
               borderRadius: BorderRadius.circular(12),
-              color: HiPopColors.surfacePalePink,
+              color: HiPopColors.darkSurface,
               boxShadow: [
                 BoxShadow(
                   color: HiPopColors.lightShadow.withValues(alpha: 0.1),

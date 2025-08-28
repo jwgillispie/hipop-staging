@@ -83,9 +83,7 @@ class ShopperNotificationService {
       }
 
       await batch.commit();
-      debugPrint('✅ Created notifications for ${followerIds.length} followers of $vendorName');
     } catch (e) {
-      debugPrint('❌ Error creating vendor popup notifications: $e');
     }
   }
 
@@ -125,9 +123,7 @@ class ShopperNotificationService {
         'scheduledFor': FieldValue.serverTimestamp(),
       });
 
-      debugPrint('✅ Created recommendation notification for shopper: $shopperId');
     } catch (e) {
-      debugPrint('❌ Error creating recommendation notification: $e');
     }
   }
 
@@ -167,9 +163,7 @@ class ShopperNotificationService {
         'scheduledFor': FieldValue.serverTimestamp(),
       });
 
-      debugPrint('✅ Created weekly digest for shopper: $shopperId');
     } catch (e) {
-      debugPrint('❌ Error creating weekly digest: $e');
     }
   }
 
@@ -200,7 +194,6 @@ class ShopperNotificationService {
         'weeklyDigest': true,
       };
     } catch (e) {
-      debugPrint('❌ Error getting notification settings: $e');
       return {
         'vendorNewPopup': false,
         'vendorLocationUpdate': false,
@@ -223,9 +216,7 @@ class ShopperNotificationService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      debugPrint('✅ Updated notification settings for shopper: $shopperId');
     } catch (e) {
-      debugPrint('❌ Error updating notification settings: $e');
       throw Exception('Failed to update notification settings: $e');
     }
   }
@@ -248,7 +239,6 @@ class ShopperNotificationService {
         };
       }).toList();
     } catch (e) {
-      debugPrint('❌ Error getting unread notifications: $e');
       return [];
     }
   }
@@ -261,7 +251,6 @@ class ShopperNotificationService {
         'readAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      debugPrint('❌ Error marking notification as read: $e');
     }
   }
 
@@ -282,9 +271,7 @@ class ShopperNotificationService {
       }
 
       await batch.commit();
-      debugPrint('✅ Marked all notifications as read for shopper: $shopperId');
     } catch (e) {
-      debugPrint('❌ Error marking all notifications as read: $e');
     }
   }
 
@@ -364,7 +351,6 @@ class ShopperNotificationService {
 
       return vendorActivity.values.toList();
     } catch (e) {
-      debugPrint('❌ Error getting followed vendors activity: $e');
       return [];
     }
   }
@@ -383,9 +369,7 @@ class ShopperNotificationService {
       }
 
       await batch.commit();
-      debugPrint('✅ Cleaned up ${snapshot.docs.length} old notifications');
     } catch (e) {
-      debugPrint('❌ Error cleaning up old notifications: $e');
     }
   }
 
@@ -429,7 +413,6 @@ class ShopperNotificationService {
 
       return stats;
     } catch (e) {
-      debugPrint('❌ Error getting notification stats: $e');
       return {
         'total': 0,
         'unread': 0,

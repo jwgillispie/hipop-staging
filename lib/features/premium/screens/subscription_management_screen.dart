@@ -163,7 +163,14 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
 
   Widget _buildUpgradePromptCard() {
     return Card(
-      color: HiPopColors.surfaceSoftPink.withValues(alpha: 0.5),
+      color: HiPopColors.darkSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: HiPopColors.accentMauve.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -581,7 +588,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 gradient: LinearGradient(
                   colors: [
                     HiPopColors.primaryDeepSage.withValues(alpha: 0.1),
-                    HiPopColors.surfaceSoftPink.withValues(alpha: 0.3),
+                    HiPopColors.accentMauve.withOpacity(0.1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

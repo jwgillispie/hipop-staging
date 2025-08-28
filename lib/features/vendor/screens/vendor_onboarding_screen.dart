@@ -520,9 +520,9 @@ class _VendorOnboardingScreenState extends State<VendorOnboardingScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: HiPopColors.surfacePalePink.withValues(alpha: 0.5),
+                    color: HiPopColors.darkSurfaceVariant,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: HiPopColors.vendorAccent.withValues(alpha: 0.3)),
+                    border: Border.all(color: HiPopColors.accentMauve.withOpacity(0.3)),
                   ),
                   child: Column(
                     children: [

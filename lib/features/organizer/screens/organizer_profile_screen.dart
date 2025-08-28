@@ -121,6 +121,7 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
                     'Profile Options',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: HiPopColors.primaryDeepSage,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -294,13 +295,7 @@ class _OrganizerProfileScreenState extends State<OrganizerProfileScreen> {
   }
 
   void _navigateToEditProfile() {
-    // TODO: Navigate to edit profile screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Edit profile coming soon!'),
-        backgroundColor: HiPopColors.organizerAccent,
-      ),
-    );
+    context.push('/organizer/edit-profile');
   }
 
   void _navigateToSubscriptionManagement() {

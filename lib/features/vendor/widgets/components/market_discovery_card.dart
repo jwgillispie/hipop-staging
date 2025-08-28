@@ -475,8 +475,12 @@ class MarketDiscoveryCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: HiPopColors.surfacePalePink.withValues(alpha: 0.5),
+                      color: HiPopColors.darkSurfaceElevated,
                       borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: HiPopColors.darkBorder,
+                        width: 1,
+                      ),
                     ),
                     child: _buildMetrics(context, detailed: true),
                   ),
@@ -595,7 +599,7 @@ class MarketDiscoveryCard extends StatelessWidget {
               imageUrl: imageUrl!,
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(
-                color: HiPopColors.surfacePalePink,
+                color: HiPopColors.darkSurfaceVariant,
                 child: Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2,

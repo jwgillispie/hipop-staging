@@ -962,7 +962,7 @@ class _OrganizerAnalyticsScreenState extends State<OrganizerAnalyticsScreen>
                         'Vendor Favorites',
                         favoritesMetrics['totalVendorFavorites']?.toString() ??
                             '0',
-                        Colors.pink,
+                        HiPopColors.accentMauve,
                       ),
                     ),
                     Expanded(

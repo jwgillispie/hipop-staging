@@ -391,11 +391,7 @@ class UpgradeBannerWidget extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [HiPopColors.surfaceSoftPink.withValues(alpha: 0.3), HiPopColors.surfacePalePink],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: HiPopColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: HiPopColors.accentMauve.withValues(alpha: 0.3)),
       ),

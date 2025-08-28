@@ -78,12 +78,13 @@ class AuthLandingScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.go('/login?type=shopper'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: HiPopColors.shopperAccent,
+                      backgroundColor: HiPopColors.accentMauve,  // Using mauve for shoppers
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 3,
                     ),
                     child: const Text(
                       'Shopper',
@@ -200,12 +201,13 @@ class AuthLandingScreen extends StatelessWidget {
                   context.go('/signup?type=shopper');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: HiPopColors.shopperAccent,
+                  backgroundColor: HiPopColors.accentMauve,  // Using mauve for shoppers
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  elevation: 3,
                 ),
                 child: const Text(
                   'Shopper',
